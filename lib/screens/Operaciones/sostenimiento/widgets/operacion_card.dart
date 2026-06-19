@@ -13,6 +13,8 @@ class OperacionCard extends StatefulWidget {
   final Function(String?) onTurnoChanged;
   final Function(String) onFechaChanged;
   final String? dniUsuario;
+  final String? selectedOperatorName;
+  final int? selectedOperatorId;
   final Map<String, dynamic>? operacionExistente;
 
   final String fechaActual;
@@ -29,6 +31,8 @@ class OperacionCard extends StatefulWidget {
     required this.selectedTurno,
     required this.operacionExistente,
     this.dniUsuario,
+    this.selectedOperatorName,
+    this.selectedOperatorId,
     this.primaryColor = const Color(0xFF1B5E6B),
   }) : super(key: key);
 
@@ -37,13 +41,13 @@ class OperacionCard extends StatefulWidget {
 }
 
 class _OperacionCardState extends State<OperacionCard> {
-
   String? selectedEquipo;
   String? selectedCodigo;
   String? selectedJefeGuardia;
   String? selectedSeccion;
   String? operador;
-  
+  int? operadorId;
+
   // Lista dinámica de tipos de equipo
   List<TipoEquipo> tiposEquipo = [];
   // Mapa para almacenar el estado de cada checkbox (true/false)
@@ -61,14 +65,14 @@ class _OperacionCardState extends State<OperacionCard> {
   List<String> secciones = [];
 
   final Map<String, List<String>> codigosPorEquipo = {};
-  
+
   List<Equipo> equiposCompletos = [];
   List<String> codigosFiltrados = [];
 
   @override
   void initState() {
     super.initState();
-    
+
     _cargarOperadorPorDni();
     _cargarEquipos();
     _cargarJefesGuardia();
@@ -86,27 +90,25 @@ class _OperacionCardState extends State<OperacionCard> {
   }
 
   Future<void> _cargarSecciones() async {
-  try {
-    final dbHelper = DatabaseHelper();
+    try {
+      final dbHelper = DatabaseHelper();
 
-    String tipoOperacion = 'EMPERNADOR';
+      String tipoOperacion = 'EMPERNADOR';
 
-    final seccionesDB =
-        await dbHelper.getSeccionesByProceso(tipoOperacion);
+      final zonas = await dbHelper.getZonasByProceso(tipoOperacion);
 
-    setState(() {
-      secciones = seccionesDB.map((s) => s.nombre).toList()..sort();
-    });
+      setState(() {
+        secciones = zonas.map((z) => z.nombre).toList()..sort();
+      });
 
-    print("Secciones cargadas: $secciones");
-
-  } catch (e) {
-    print("Error cargando secciones: $e");
-    setState(() {
-      secciones = [];
-    });
+      print("Zonas cargadas: $secciones");
+    } catch (e) {
+      print("Error cargando zonas: $e");
+      setState(() {
+        secciones = [];
+      });
+    }
   }
-}
 
   Future<void> _cargarOperadorPorDni() async {
     if (widget.dniUsuario == null) return;
@@ -117,21 +119,28 @@ class _OperacionCardState extends State<OperacionCard> {
 
       if (usuario != null) {
         setState(() {
-          operador = '${usuario['nombres']} ${usuario['apellidos']}';
+          operadorId = usuario['operador_id'] as int?;
+          _syncDisplayedOperator(
+            fallbackName: '${usuario['nombres']} ${usuario['apellidos']}',
+          );
         });
         print('Operador cargado: $operador');
       } else {
         print('No se encontró usuario con DNI: ${widget.dniUsuario}');
         setState(() {
-          operador = operadorEjemplo;
+          _syncDisplayedOperator();
         });
       }
     } catch (e) {
       print('Error al cargar operador: $e');
       setState(() {
-        operador = operadorEjemplo;
+        _syncDisplayedOperator();
       });
     }
+  }
+
+  void _syncDisplayedOperator({String? fallbackName}) {
+    operador = widget.selectedOperatorName ?? fallbackName ?? operadorEjemplo;
   }
 
   Future<void> _cargarEquipos() async {
@@ -144,7 +153,7 @@ class _OperacionCardState extends State<OperacionCard> {
       String tipoOperacion = 'EMPERNADOR';
 
       List<Equipo> equiposFiltrados = equiposCompletos
-          .where((e) => e.proceso == tipoOperacion)
+          .where((e) => e.matchesProceso(tipoOperacion))
           .toList();
 
       Set<String> nombresEquipos = {};
@@ -165,7 +174,6 @@ class _OperacionCardState extends State<OperacionCard> {
           codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
         }
       });
-
     } catch (e) {
       print("Error cargando equipos: $e");
     }
@@ -184,7 +192,6 @@ class _OperacionCardState extends State<OperacionCard> {
       });
 
       print('Jefes de guardia cargados: $jefesGuardia');
-
     } catch (e) {
       print("Error al obtener los jefes de guardia: $e");
       setState(() {
@@ -198,10 +205,10 @@ class _OperacionCardState extends State<OperacionCard> {
     try {
       final dbHelper = DatabaseHelper();
       final List<TipoEquipo> tipos = await dbHelper.getTiposEquipo();
-      
+
       setState(() {
         tiposEquipo = tipos;
-        
+
         // Inicializar todos los checkboxes como false
         tiposSeleccionados.clear();
         for (var tipo in tiposEquipo) {
@@ -209,19 +216,22 @@ class _OperacionCardState extends State<OperacionCard> {
             tiposSeleccionados[tipo.id!] = false;
           }
         }
-        
+
         // Si hay una operación existente, cargar los valores guardados desde el JSON string
         if (widget.operacionExistente != null) {
-          final String? tiposJsonString = widget.operacionExistente!['tipo_equipo'];
-          
+          final String? tiposJsonString =
+              widget.operacionExistente!['tipo_equipo'];
+
           if (tiposJsonString != null && tiposJsonString.isNotEmpty) {
             try {
               // Decodificar el JSON string a Map
               Map<String, dynamic> tiposGuardados = jsonDecode(tiposJsonString);
-              
+
               for (var tipo in tiposEquipo) {
-                if (tipo.id != null && tiposGuardados.containsKey(tipo.nombre)) {
-                  tiposSeleccionados[tipo.id!] = tiposGuardados[tipo.nombre] as bool;
+                if (tipo.id != null &&
+                    tiposGuardados.containsKey(tipo.nombre)) {
+                  tiposSeleccionados[tipo.id!] =
+                      tiposGuardados[tipo.nombre] as bool;
                 }
               }
             } catch (e) {
@@ -230,7 +240,7 @@ class _OperacionCardState extends State<OperacionCard> {
           }
         }
       });
-      
+
       print('Tipos de equipo cargados: ${tiposEquipo.length}');
     } catch (e) {
       print('Error al cargar tipos de equipo: $e');
@@ -241,23 +251,30 @@ class _OperacionCardState extends State<OperacionCard> {
   void didUpdateWidget(covariant OperacionCard oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    if (oldWidget.selectedOperatorId != widget.selectedOperatorId ||
+        oldWidget.selectedOperatorName != widget.selectedOperatorName) {
+      _syncDisplayedOperator();
+    }
+
     if (widget.operacionExistente != oldWidget.operacionExistente) {
       if (widget.operacionExistente != null) {
         selectedEquipo = widget.operacionExistente!['equipo'];
         selectedCodigo = widget.operacionExistente!['n_equipo'];
         selectedJefeGuardia = widget.operacionExistente!['jefe_guardia'];
         selectedSeccion = widget.operacionExistente!['seccion'];
-        
+
         // Cargar tipos guardados desde JSON string
-        final String? tiposJsonString = widget.operacionExistente!['tipo_equipo'];
-        
+        final String? tiposJsonString =
+            widget.operacionExistente!['tipo_equipo'];
+
         if (tiposJsonString != null && tiposJsonString.isNotEmpty) {
           try {
             Map<String, dynamic> tiposGuardados = jsonDecode(tiposJsonString);
-            
+
             for (var tipo in tiposEquipo) {
               if (tipo.id != null && tiposGuardados.containsKey(tipo.nombre)) {
-                tiposSeleccionados[tipo.id!] = tiposGuardados[tipo.nombre] as bool;
+                tiposSeleccionados[tipo.id!] =
+                    tiposGuardados[tipo.nombre] as bool;
               }
             }
           } catch (e) {
@@ -271,14 +288,14 @@ class _OperacionCardState extends State<OperacionCard> {
         selectedCodigo = null;
         selectedJefeGuardia = null;
         selectedSeccion = null;
-        
+
         // Resetear checkboxes
         for (var tipo in tiposEquipo) {
           if (tipo.id != null) {
             tiposSeleccionados[tipo.id!] = false;
           }
         }
-        
+
         codigosFiltrados = [];
       }
       setState(() {});
@@ -298,8 +315,7 @@ class _OperacionCardState extends State<OperacionCard> {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -348,21 +364,22 @@ class _OperacionCardState extends State<OperacionCard> {
           children: [
             _buildFlexibleField(
               width: _calculateFieldWidth(
-                  cardWidth,
-                  fieldWeights['fecha']! * scaleFactor),
+                cardWidth,
+                fieldWeights['fecha']! * scaleFactor,
+              ),
               child: _buildFechaField(),
             ),
 
             _buildFlexibleField(
               width: _calculateFieldWidth(
-                  cardWidth,
-                  fieldWeights['turno']! * scaleFactor),
+                cardWidth,
+                fieldWeights['turno']! * scaleFactor,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Turno',
                 value: widget.selectedTurno,
                 items: turnos,
-                onChanged:
-                operacionBloqueada ? null : widget.onTurnoChanged,
+                onChanged: operacionBloqueada ? null : widget.onTurnoChanged,
                 icon: Icons.access_time,
                 hint: 'Turno',
                 primaryColor: widget.primaryColor,
@@ -371,8 +388,9 @@ class _OperacionCardState extends State<OperacionCard> {
 
             _buildFlexibleField(
               width: _calculateFieldWidth(
-                  cardWidth,
-                  fieldWeights['equipo']! * scaleFactor),
+                cardWidth,
+                fieldWeights['equipo']! * scaleFactor,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Equipo',
                 value: selectedEquipo,
@@ -380,13 +398,13 @@ class _OperacionCardState extends State<OperacionCard> {
                 onChanged: operacionBloqueada
                     ? null
                     : (value) {
-                  setState(() {
-                    selectedEquipo = value;
-                    selectedCodigo = null;
+                        setState(() {
+                          selectedEquipo = value;
+                          selectedCodigo = null;
 
-                    codigosFiltrados = codigosPorEquipo[value] ?? [];
-                  });
-                },
+                          codigosFiltrados = codigosPorEquipo[value] ?? [];
+                        });
+                      },
                 icon: Icons.precision_manufacturing,
                 hint: equipos.isEmpty ? 'Cargando...' : 'Equipo',
                 primaryColor: widget.primaryColor,
@@ -395,19 +413,20 @@ class _OperacionCardState extends State<OperacionCard> {
 
             _buildFlexibleField(
               width: _calculateFieldWidth(
-                  cardWidth,
-                  fieldWeights['codigo']! * scaleFactor),
+                cardWidth,
+                fieldWeights['codigo']! * scaleFactor,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Código',
                 value: selectedCodigo,
                 items: codigosFiltrados,
                 onChanged: operacionBloqueada || selectedEquipo == null
-                  ? null
-                  : (value) {
-                      setState(() {
-                        selectedCodigo = value;
-                      });
-                    },
+                    ? null
+                    : (value) {
+                        setState(() {
+                          selectedCodigo = value;
+                        });
+                      },
                 icon: Icons.qr_code,
                 hint: 'Código',
               ),
@@ -415,30 +434,32 @@ class _OperacionCardState extends State<OperacionCard> {
 
             _buildFlexibleField(
               width: _calculateFieldWidth(
-                  cardWidth,
-                  fieldWeights['tipo_equipo']! * scaleFactor),
+                cardWidth,
+                fieldWeights['tipo_equipo']! * scaleFactor,
+              ),
               child: _buildTipoEquipoField(),
             ),
 
             _buildFlexibleField(
               width: _calculateFieldWidth(
-                  cardWidth,
-                  fieldWeights['operador']! * scaleFactor),
+                cardWidth,
+                fieldWeights['operador']! * scaleFactor,
+              ),
               child: _buildOperadorField(),
             ),
 
             _buildFlexibleField(
               width: _calculateFieldWidth(
-                  cardWidth,
-                  fieldWeights['jefe']! * scaleFactor),
+                cardWidth,
+                fieldWeights['jefe']! * scaleFactor,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Jefe Guardia',
                 value: selectedJefeGuardia,
                 items: jefesGuardia,
                 onChanged: operacionBloqueada
                     ? null
-                    : (value) =>
-                    setState(() => selectedJefeGuardia = value),
+                    : (value) => setState(() => selectedJefeGuardia = value),
                 icon: Icons.person,
                 hint: jefesGuardia.isEmpty ? 'Cargando...' : 'Jefe',
                 primaryColor: widget.primaryColor,
@@ -447,18 +468,18 @@ class _OperacionCardState extends State<OperacionCard> {
 
             _buildFlexibleField(
               width: _calculateFieldWidth(
-                  cardWidth,
-                  fieldWeights['seccion']! * scaleFactor),
+                cardWidth,
+                fieldWeights['seccion']! * scaleFactor,
+              ),
               child: CustomMaterialDropdown(
-                label: 'Sección',
+                label: 'Zona',
                 value: selectedSeccion,
                 items: secciones,
                 onChanged: operacionBloqueada
                     ? null
-                    : (value) =>
-                    setState(() => selectedSeccion = value),
+                    : (value) => setState(() => selectedSeccion = value),
                 icon: Icons.map,
-                hint: 'Sección',
+                hint: 'Zona',
                 primaryColor: widget.primaryColor,
               ),
             ),
@@ -470,14 +491,14 @@ class _OperacionCardState extends State<OperacionCard> {
 
   Widget _buildTipoEquipoField() {
     bool isEnabled = !operacionBloqueada;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         border: Border.all(
-          color: isEnabled 
-            ? widget.primaryColor.withOpacity(0.5) 
-            : Colors.grey.shade300,
+          color: isEnabled
+              ? widget.primaryColor.withOpacity(0.5)
+              : Colors.grey.shade300,
         ),
         borderRadius: BorderRadius.circular(8),
         color: isEnabled ? Colors.white : Colors.grey.shade50,
@@ -495,17 +516,17 @@ class _OperacionCardState extends State<OperacionCard> {
             ),
           ),
           const SizedBox(height: 6),
-          
+
           Wrap(
             spacing: 8,
             runSpacing: 4,
             children: tiposEquipo.map((tipo) {
               if (tipo.id == null) return const SizedBox.shrink();
-              
+
               bool isSelected = tiposSeleccionados[tipo.id!] ?? false;
-              
+
               return InkWell(
-                onTap: isEnabled 
+                onTap: isEnabled
                     ? () {
                         setState(() {
                           tiposSeleccionados[tipo.id!] = !isSelected;
@@ -514,7 +535,10 @@ class _OperacionCardState extends State<OperacionCard> {
                     : null,
                 borderRadius: BorderRadius.circular(4),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -523,15 +547,15 @@ class _OperacionCardState extends State<OperacionCard> {
                         height: 18,
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: isEnabled 
-                                ? (isSelected 
-                                    ? widget.primaryColor 
-                                    : Colors.grey.shade400)
+                            color: isEnabled
+                                ? (isSelected
+                                      ? widget.primaryColor
+                                      : Colors.grey.shade400)
                                 : Colors.grey.shade300,
                             width: isSelected ? 2 : 1,
                           ),
                           borderRadius: BorderRadius.circular(4),
-                          color: isSelected 
+                          color: isSelected
                               ? widget.primaryColor.withOpacity(0.1)
                               : Colors.transparent,
                         ),
@@ -548,9 +572,13 @@ class _OperacionCardState extends State<OperacionCard> {
                         tipo.nombre,
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                          color: isEnabled 
-                              ? (isSelected ? widget.primaryColor : Colors.black87)
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: isEnabled
+                              ? (isSelected
+                                    ? widget.primaryColor
+                                    : Colors.black87)
                               : Colors.grey,
                         ),
                       ),
@@ -560,7 +588,7 @@ class _OperacionCardState extends State<OperacionCard> {
               );
             }).toList(),
           ),
-          
+
           if (tiposEquipo.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -578,8 +606,7 @@ class _OperacionCardState extends State<OperacionCard> {
     );
   }
 
-  Widget _buildFlexibleField(
-      {required double width, required Widget child}) {
+  Widget _buildFlexibleField({required double width, required Widget child}) {
     return SizedBox(width: width, child: child);
   }
 
@@ -590,32 +617,28 @@ class _OperacionCardState extends State<OperacionCard> {
       onTap: isEnabled ? _selectDate : null,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding:
-        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           border: Border.all(
-              color: isEnabled
-                  ? widget.primaryColor.withOpacity(0.5)
-                  : Colors.grey.shade300),
+            color: isEnabled
+                ? widget.primaryColor.withOpacity(0.5)
+                : Colors.grey.shade300,
+          ),
           borderRadius: BorderRadius.circular(8),
-          color:
-          isEnabled ? Colors.white : Colors.grey.shade50,
+          color: isEnabled ? Colors.white : Colors.grey.shade50,
         ),
         child: Row(
           children: [
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Fecha',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isEnabled
-                          ? widget.primaryColor
-                          : Colors.grey,
+                      color: isEnabled ? widget.primaryColor : Colors.grey,
                     ),
                   ),
                   Text(
@@ -623,9 +646,7 @@ class _OperacionCardState extends State<OperacionCard> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: isEnabled
-                          ? Colors.black87
-                          : Colors.grey,
+                      color: isEnabled ? Colors.black87 : Colors.grey,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -635,9 +656,7 @@ class _OperacionCardState extends State<OperacionCard> {
             Icon(
               Icons.calendar_today,
               size: 16,
-              color: isEnabled
-                  ? widget.primaryColor
-                  : Colors.grey,
+              color: isEnabled ? widget.primaryColor : Colors.grey,
             ),
           ],
         ),
@@ -647,8 +666,7 @@ class _OperacionCardState extends State<OperacionCard> {
 
   Widget _buildOperadorField() {
     return Container(
-      padding:
-      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(8),
@@ -658,28 +676,24 @@ class _OperacionCardState extends State<OperacionCard> {
         children: [
           Expanded(
             child: Column(
-              crossAxisAlignment:
-              CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Operador',
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 ),
                 Text(
                   operador ?? operadorEjemplo,
                   style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.person_outline,
-              size: 16,
-              color: Colors.grey.shade400),
+          Icon(Icons.person_outline, size: 16, color: Colors.grey.shade400),
         ],
       ),
     );
@@ -689,16 +703,13 @@ class _OperacionCardState extends State<OperacionCard> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed:
-        operacionBloqueada ? null : _crearOperacion,
+        onPressed: operacionBloqueada ? null : _crearOperacion,
         style: ElevatedButton.styleFrom(
           backgroundColor: widget.primaryColor,
           foregroundColor: Colors.white,
           elevation: 2,
-          padding:
-          const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -707,9 +718,7 @@ class _OperacionCardState extends State<OperacionCard> {
             SizedBox(width: 6),
             Text(
               'CREAR OPERACIÓN',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -734,14 +743,11 @@ class _OperacionCardState extends State<OperacionCard> {
     );
 
     if (picked != null) {
-      String nuevaFecha =
-      DateFormat('yyyy-MM-dd').format(picked);
+      String nuevaFecha = DateFormat('yyyy-MM-dd').format(picked);
 
       if (nuevaFecha != widget.fechaActual) {
         widget.onFechaChanged(nuevaFecha);
-        _showSnackbar(
-            'Fecha actualizada: $nuevaFecha',
-            Colors.green);
+        _showSnackbar('Fecha actualizada: $nuevaFecha', Colors.green);
       }
     }
   }
@@ -753,17 +759,13 @@ class _OperacionCardState extends State<OperacionCard> {
         selectedCodigo == null ||
         selectedJefeGuardia == null ||
         selectedSeccion == null) {
-      _showSnackbar(
-          'Complete todos los campos',
-          Colors.orange);
+      _showSnackbar('Complete todos los campos', Colors.orange);
       return;
     }
 
     bool algunTipoSeleccionado = tiposSeleccionados.values.contains(true);
     if (!algunTipoSeleccionado) {
-      _showSnackbar(
-          'Seleccione al menos un tipo de equipo',
-          Colors.orange);
+      _showSnackbar('Seleccione al menos un tipo de equipo', Colors.orange);
       return;
     }
 
@@ -784,6 +786,9 @@ class _OperacionCardState extends State<OperacionCard> {
       'n_equipo': selectedCodigo,
       'tipo_equipo': tiposJsonString, // Enviar como JSON string
       'operador': operador ?? operadorEjemplo,
+      'actor_dni': widget.dniUsuario,
+      'actor_operador_id': operadorId,
+      'operador_id': widget.selectedOperatorId ?? operadorId,
       'jefe_guardia': selectedJefeGuardia,
       'seccion': selectedSeccion,
       'fecha': widget.fechaActual,
@@ -794,19 +799,17 @@ class _OperacionCardState extends State<OperacionCard> {
       selectedCodigo = null;
       selectedJefeGuardia = null;
       selectedSeccion = null;
-      
+
       for (var tipo in tiposEquipo) {
         if (tipo.id != null) {
           tiposSeleccionados[tipo.id!] = false;
         }
       }
-      
+
       codigosFiltrados = [];
     });
 
-    _showSnackbar(
-        'Operación creada exitosamente',
-        Colors.green);
+    _showSnackbar('Operación creada exitosamente', Colors.green);
   }
 
   void _showSnackbar(String message, Color color) {

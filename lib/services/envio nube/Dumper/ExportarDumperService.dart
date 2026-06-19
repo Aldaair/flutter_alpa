@@ -10,7 +10,6 @@ class ExportarDumperService {
     Set<int> selectedItems,
     List<Map<String, dynamic>> operacionData,
   ) async {
-
     final List<Map<String, dynamic>> jsonDataList = [];
 
     /// 🔹 Helpers seguros
@@ -35,7 +34,6 @@ class ExportarDumperService {
     }
 
     for (var id in selectedItems) {
-
       final operacion = operacionData.firstWhere(
         (op) => op['id'] == id,
         orElse: () => {},
@@ -61,6 +59,7 @@ class ExportarDumperService {
         "turno": operacion['turno'] ?? "",
         "seccion": operacion['seccion'] ?? "",
         "operador": operacion['operador'] ?? "",
+        "operador_id": operacion['operador_id'],
         "jefe_guardia": operacion['jefe_guardia'] ?? "",
         "equipo": operacion['equipo'] ?? "",
         "n_equipo": operacion['n_equipo'] ?? "",

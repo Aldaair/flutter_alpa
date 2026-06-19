@@ -1,14 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/models/assigned_labor.dart';
 import 'package:i_miner/models/PlanProduccion.dart';
 import 'package:i_miner/models/PlanMetraje.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
+import 'package:i_miner/models/DimMina.dart';
+import 'package:i_miner/models/DimZona.dart';
+import 'package:i_miner/models/DimArea.dart';
+import 'package:i_miner/models/DimFase.dart';
+import 'package:i_miner/models/DimTipoLabor.dart';
+import 'package:i_miner/models/DimEstructuraMineral.dart';
+import 'package:i_miner/models/DimNivel.dart';
+import 'package:i_miner/models/DimAla.dart';
+import 'package:i_miner/models/DimLabor.dart';
+import 'package:i_miner/services/mis_labores_service.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
   final int estadoId;
   final Map<String, dynamic>? datosIniciales;
   final String estado;
+  final String fecha;
+  final String turno;
   final Color primaryColor;
   final Function(Map<String, dynamic>) onGuardar;
 
@@ -18,44 +31,91 @@ class DialogoFormularioPerforacion extends StatefulWidget {
     required this.estadoId,
     this.datosIniciales,
     required this.estado,
+    required this.fecha,
+    required this.turno,
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
   }) : super(key: key);
-  
+
   @override
-  State<DialogoFormularioPerforacion> createState() => _DialogoFormularioPerforacionState();
+  State<DialogoFormularioPerforacion> createState() =>
+      _DialogoFormularioPerforacionState();
 }
 
-class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforacion> {
+class _LongHolePlanLocation {
+  const _LongHolePlanLocation({
+    required this.mina,
+    required this.zona,
+    required this.area,
+    required this.fase,
+    required this.estructuraMineral,
+    required this.nivel,
+    required this.tipoLabor,
+    required this.labor,
+    required this.ala,
+  });
+
+  final String mina;
+  final String zona;
+  final String area;
+  final String fase;
+  final String estructuraMineral;
+  final String nivel;
+  final String tipoLabor;
+  final String labor;
+  final String ala;
+}
+
+class _DialogoFormularioPerforacionState
+    extends State<DialogoFormularioPerforacion> {
   bool isEditable = false;
   bool isLoading = true;
+  bool usarFrentePlanificado = true;
 
   // Controladores para cada taladro
-  final TextEditingController nTaladrosProduccionController = TextEditingController();
-  final TextEditingController metrosPerforadosProduccionController = TextEditingController();
-  
-  final TextEditingController nTaladrosRimadosController = TextEditingController();
-  final TextEditingController metrosPerforadosRimadosController = TextEditingController();
-  
-  final TextEditingController nTaladrosAlivioController = TextEditingController();
-  final TextEditingController metrosPerforadosAlivioController = TextEditingController();
-  
-  final TextEditingController nTaladrosRepasoController = TextEditingController();
-  final TextEditingController metrosPerforadosRepasoController = TextEditingController();
-  
+  final TextEditingController nTaladrosProduccionController =
+      TextEditingController();
+  final TextEditingController metrosPerforadosProduccionController =
+      TextEditingController();
+
+  final TextEditingController nTaladrosRimadosController =
+      TextEditingController();
+  final TextEditingController metrosPerforadosRimadosController =
+      TextEditingController();
+
+  final TextEditingController nTaladrosAlivioController =
+      TextEditingController();
+  final TextEditingController metrosPerforadosAlivioController =
+      TextEditingController();
+
+  final TextEditingController nTaladrosRepasoController =
+      TextEditingController();
+  final TextEditingController metrosPerforadosRepasoController =
+      TextEditingController();
+
   final TextEditingController numBarrasController = TextEditingController();
   final TextEditingController observacionesController = TextEditingController();
 
   // Variables para los campos seleccionables (NUEVO ORDEN)
-  String? tipoLaborSeleccionado;    // 1º
-  String? laborSeleccionado;         // 2º  
-  String? alaSeleccionado;           // 3º
-  String? nivelSeleccionado;         // 4º (antes era el primero)
+  String? minaSeleccionada;
+  String? zonaSeleccionada;
+  String? areaSeleccionada;
+  String? faseSeleccionada;
+  String? estructuraMineralSeleccionada;
+  String? nivelSeleccionado;
+  String? tipoLaborSeleccionado; // 1º
+  String? laborSeleccionado; // 2º
+  String? alaSeleccionado; // 3º
 
   String? tipoPerforacionSeleccionado;
   String? longitudBarraSeleccionada;
 
   // Opciones para los dropdowns
+  List<String> opcionesMina = [];
+  List<String> opcionesZona = [];
+  List<String> opcionesArea = [];
+  List<String> opcionesFase = [];
+  List<String> opcionesEstructuraMineral = [];
   List<String> opcionesNivel = [];
   List<String> opcionesTipoLabor = [];
   List<String> opcionesLabor = [];
@@ -64,15 +124,34 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
   List<String> opcionesLongitudBarras = [];
 
   // Listas filtradas para la selección en cascada (invertida)
+  List<String> filteredMinas = [];
+  List<String> filteredZonas = [];
+  List<String> filteredAreas = [];
+  List<String> filteredFases = [];
+  List<String> filteredEstructurasMinerales = [];
   List<String> filteredTiposLabor = [];
   List<String> filteredLabores = [];
   List<String> filteredAlas = [];
-  List<String> filteredNiveles = [];  // Nueva lista filtrada para niveles
+  List<String> filteredNiveles = []; // Nueva lista filtrada para niveles
+
+  // Catálogos desde shared DB
+  List<DimMina> minasCatalogo = [];
+  List<DimZona> zonasCatalogo = [];
+  List<DimArea> areasCatalogo = [];
+  List<DimFase> fasesCatalogo = [];
+  List<DimTipoLabor> tiposLaborCatalogo = [];
+  List<DimEstructuraMineral> estructurasMineralesCatalogo = [];
+  List<DimNivel> nivelesCatalogo = [];
+  List<DimAla> alasCatalogo = [];
+  List<DimLabor> laboresCatalogo = [];
 
   // Almacenar objetos completos
   List<PlanProduccion> planesProduccionCompletos = [];
   List<PlanMetraje> planesMetrajeCompletos = [];
+  List<_LongHolePlanLocation> ubicacionesPlanCompletas = [];
   List<TipoPerforacion> tiposPerforacionCompletos = [];
+  List<AssignedLabor> laboresAsignadas = [];
+  AssignedLabor? laborAsignadaSeleccionada;
 
   @override
   void initState() {
@@ -84,12 +163,14 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
 
   Future<void> _cargarDatosDesdeBD() async {
     setState(() => isLoading = true);
-    
+
     try {
       await Future.wait([
         _cargarPlanesProduccionYMetraje(),
         _cargarTiposPerforacion(),
         _cargarLongitudBarras(),
+        _cargarMisLabores(),
+        _cargarCatalogos(),
       ]);
     } catch (e) {
       print("Error cargando datos: $e");
@@ -98,17 +179,178 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
     }
   }
 
+  Future<void> _cargarMisLabores() async {
+    try {
+      final service = MisLaboresService();
+      final labores = await service.fetchAssignedLabores(
+        fecha: widget.fecha,
+        processName: 'PERFORACIÓN TALADROS LARGOS',
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        laboresAsignadas = labores;
+      });
+
+      _sincronizarFrentePlanificado();
+    } catch (e) {
+      print('Error cargando mis labores: $e');
+      usarFrentePlanificado = false;
+    }
+  }
+
+  Future<void> _cargarCatalogos() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final results = await Future.wait([
+        dbHelper.getMinas(),
+        dbHelper.getDimZonas(),
+        dbHelper.getAreas(),
+        dbHelper.getFases(),
+        dbHelper.getTiposLabor(),
+        dbHelper.getEstructurasMinerales(),
+        dbHelper.getNiveles(),
+        dbHelper.getAlas(),
+        dbHelper.getLabores(),
+      ]);
+
+      setState(() {
+        minasCatalogo = results[0] as List<DimMina>;
+        zonasCatalogo = results[1] as List<DimZona>;
+        areasCatalogo = results[2] as List<DimArea>;
+        fasesCatalogo = results[3] as List<DimFase>;
+        tiposLaborCatalogo = results[4] as List<DimTipoLabor>;
+        estructurasMineralesCatalogo = results[5] as List<DimEstructuraMineral>;
+        nivelesCatalogo = results[6] as List<DimNivel>;
+        alasCatalogo = results[7] as List<DimAla>;
+        laboresCatalogo = results[8] as List<DimLabor>;
+      });
+    } catch (e) {
+      print('Error cargando catálogos: $e');
+    }
+  }
+
+  void _sincronizarFrentePlanificado() {
+    if (laboresAsignadas.isEmpty) {
+      if (mounted) {
+        setState(() {
+          usarFrentePlanificado = false;
+        });
+      }
+      return;
+    }
+
+    final laborInicial = _buscarLaborAsignadaInicial();
+    laborAsignadaSeleccionada = laborInicial ?? laboresAsignadas.first;
+
+    final datosInicialesTienenFrenteManual =
+        (widget.datosIniciales?['labor']?.toString().isNotEmpty ?? false) &&
+        laborInicial == null;
+
+    usarFrentePlanificado = !datosInicialesTienenFrenteManual;
+    if (usarFrentePlanificado) {
+      _aplicarLaborAsignada(laborAsignadaSeleccionada!);
+    }
+  }
+
+  AssignedLabor? _buscarLaborAsignadaInicial() {
+    final laborActual = widget.datosIniciales?['labor']?.toString() ?? '';
+    final tipoLaborActual =
+        widget.datosIniciales?['tipo_labor']?.toString() ?? '';
+    final nivelActual = widget.datosIniciales?['nivel']?.toString() ?? '';
+
+    for (final labor in laboresAsignadas) {
+      if (labor.laborNombre == laborActual &&
+          labor.tipoLabor == tipoLaborActual &&
+          labor.nivel == nivelActual) {
+        return labor;
+      }
+    }
+
+    return null;
+  }
+
+  void _aplicarLaborAsignada(AssignedLabor labor) {
+    final ubicacion = _resolverUbicacionPlanificada(labor);
+    final ala = ubicacion?.ala ?? _resolverAlaPlanificada(labor);
+
+    setState(() {
+      minaSeleccionada = ubicacion?.mina;
+      zonaSeleccionada = ubicacion?.zona;
+      areaSeleccionada = ubicacion?.area;
+      faseSeleccionada = ubicacion?.fase;
+      estructuraMineralSeleccionada = ubicacion?.estructuraMineral;
+      nivelSeleccionado =
+          ubicacion?.nivel ?? (labor.nivel.isEmpty ? null : labor.nivel);
+      tipoLaborSeleccionado = labor.tipoLabor.isEmpty ? null : labor.tipoLabor;
+      laborSeleccionado = labor.laborNombre.isEmpty ? null : labor.laborNombre;
+      alaSeleccionado = ala;
+      laborAsignadaSeleccionada = labor;
+      _actualizarFiltros();
+    });
+  }
+
+  _LongHolePlanLocation? _resolverUbicacionPlanificada(AssignedLabor labor) {
+    for (final ubicacion in ubicacionesPlanCompletas) {
+      final matchesAla = labor.ala.isEmpty || ubicacion.ala == labor.ala;
+      final matchesEstructura =
+          labor.estructuraMineral.isEmpty ||
+          ubicacion.estructuraMineral == labor.estructuraMineral;
+
+      if (ubicacion.tipoLabor == labor.tipoLabor &&
+          ubicacion.labor == labor.laborNombre &&
+          ubicacion.nivel == labor.nivel &&
+          matchesAla &&
+          matchesEstructura) {
+        return ubicacion;
+      }
+    }
+
+    return null;
+  }
+
+  String? _resolverAlaPlanificada(AssignedLabor labor) {
+    final alas = <String>{};
+
+    for (final plan in planesProduccionCompletos) {
+      if (plan.tipoLabor == labor.tipoLabor &&
+          plan.labor == labor.laborNombre &&
+          plan.nivel == labor.nivel &&
+          (plan.ala?.isNotEmpty ?? false)) {
+        alas.add(plan.ala!);
+      }
+    }
+
+    for (final plan in planesMetrajeCompletos) {
+      if (plan.tipoLabor == labor.tipoLabor &&
+          plan.labor == labor.laborNombre &&
+          plan.nivel == labor.nivel &&
+          (plan.ala?.isNotEmpty ?? false)) {
+        alas.add(plan.ala!);
+      }
+    }
+
+    if (alas.length == 1) {
+      return alas.first;
+    }
+
+    return widget.datosIniciales?['ala']?.toString().isNotEmpty == true
+        ? widget.datosIniciales!['ala'].toString()
+        : null;
+  }
+
   Future<void> _cargarLongitudBarras() async {
     try {
       final dbHelper = DatabaseHelper();
       final data = await dbHelper.getLongitudBarrasPorProceso(
-        "PERFORACIÓN TALADROS LARGOS"
+        "PERFORACIÓN TALADROS LARGOS",
       );
-      final lista = data
-          .map((e) => e['longitud_pies'].toString())
-          .toSet()
-          .toList()
-        ..sort((a, b) => double.parse(a).compareTo(double.parse(b)));
+      final lista =
+          data.map((e) => e['longitud_pies'].toString()).toSet().toList()
+            ..sort((a, b) => double.parse(a).compareTo(double.parse(b)));
       setState(() {
         opcionesLongitudBarras = lista;
       });
@@ -124,45 +366,72 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
         dbHelper.getPlanesProduccion(),
         dbHelper.getPlanesMetraje(),
       ]);
-      
+
       planesProduccionCompletos = results[0] as List<PlanProduccion>;
       planesMetrajeCompletos = results[1] as List<PlanMetraje>;
 
+      ubicacionesPlanCompletas = _buildPlanLocations();
+
+      final minasSet = <String>{};
+      final zonasSet = <String>{};
+      final areasSet = <String>{};
+      final fasesSet = <String>{};
+      final estructurasSet = <String>{};
       Set<String> nivelesSet = {};
       Set<String> tiposLaborSet = {};
       Set<String> laboresSet = {};
       Set<String> alasSet = {};
 
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
+      for (final ubicacion in ubicacionesPlanCompletas) {
+        minasSet.add(ubicacion.mina);
+        zonasSet.add(ubicacion.zona);
+        areasSet.add(ubicacion.area);
+        fasesSet.add(ubicacion.fase);
+        estructurasSet.add(ubicacion.estructuraMineral);
+        nivelesSet.add(ubicacion.nivel);
+        tiposLaborSet.add(ubicacion.tipoLabor);
+        laboresSet.add(ubicacion.labor);
+        if (ubicacion.ala.isNotEmpty) {
+          alasSet.add(ubicacion.ala);
+        }
       }
 
       setState(() {
+        opcionesMina = minasSet.toList()..sort();
+        opcionesZona = zonasSet.toList()..sort();
+        opcionesArea = areasSet.toList()..sort();
+        opcionesFase = fasesSet.toList()..sort();
+        opcionesEstructuraMineral = estructurasSet.toList()..sort();
         opcionesNivel = nivelesSet.toList()..sort();
         opcionesTipoLabor = tiposLaborSet.toList()..sort();
         opcionesLabor = laboresSet.toList()..sort();
         opcionesAla = alasSet.toList()..sort();
+        filteredMinas = List.from(opcionesMina);
+        filteredZonas = List.from(opcionesZona);
+        filteredAreas = List.from(opcionesArea);
+        filteredFases = List.from(opcionesFase);
+        filteredEstructurasMinerales = List.from(opcionesEstructuraMineral);
         filteredTiposLabor = List.from(opcionesTipoLabor);
         filteredLabores = List.from(opcionesLabor);
         filteredAlas = List.from(opcionesAla);
         filteredNiveles = List.from(opcionesNivel);
       });
 
+      _actualizarFiltros();
+      if (laboresAsignadas.isNotEmpty) {
+        _sincronizarFrentePlanificado();
+      }
     } catch (e) {
       print("Error cargando planes: $e");
       setState(() {
         opcionesNivel = ['Nivel 1', 'Nivel 2', 'Nivel 3', 'Nivel 4'];
-        opcionesTipoLabor = ['Galería', 'Crucero', 'Rampa', 'Chimenea', 'Subterráneo'];
+        opcionesTipoLabor = [
+          'Galería',
+          'Crucero',
+          'Rampa',
+          'Chimenea',
+          'Subterráneo',
+        ];
         opcionesLabor = ['Labor A', 'Labor B', 'Labor C', 'Labor D'];
         opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
         filteredTiposLabor = List.from(opcionesTipoLabor);
@@ -176,31 +445,112 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
   Future<void> _cargarTiposPerforacion() async {
     try {
       final dbHelper = DatabaseHelper();
-      tiposPerforacionCompletos = await dbHelper.getTiposPerforacionByProceso("PERFORACIÓN TALADROS LARGOS");
-      final lista = tiposPerforacionCompletos
-          .map((t) => t.nombre ?? '')
-          .where((n) => n.isNotEmpty)
-          .toSet()
-          .toList()
-        ..sort();
+      tiposPerforacionCompletos = await dbHelper.getTiposPerforacionByProceso(
+        "PERFORACIÓN TALADROS LARGOS",
+      );
+      final lista =
+          tiposPerforacionCompletos
+              .map((t) => t.nombre ?? '')
+              .where((n) => n.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
       setState(() {
         opcionesTipoPerforacion = lista;
       });
     } catch (e) {
       print("Error cargando tipos perforación: $e");
       setState(() {
-        opcionesTipoPerforacion = ['Perforación 1', 'Perforación 2', 'Perforación 3', 'Perforación 4'];
+        opcionesTipoPerforacion = [
+          'Perforación 1',
+          'Perforación 2',
+          'Perforación 3',
+          'Perforación 4',
+        ];
       });
     }
   }
 
-  // NUEVAS FUNCIONES DE FILTRADO (orden invertido)
+  void _onMinaChanged(String? nuevaMina) {
+    setState(() {
+      minaSeleccionada = nuevaMina;
+      zonaSeleccionada = null;
+      areaSeleccionada = null;
+      faseSeleccionada = null;
+      estructuraMineralSeleccionada = null;
+      nivelSeleccionado = null;
+      tipoLaborSeleccionado = null;
+      laborSeleccionado = null;
+      alaSeleccionado = null;
+      _actualizarFiltros();
+    });
+  }
+
+  void _onZonaChanged(String? nuevaZona) {
+    setState(() {
+      zonaSeleccionada = nuevaZona;
+      areaSeleccionada = null;
+      faseSeleccionada = null;
+      estructuraMineralSeleccionada = null;
+      nivelSeleccionado = null;
+      tipoLaborSeleccionado = null;
+      laborSeleccionado = null;
+      alaSeleccionado = null;
+      _actualizarFiltros();
+    });
+  }
+
+  void _onAreaChanged(String? nuevaArea) {
+    setState(() {
+      areaSeleccionada = nuevaArea;
+      faseSeleccionada = null;
+      estructuraMineralSeleccionada = null;
+      nivelSeleccionado = null;
+      tipoLaborSeleccionado = null;
+      laborSeleccionado = null;
+      alaSeleccionado = null;
+      _actualizarFiltros();
+    });
+  }
+
+  void _onFaseChanged(String? nuevaFase) {
+    setState(() {
+      faseSeleccionada = nuevaFase;
+      estructuraMineralSeleccionada = null;
+      nivelSeleccionado = null;
+      tipoLaborSeleccionado = null;
+      laborSeleccionado = null;
+      alaSeleccionado = null;
+      _actualizarFiltros();
+    });
+  }
+
+  void _onEstructuraMineralChanged(String? nuevaEstructura) {
+    setState(() {
+      estructuraMineralSeleccionada = nuevaEstructura;
+      nivelSeleccionado = null;
+      tipoLaborSeleccionado = null;
+      laborSeleccionado = null;
+      alaSeleccionado = null;
+      _actualizarFiltros();
+    });
+  }
+
+  void _onNivelChanged(String? nuevoNivel) {
+    setState(() {
+      nivelSeleccionado = nuevoNivel;
+      tipoLaborSeleccionado = null;
+      laborSeleccionado = null;
+      alaSeleccionado = null;
+      _actualizarFiltros();
+    });
+  }
+
   void _onTipoLaborChanged(String? nuevoTipoLabor) {
     setState(() {
       tipoLaborSeleccionado = nuevoTipoLabor;
       laborSeleccionado = null;
       alaSeleccionado = null;
-      nivelSeleccionado = null;
       _actualizarFiltros();
     });
   }
@@ -209,7 +559,6 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
     setState(() {
       laborSeleccionado = nuevoLabor;
       alaSeleccionado = null;
-      nivelSeleccionado = null;
       _actualizarFiltros();
     });
   }
@@ -217,180 +566,339 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
   void _onAlaChanged(String? nuevoAla) {
     setState(() {
       alaSeleccionado = nuevoAla;
-      nivelSeleccionado = null;
       _actualizarFiltros();
     });
   }
 
-void _actualizarFiltros() {
-
-  // Filtrar Labores basado en Tipo Labor
-  if (tipoLaborSeleccionado != null) {
-
-    Set<String> laboresFiltrados = {};
-
-    for (var plan in planesProduccionCompletos) {
-      if (plan.tipoLabor == tipoLaborSeleccionado &&
-          (plan.labor?.isNotEmpty ?? false)) {
-
-        laboresFiltrados.add(plan.labor!);
-      }
+  void _actualizarFiltros() {
+    if (usarFrentePlanificado && ubicacionesPlanCompletas.isNotEmpty) {
+      _actualizarFiltrosDesdePlanes();
+    } else {
+      _actualizarFiltrosDesdeCatalogos();
     }
-
-    for (var plan in planesMetrajeCompletos) {
-      if (plan.tipoLabor == tipoLaborSeleccionado &&
-          (plan.labor?.isNotEmpty ?? false)) {
-
-        laboresFiltrados.add(plan.labor!);
-      }
-    }
-
-    filteredLabores = laboresFiltrados.toList()..sort();
-
-  } else {
-
-    filteredLabores = List.from(opcionesLabor);
-
   }
 
-  // Filtrar Alas basado en Tipo Labor y Labor
-  if (tipoLaborSeleccionado != null &&
-      laborSeleccionado != null) {
+  void _actualizarFiltrosDesdePlanes() {
+    filteredMinas = _uniqueSorted(
+      ubicacionesPlanCompletas.map((ubicacion) => ubicacion.mina),
+    );
+    filteredZonas = _uniqueSorted(
+      ubicacionesPlanCompletas
+          .where(
+            (ubicacion) =>
+                minaSeleccionada == null || ubicacion.mina == minaSeleccionada,
+          )
+          .map((ubicacion) => ubicacion.zona),
+    );
+    filteredAreas = _uniqueSorted(
+      ubicacionesPlanCompletas
+          .where(
+            (ubicacion) =>
+                (minaSeleccionada == null ||
+                    ubicacion.mina == minaSeleccionada) &&
+                (zonaSeleccionada == null ||
+                    ubicacion.zona == zonaSeleccionada),
+          )
+          .map((ubicacion) => ubicacion.area),
+    );
+    filteredFases = _uniqueSorted(
+      ubicacionesPlanCompletas
+          .where(
+            (ubicacion) =>
+                (minaSeleccionada == null ||
+                    ubicacion.mina == minaSeleccionada) &&
+                (zonaSeleccionada == null ||
+                    ubicacion.zona == zonaSeleccionada) &&
+                (areaSeleccionada == null ||
+                    ubicacion.area == areaSeleccionada),
+          )
+          .map((ubicacion) => ubicacion.fase),
+    );
+    filteredEstructurasMinerales = _uniqueSorted(
+      ubicacionesPlanCompletas
+          .where(
+            (ubicacion) =>
+                (minaSeleccionada == null ||
+                    ubicacion.mina == minaSeleccionada) &&
+                (zonaSeleccionada == null ||
+                    ubicacion.zona == zonaSeleccionada) &&
+                (areaSeleccionada == null ||
+                    ubicacion.area == areaSeleccionada) &&
+                (faseSeleccionada == null ||
+                    ubicacion.fase == faseSeleccionada),
+          )
+          .map((ubicacion) => ubicacion.estructuraMineral),
+    );
+    filteredNiveles = _uniqueSorted(
+      ubicacionesPlanCompletas
+          .where(
+            (ubicacion) =>
+                (minaSeleccionada == null ||
+                    ubicacion.mina == minaSeleccionada) &&
+                (zonaSeleccionada == null ||
+                    ubicacion.zona == zonaSeleccionada) &&
+                (areaSeleccionada == null ||
+                    ubicacion.area == areaSeleccionada) &&
+                (faseSeleccionada == null ||
+                    ubicacion.fase == faseSeleccionada) &&
+                (estructuraMineralSeleccionada == null ||
+                    ubicacion.estructuraMineral ==
+                        estructuraMineralSeleccionada),
+          )
+          .map((ubicacion) => ubicacion.nivel),
+    );
+    filteredTiposLabor = _uniqueSorted(
+      ubicacionesPlanCompletas
+          .where(
+            (ubicacion) =>
+                (minaSeleccionada == null ||
+                    ubicacion.mina == minaSeleccionada) &&
+                (zonaSeleccionada == null ||
+                    ubicacion.zona == zonaSeleccionada) &&
+                (areaSeleccionada == null ||
+                    ubicacion.area == areaSeleccionada) &&
+                (faseSeleccionada == null ||
+                    ubicacion.fase == faseSeleccionada) &&
+                (estructuraMineralSeleccionada == null ||
+                    ubicacion.estructuraMineral ==
+                        estructuraMineralSeleccionada) &&
+                (nivelSeleccionado == null ||
+                    ubicacion.nivel == nivelSeleccionado),
+          )
+          .map((ubicacion) => ubicacion.tipoLabor),
+    );
+    filteredLabores = _uniqueSorted(
+      ubicacionesPlanCompletas
+          .where(
+            (ubicacion) =>
+                (minaSeleccionada == null ||
+                    ubicacion.mina == minaSeleccionada) &&
+                (zonaSeleccionada == null ||
+                    ubicacion.zona == zonaSeleccionada) &&
+                (areaSeleccionada == null ||
+                    ubicacion.area == areaSeleccionada) &&
+                (faseSeleccionada == null ||
+                    ubicacion.fase == faseSeleccionada) &&
+                (estructuraMineralSeleccionada == null ||
+                    ubicacion.estructuraMineral ==
+                        estructuraMineralSeleccionada) &&
+                (nivelSeleccionado == null ||
+                    ubicacion.nivel == nivelSeleccionado) &&
+                (tipoLaborSeleccionado == null ||
+                    ubicacion.tipoLabor == tipoLaborSeleccionado),
+          )
+          .map((ubicacion) => ubicacion.labor),
+    );
+    filteredAlas = _uniqueSorted(
+      ubicacionesPlanCompletas
+          .where(
+            (ubicacion) =>
+                (minaSeleccionada == null ||
+                    ubicacion.mina == minaSeleccionada) &&
+                (zonaSeleccionada == null ||
+                    ubicacion.zona == zonaSeleccionada) &&
+                (areaSeleccionada == null ||
+                    ubicacion.area == areaSeleccionada) &&
+                (faseSeleccionada == null ||
+                    ubicacion.fase == faseSeleccionada) &&
+                (estructuraMineralSeleccionada == null ||
+                    ubicacion.estructuraMineral ==
+                        estructuraMineralSeleccionada) &&
+                (nivelSeleccionado == null ||
+                    ubicacion.nivel == nivelSeleccionado) &&
+                (tipoLaborSeleccionado == null ||
+                    ubicacion.tipoLabor == tipoLaborSeleccionado) &&
+                (laborSeleccionado == null ||
+                    ubicacion.labor == laborSeleccionado),
+          )
+          .map((ubicacion) => ubicacion.ala)
+          .where((ala) => ala.isNotEmpty),
+    );
 
-    Set<String> alasFiltrados = {};
-
-    for (var plan in planesProduccionCompletos) {
-      if (plan.tipoLabor == tipoLaborSeleccionado &&
-          plan.labor == laborSeleccionado &&
-          (plan.ala?.isNotEmpty ?? false)) {
-
-        alasFiltrados.add(plan.ala!);
-      }
-    }
-
-    for (var plan in planesMetrajeCompletos) {
-      if (plan.tipoLabor == tipoLaborSeleccionado &&
-          plan.labor == laborSeleccionado &&
-          (plan.ala?.isNotEmpty ?? false)) {
-
-        alasFiltrados.add(plan.ala!);
-      }
-    }
-
-    filteredAlas = alasFiltrados.toList()..sort();
-
-  } else {
-
-    filteredAlas = List.from(opcionesAla);
-
+    _clearSelectionsIfMissing();
   }
 
-  // Filtrar Niveles
-  // Si hay ala -> filtra por ala
-  // Si no hay ala -> solo por tipo labor + labor
-  if (tipoLaborSeleccionado != null &&
-      laborSeleccionado != null) {
+  void _actualizarFiltrosDesdeCatalogos() {
+    filteredMinas = _uniqueSorted(
+      minasCatalogo.map((m) => m.nombre),
+    );
+    filteredZonas = _uniqueSorted(
+      zonasCatalogo
+          .where(
+            (z) =>
+                minaSeleccionada == null ||
+                (z.minaId != null &&
+                    minasCatalogo.any(
+                      (m) =>
+                          m.minaId == z.minaId &&
+                          m.nombre == minaSeleccionada,
+                    )),
+          )
+          .map((z) => z.nombre),
+    );
+    filteredAreas = _uniqueSorted(
+      areasCatalogo
+          .where(
+            (a) =>
+                (minaSeleccionada == null ||
+                    zonasCatalogo.any(
+                      (z) =>
+                          z.zonaId == a.zonaId &&
+                          zonasCatalogo.any(
+                            (zs) =>
+                                zs.nombre == minaSeleccionada ||
+                                true,
+                          ),
+                    )) &&
+                (zonaSeleccionada == null ||
+                    (a.zonaId != null &&
+                        zonasCatalogo.any(
+                          (z) =>
+                              z.zonaId == a.zonaId &&
+                              z.nombre == zonaSeleccionada,
+                        ))),
+          )
+          .map((a) => a.nombre),
+    );
+    filteredFases = _uniqueSorted(
+      fasesCatalogo.map((f) => f.nombre),
+    );
+    filteredEstructurasMinerales = _uniqueSorted(
+      estructurasMineralesCatalogo.map((e) => e.nombre),
+    );
+    filteredNiveles = _uniqueSorted(
+      nivelesCatalogo.map((n) => n.nombre),
+    );
+    filteredTiposLabor = _uniqueSorted(
+      tiposLaborCatalogo.map((t) => t.nombre),
+    );
+    filteredLabores = _uniqueSorted(
+      laboresCatalogo.map((l) => l.nombreLabor),
+    );
+    filteredAlas = _uniqueSorted(
+      alasCatalogo.map((a) => a.nombre),
+    );
 
-    Set<String> nivelesFiltrados = {};
-
-    for (var plan in planesProduccionCompletos) {
-
-      bool coincideBase =
-          plan.tipoLabor == tipoLaborSeleccionado &&
-          plan.labor == laborSeleccionado;
-
-      bool coincideAla =
-          alaSeleccionado == null ||
-          alaSeleccionado!.isEmpty ||
-          plan.ala == alaSeleccionado;
-
-      if (coincideBase &&
-          coincideAla &&
-          (plan.nivel?.isNotEmpty ?? false)) {
-
-        nivelesFiltrados.add(plan.nivel!);
-      }
-    }
-
-    for (var plan in planesMetrajeCompletos) {
-
-      bool coincideBase =
-          plan.tipoLabor == tipoLaborSeleccionado &&
-          plan.labor == laborSeleccionado;
-
-      bool coincideAla =
-          alaSeleccionado == null ||
-          alaSeleccionado!.isEmpty ||
-          plan.ala == alaSeleccionado;
-
-      if (coincideBase &&
-          coincideAla &&
-          (plan.nivel?.isNotEmpty ?? false)) {
-
-        nivelesFiltrados.add(plan.nivel!);
-      }
-    }
-
-    filteredNiveles = nivelesFiltrados.toList()..sort();
-
-// Auto seleccionar nivel
-if (filteredNiveles.isNotEmpty) {
-
-  if (nivelSeleccionado == null ||
-      !filteredNiveles.contains(nivelSeleccionado)) {
-
-    nivelSeleccionado = filteredNiveles.first;
+    _clearSelectionsIfMissing();
   }
 
-} else {
+  void _clearSelectionsIfMissing() {
+    final selectionChanged =
+        _clearSelectionIfMissing(
+          () => minaSeleccionada = null,
+          minaSeleccionada,
+          filteredMinas,
+        ) |
+        _clearSelectionIfMissing(
+          () => zonaSeleccionada = null,
+          zonaSeleccionada,
+          filteredZonas,
+        ) |
+        _clearSelectionIfMissing(
+          () => areaSeleccionada = null,
+          areaSeleccionada,
+          filteredAreas,
+        ) |
+        _clearSelectionIfMissing(
+          () => faseSeleccionada = null,
+          faseSeleccionada,
+          filteredFases,
+        ) |
+        _clearSelectionIfMissing(
+          () => estructuraMineralSeleccionada = null,
+          estructuraMineralSeleccionada,
+          filteredEstructurasMinerales,
+        ) |
+        _clearSelectionIfMissing(
+          () => nivelSeleccionado = null,
+          nivelSeleccionado,
+          filteredNiveles,
+        ) |
+        _clearSelectionIfMissing(
+          () => tipoLaborSeleccionado = null,
+          tipoLaborSeleccionado,
+          filteredTiposLabor,
+        ) |
+        _clearSelectionIfMissing(
+          () => laborSeleccionado = null,
+          laborSeleccionado,
+          filteredLabores,
+        ) |
+        _clearSelectionIfMissing(
+          () => alaSeleccionado = null,
+          alaSeleccionado,
+          filteredAlas,
+        );
 
-  nivelSeleccionado = null;
-
-}
-
-  } else {
-
-    filteredNiveles = List.from(opcionesNivel);
-
+    if (selectionChanged) {
+      _actualizarFiltros();
+    }
   }
-}
 
   void _cargarDatosIniciales() {
     if (widget.datosIniciales != null) {
       setState(() {
         // Cargar en el nuevo orden
-        tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor']?.isNotEmpty == true 
-            ? widget.datosIniciales!['tipo_labor'] 
+        minaSeleccionada = widget.datosIniciales!['mina']?.isNotEmpty == true
+            ? widget.datosIniciales!['mina']
             : null;
-        laborSeleccionado = widget.datosIniciales!['labor']?.isNotEmpty == true 
-            ? widget.datosIniciales!['labor'] 
+        zonaSeleccionada = widget.datosIniciales!['zona']?.isNotEmpty == true
+            ? widget.datosIniciales!['zona']
             : null;
-        alaSeleccionado = widget.datosIniciales!['ala']?.isNotEmpty == true 
-            ? widget.datosIniciales!['ala'] 
+        areaSeleccionada = widget.datosIniciales!['area']?.isNotEmpty == true
+            ? widget.datosIniciales!['area']
             : null;
-        nivelSeleccionado = widget.datosIniciales!['nivel']?.isNotEmpty == true 
-            ? widget.datosIniciales!['nivel'] 
+        faseSeleccionada = widget.datosIniciales!['fase']?.isNotEmpty == true
+            ? widget.datosIniciales!['fase']
             : null;
-        
-        tipoPerforacionSeleccionado = widget.datosIniciales!['tipo_perforacion']?.isNotEmpty == true 
-            ? widget.datosIniciales!['tipo_perforacion'] 
+        estructuraMineralSeleccionada =
+            widget.datosIniciales!['estructura_mineral']?.isNotEmpty == true
+            ? widget.datosIniciales!['estructura_mineral']
             : null;
-        
+        tipoLaborSeleccionado =
+            widget.datosIniciales!['tipo_labor']?.isNotEmpty == true
+            ? widget.datosIniciales!['tipo_labor']
+            : null;
+        laborSeleccionado = widget.datosIniciales!['labor']?.isNotEmpty == true
+            ? widget.datosIniciales!['labor']
+            : null;
+        alaSeleccionado = widget.datosIniciales!['ala']?.isNotEmpty == true
+            ? widget.datosIniciales!['ala']
+            : null;
+        nivelSeleccionado = widget.datosIniciales!['nivel']?.isNotEmpty == true
+            ? widget.datosIniciales!['nivel']
+            : null;
+
+        tipoPerforacionSeleccionado =
+            widget.datosIniciales!['tipo_perforacion']?.isNotEmpty == true
+            ? widget.datosIniciales!['tipo_perforacion']
+            : null;
+
         // Cargar nuevos campos
-        nTaladrosProduccionController.text = widget.datosIniciales!['n_taladros_produccion'] ?? '';
-        metrosPerforadosProduccionController.text = widget.datosIniciales!['metros_perforados_produccion'] ?? '';
-        nTaladrosRimadosController.text = widget.datosIniciales!['n_taladros_rimados'] ?? '';
-        metrosPerforadosRimadosController.text = widget.datosIniciales!['metros_perforados_rimados'] ?? '';
-        nTaladrosAlivioController.text = widget.datosIniciales!['n_taladros_alivio'] ?? '';
-        metrosPerforadosAlivioController.text = widget.datosIniciales!['metros_perforados_alivio'] ?? '';
-        nTaladrosRepasoController.text = widget.datosIniciales!['n_taladros_repaso'] ?? '';
-        metrosPerforadosRepasoController.text = widget.datosIniciales!['metros_perforados_repaso'] ?? '';
-        
-        longitudBarraSeleccionada = widget.datosIniciales!['long_barras']?.toString();
+        nTaladrosProduccionController.text =
+            widget.datosIniciales!['n_taladros_produccion'] ?? '';
+        metrosPerforadosProduccionController.text =
+            widget.datosIniciales!['metros_perforados_produccion'] ?? '';
+        nTaladrosRimadosController.text =
+            widget.datosIniciales!['n_taladros_rimados'] ?? '';
+        metrosPerforadosRimadosController.text =
+            widget.datosIniciales!['metros_perforados_rimados'] ?? '';
+        nTaladrosAlivioController.text =
+            widget.datosIniciales!['n_taladros_alivio'] ?? '';
+        metrosPerforadosAlivioController.text =
+            widget.datosIniciales!['metros_perforados_alivio'] ?? '';
+        nTaladrosRepasoController.text =
+            widget.datosIniciales!['n_taladros_repaso'] ?? '';
+        metrosPerforadosRepasoController.text =
+            widget.datosIniciales!['metros_perforados_repaso'] ?? '';
+
+        longitudBarraSeleccionada = widget.datosIniciales!['long_barras']
+            ?.toString();
         numBarrasController.text = widget.datosIniciales!['num_barras'] ?? '';
-        observacionesController.text = widget.datosIniciales!['observaciones'] ?? '';
+        observacionesController.text =
+            widget.datosIniciales!['observaciones'] ?? '';
       });
-      
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _actualizarFiltros();
       });
@@ -399,16 +907,39 @@ if (filteredNiveles.isNotEmpty) {
 
   Future<void> _guardarDatos() async {
     if (tipoPerforacionSeleccionado == null) {
-      _mostrarSnackbar('Debe seleccionar un tipo de perforación', Colors.orange);
+      _mostrarSnackbar(
+        'Debe seleccionar un tipo de perforación',
+        Colors.orange,
+      );
+      return;
+    }
+
+    if (minaSeleccionada == null ||
+        zonaSeleccionada == null ||
+        areaSeleccionada == null ||
+        faseSeleccionada == null ||
+        estructuraMineralSeleccionada == null ||
+        nivelSeleccionado == null ||
+        tipoLaborSeleccionado == null ||
+        laborSeleccionado == null) {
+      _mostrarSnackbar(
+        'Complete toda la ubicacion del frente antes de guardar',
+        Colors.orange,
+      );
       return;
     }
 
     Map<String, dynamic> datosFormulario = {
-      'tipo_labor': tipoLaborSeleccionado ?? '',  // Ahora primero
+      'frente_origen': usarFrentePlanificado ? 'planificado' : 'otro_frente',
+      'mina': minaSeleccionada ?? '',
+      'zona': zonaSeleccionada ?? '',
+      'area': areaSeleccionada ?? '',
+      'fase': faseSeleccionada ?? '',
+      'estructura_mineral': estructuraMineralSeleccionada ?? '',
+      'tipo_labor': tipoLaborSeleccionado ?? '', // Ahora primero
       'labor': laborSeleccionado ?? '',
       'ala': alaSeleccionado ?? '',
-      'nivel': nivelSeleccionado ?? '',           // Ahora último
-      
+      'nivel': nivelSeleccionado ?? '', // Ahora último
       // Nuevos campos para cada taladro
       'n_taladros_produccion': nTaladrosProduccionController.text,
       'metros_perforados_produccion': metrosPerforadosProduccionController.text,
@@ -418,11 +949,13 @@ if (filteredNiveles.isNotEmpty) {
       'metros_perforados_alivio': metrosPerforadosAlivioController.text,
       'n_taladros_repaso': nTaladrosRepasoController.text,
       'metros_perforados_repaso': metrosPerforadosRepasoController.text,
-      
+
       'long_barras': longitudBarraSeleccionada ?? '',
       'num_barras': numBarrasController.text,
       'tipo_perforacion': tipoPerforacionSeleccionado ?? '',
-      'tipo_perforacion_id': _obtenerIdTipoPerforacion(tipoPerforacionSeleccionado),
+      'tipo_perforacion_id': _obtenerIdTipoPerforacion(
+        tipoPerforacionSeleccionado,
+      ),
       'observaciones': observacionesController.text,
     };
 
@@ -471,9 +1004,7 @@ if (filteredNiveles.isNotEmpty) {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 1100,
         constraints: BoxConstraints(
@@ -501,49 +1032,68 @@ if (filteredNiveles.isNotEmpty) {
                             icon: Icons.location_on,
                             titulo: 'Ubicación',
                             children: [
-                              _buildCompactDropdownField(
-                                label: 'Tipo Labor',
-                                value: tipoLaborSeleccionado,      // 1º
-                                items: filteredTiposLabor,
-                                onChanged: isEditable ? _onTipoLaborChanged : null,
-                                icon: Icons.construction,
-                              ),
-                              const SizedBox(width: 8),
-                              _buildCompactDropdownField(
-                                label: 'Labor',
-                                value: laborSeleccionado,          // 2º
-                                items: filteredLabores,
-                                onChanged: (tipoLaborSeleccionado != null && isEditable) 
-                                    ? _onLaborChanged 
-                                    : null,
-                                icon: Icons.factory,
-                              ),
-                              const SizedBox(width: 8),
-                              _buildCompactDropdownField(
-                                label: 'Ala',
-                                value: alaSeleccionado,           // 3º
-                                items: filteredAlas,
-                                onChanged: (laborSeleccionado != null && isEditable) 
-                                    ? _onAlaChanged 
-                                    : null,
-                                icon: Icons.compare_arrows,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (laboresAsignadas.isNotEmpty) ...[
+                                      SegmentedButton<bool>(
+                                        segments: const [
+                                          ButtonSegment<bool>(
+                                            value: true,
+                                            label: Text('Frente planificado'),
+                                          ),
+                                          ButtonSegment<bool>(
+                                            value: false,
+                                            label: Text('Otro frente'),
+                                          ),
+                                        ],
+                                        selected: {usarFrentePlanificado},
+                                        onSelectionChanged: isEditable
+                                            ? (selection) {
+                                                final usePlanned =
+                                                    selection.first;
+                                                setState(() {
+                                                  usarFrentePlanificado =
+                                                      usePlanned;
+                                                });
+                                                if (usePlanned &&
+                                                    laborAsignadaSeleccionada !=
+                                                        null) {
+                                                  _aplicarLaborAsignada(
+                                                    laborAsignadaSeleccionada!,
+                                                  );
+                                                }
+                                              }
+                                            : null,
+                                      ),
+                                      const SizedBox(height: 12),
+                                    ],
+                                    if (usarFrentePlanificado &&
+                                        laboresAsignadas.isNotEmpty)
+                                      _buildPlannedFrontSelector()
+                                    else
+                                      _buildManualFrontSelectors(),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 12),
-                          
+
                           // Taladro Producción
                           _buildSeccionTaladro(
                             titulo: 'Taladro Producción',
                             icon: Icons.golf_course,
                             nTaladrosController: nTaladrosProduccionController,
-                            metrosController: metrosPerforadosProduccionController,
+                            metrosController:
+                                metrosPerforadosProduccionController,
                             color: Colors.blue.shade700,
                           ),
-                          
+
                           const SizedBox(height: 12),
-                          
+
                           // Taladro Rimados
                           _buildSeccionTaladro(
                             titulo: 'Taladro Rimados',
@@ -552,9 +1102,9 @@ if (filteredNiveles.isNotEmpty) {
                             metrosController: metrosPerforadosRimadosController,
                             color: Colors.orange.shade700,
                           ),
-                          
+
                           const SizedBox(height: 12),
-                          
+
                           // Taladro Alivio
                           _buildSeccionTaladro(
                             titulo: 'Taladro Alivio',
@@ -563,9 +1113,9 @@ if (filteredNiveles.isNotEmpty) {
                             metrosController: metrosPerforadosAlivioController,
                             color: Colors.red.shade700,
                           ),
-                          
+
                           const SizedBox(height: 12),
-                          
+
                           // Taladro Repaso
                           _buildSeccionTaladro(
                             titulo: 'Taladro Repaso',
@@ -574,9 +1124,9 @@ if (filteredNiveles.isNotEmpty) {
                             metrosController: metrosPerforadosRepasoController,
                             color: Colors.purple.shade700,
                           ),
-                          
+
                           const SizedBox(height: 12),
-                          
+
                           // Barras
                           _buildSeccionCompacta(
                             icon: Icons.height,
@@ -587,7 +1137,9 @@ if (filteredNiveles.isNotEmpty) {
                                 value: longitudBarraSeleccionada,
                                 items: opcionesLongitudBarras,
                                 onChanged: isEditable
-                                    ? (value) => setState(() => longitudBarraSeleccionada = value)
+                                    ? (value) => setState(
+                                        () => longitudBarraSeleccionada = value,
+                                      )
                                     : null,
                                 icon: Icons.straighten,
                               ),
@@ -599,9 +1151,9 @@ if (filteredNiveles.isNotEmpty) {
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 12),
-                          
+
                           // Tipo de Perforación
                           _buildSeccionCompacta(
                             icon: Icons.settings_input_component,
@@ -611,16 +1163,19 @@ if (filteredNiveles.isNotEmpty) {
                                 label: 'Seleccione tipo',
                                 value: tipoPerforacionSeleccionado,
                                 items: opcionesTipoPerforacion,
-                                onChanged: isEditable 
-                                    ? (value) => setState(() => tipoPerforacionSeleccionado = value)
+                                onChanged: isEditable
+                                    ? (value) => setState(
+                                        () =>
+                                            tipoPerforacionSeleccionado = value,
+                                      )
                                     : null,
                                 icon: Icons.settings_input_component,
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 12),
-                          
+
                           // Observaciones
                           _buildSeccionObservaciones(),
                         ],
@@ -633,7 +1188,6 @@ if (filteredNiveles.isNotEmpty) {
       ),
     );
   }
-
 
   // ✅ NUEVO WIDGET: Sección para cada taladro con sus dos campos
   Widget _buildSeccionTaladro({
@@ -1044,5 +1598,310 @@ if (filteredNiveles.isNotEmpty) {
         ],
       ),
     );
+  }
+
+  Widget _buildPlannedFrontSelector() {
+    final selected = laborAsignadaSeleccionada;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<int>(
+          value: selected?.laborId,
+          decoration: const InputDecoration(
+            labelText: 'Labor asignada',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+          items: laboresAsignadas.map((labor) {
+            return DropdownMenuItem<int>(
+              value: labor.laborId,
+              child: Text(
+                '${labor.laborNombre} | ${labor.nivel} | ${labor.estructuraMineral}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: isEditable
+              ? (laborId) {
+                  final match = laboresAsignadas.where(
+                    (labor) => labor.laborId == laborId,
+                  );
+                  if (match.isNotEmpty) {
+                    _aplicarLaborAsignada(match.first);
+                  }
+                }
+              : null,
+        ),
+        if (selected != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Ubicacion: ${minaSeleccionada ?? '-'} / ${zonaSeleccionada ?? '-'} / ${areaSeleccionada ?? '-'} / ${faseSeleccionada ?? '-'}',
+            style: const TextStyle(fontSize: 12),
+          ),
+          Text(
+            'Hoy tienes planificado: ${selected.estructuraMineral} / Nivel ${selected.nivel} / ${selected.tipoLabor} / ${selected.laborNombre}${alaSeleccionado?.isNotEmpty == true ? ' / Ala $alaSeleccionado' : ''}',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          if (selected.valorPlanificado > 0)
+            Text(
+              'Valor planificado: ${selected.valorPlanificado}',
+              style: const TextStyle(fontSize: 12),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildManualFrontSelectors() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildCompactDropdownField(
+                label: 'Mina',
+                value: minaSeleccionada,
+                items: filteredMinas,
+                onChanged: isEditable ? _onMinaChanged : null,
+                icon: Icons.terrain,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildCompactDropdownField(
+                label: 'Zona',
+                value: zonaSeleccionada,
+                items: filteredZonas,
+                onChanged: (minaSeleccionada != null && isEditable)
+                    ? _onZonaChanged
+                    : null,
+                icon: Icons.map,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildCompactDropdownField(
+                label: 'Area',
+                value: areaSeleccionada,
+                items: filteredAreas,
+                onChanged: (zonaSeleccionada != null && isEditable)
+                    ? _onAreaChanged
+                    : null,
+                icon: Icons.grid_view,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildCompactDropdownField(
+                label: 'Fase',
+                value: faseSeleccionada,
+                items: filteredFases,
+                onChanged: (areaSeleccionada != null && isEditable)
+                    ? _onFaseChanged
+                    : null,
+                icon: Icons.layers,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildCompactDropdownField(
+                label: 'Estructura Mineral',
+                value: estructuraMineralSeleccionada,
+                items: filteredEstructurasMinerales,
+                onChanged: (faseSeleccionada != null && isEditable)
+                    ? _onEstructuraMineralChanged
+                    : null,
+                icon: Icons.account_tree,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildCompactDropdownField(
+                label: 'Nivel',
+                value: nivelSeleccionado,
+                items: filteredNiveles,
+                onChanged: (estructuraMineralSeleccionada != null && isEditable)
+                    ? _onNivelChanged
+                    : null,
+                icon: Icons.height,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildCompactDropdownField(
+                label: 'Tipo Labor',
+                value: tipoLaborSeleccionado,
+                items: filteredTiposLabor,
+                onChanged: (nivelSeleccionado != null && isEditable)
+                    ? _onTipoLaborChanged
+                    : null,
+                icon: Icons.construction,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildCompactDropdownField(
+                label: 'Labor',
+                value: laborSeleccionado,
+                items: filteredLabores,
+                onChanged: (tipoLaborSeleccionado != null && isEditable)
+                    ? _onLaborChanged
+                    : null,
+                icon: Icons.factory,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildCompactDropdownField(
+                label: 'Ala',
+                value: alaSeleccionado,
+                items: filteredAlas,
+                onChanged: (laborSeleccionado != null && isEditable)
+                    ? _onAlaChanged
+                    : null,
+                icon: Icons.compare_arrows,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Expanded(child: SizedBox.shrink()),
+            const SizedBox(width: 8),
+            const Expanded(child: SizedBox.shrink()),
+            const SizedBox(width: 8),
+            const Expanded(child: SizedBox.shrink()),
+          ],
+        ),
+      ],
+    );
+  }
+
+  List<_LongHolePlanLocation> _buildPlanLocations() {
+    final locations = <_LongHolePlanLocation>[];
+
+    for (final plan in planesProduccionCompletos) {
+      final location = _locationFromPlan(
+        mina: plan.mina,
+        zona: plan.zona,
+        area: plan.area,
+        fase: plan.fase,
+        estructuraMineral: plan.estructuraVeta,
+        nivel: plan.nivel,
+        tipoLabor: plan.tipoLabor,
+        labor: plan.labor,
+        ala: plan.ala,
+      );
+      if (location != null) {
+        locations.add(location);
+      }
+    }
+
+    for (final plan in planesMetrajeCompletos) {
+      final location = _locationFromPlan(
+        mina: plan.mina,
+        zona: plan.zona,
+        area: plan.area,
+        fase: plan.fase,
+        estructuraMineral: plan.estructuraVeta,
+        nivel: plan.nivel,
+        tipoLabor: plan.tipoLabor,
+        labor: plan.labor,
+        ala: plan.ala,
+      );
+      if (location != null) {
+        locations.add(location);
+      }
+    }
+
+    final unique = <String, _LongHolePlanLocation>{};
+    for (final location in locations) {
+      final key = [
+        location.mina,
+        location.zona,
+        location.area,
+        location.fase,
+        location.estructuraMineral,
+        location.nivel,
+        location.tipoLabor,
+        location.labor,
+        location.ala,
+      ].join('|');
+      unique[key] = location;
+    }
+
+    return unique.values.toList();
+  }
+
+  _LongHolePlanLocation? _locationFromPlan({
+    required String? mina,
+    required String? zona,
+    required String? area,
+    required String? fase,
+    required String? estructuraMineral,
+    required String? nivel,
+    required String? tipoLabor,
+    required String? labor,
+    required String? ala,
+  }) {
+    final resolvedMina = mina?.trim() ?? '';
+    final resolvedZona = zona?.trim() ?? '';
+    final resolvedArea = area?.trim() ?? '';
+    final resolvedFase = fase?.trim() ?? '';
+    final resolvedEstructura = estructuraMineral?.trim() ?? '';
+    final resolvedNivel = nivel?.trim() ?? '';
+    final resolvedTipoLabor = tipoLabor?.trim() ?? '';
+    final resolvedLabor = labor?.trim() ?? '';
+    final resolvedAla = ala?.trim() ?? '';
+
+    if (resolvedMina.isEmpty ||
+        resolvedZona.isEmpty ||
+        resolvedArea.isEmpty ||
+        resolvedFase.isEmpty ||
+        resolvedEstructura.isEmpty ||
+        resolvedNivel.isEmpty ||
+        resolvedTipoLabor.isEmpty ||
+        resolvedLabor.isEmpty) {
+      return null;
+    }
+
+    return _LongHolePlanLocation(
+      mina: resolvedMina,
+      zona: resolvedZona,
+      area: resolvedArea,
+      fase: resolvedFase,
+      estructuraMineral: resolvedEstructura,
+      nivel: resolvedNivel,
+      tipoLabor: resolvedTipoLabor,
+      labor: resolvedLabor,
+      ala: resolvedAla,
+    );
+  }
+
+  List<String> _uniqueSorted(Iterable<String> values) {
+    final unique = values
+        .where((value) => value.trim().isNotEmpty)
+        .toSet()
+        .toList();
+    unique.sort();
+    return unique;
+  }
+
+  bool _clearSelectionIfMissing(
+    void Function() clear,
+    String? selectedValue,
+    List<String> options,
+  ) {
+    if (selectedValue != null && !options.contains(selectedValue)) {
+      clear();
+      return true;
+    }
+
+    return false;
   }
 }

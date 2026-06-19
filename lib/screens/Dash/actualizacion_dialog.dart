@@ -23,6 +23,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
   // Agrupación de opciones por categoría
   final Map<String, List<String>> categorias = {
     'Planificación': [
+      'Periodos',
       'Plan Mensual',
       'Plan Metraje',
       'Plan Producción',
@@ -32,7 +33,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Horometros',
       'Empresas',
       'Equipos',
-      'Secciones',
+      'Zonas',
       'Tipos Equipo',
       'Accesorios',
       'Destinatarios',
@@ -41,17 +42,28 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Pernos',
       'Mallas',
       'Origen y Destino',
-      'Guardias'
+      'Guardias',
     ],
-    'Perforación y Explosivos': [
-      'Tipos Perforación',
-      'Explosivos',
-      'Explosivos Uni',
-      'Accesorios',
-      'Numero de retardos'
+    'Perforación': ['Tipos Perforación', 'Accesorios', 'Numero de retardos'],
+    'Sistema': [
+      'Jefes Guardia',
+      'Estados',
+      'Checklist',
+      'Checklist Carguio',
+      'Autorizaciones',
     ],
-    'Sistema': ['Jefes Guardia', 'Estados', 'Checklist', 'Checklist Carguio'],
-
+    'Catálogos': [
+      'Minas',
+      'Dim Zonas',
+      'Areas',
+      'Fases',
+      'Tipos Labor',
+      'Estructuras Minerales',
+      'Niveles',
+      'Alas',
+      'Labores',
+      'Dim Turnos',
+    ],
   };
 
   @override

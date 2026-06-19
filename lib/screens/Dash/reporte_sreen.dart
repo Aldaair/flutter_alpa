@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/offline_authorization_repository.dart';
 import 'package:i_miner/core/network/connection_provider.dart';
 import 'package:i_miner/screens/Dash/actualizacion_dialog.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/operaciones_centralizada.dart';
@@ -10,32 +11,169 @@ import 'package:i_miner/screens/Operaciones/Carguio/Scoop/lista_perforacion_sree
 import 'package:i_miner/screens/Operaciones/Mediciones/select_tipo_explosivo.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/ServiciosAuxiliaresScreen.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20horizontal/lista_perforacion_sreen.dart';
-import 'package:i_miner/screens/Operaciones/explosivos/prueba.dart';
 import 'package:i_miner/screens/Operaciones/sostenimiento/lista_perforacion_sreen.dart';
 import 'package:i_miner/screens/widgets/ReportButton.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20largo/lista_perforacion_sreen.dart';
 import 'package:i_miner/screens/login/login_screen.dart';
-import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_FechasPlanMensualService.dart';
 import 'package:i_miner/services/get%20nube/actualizacion_service.dart';
 import 'package:provider/provider.dart';
 import 'package:i_miner/services/get%20nube/registros%20nube/ApiServiceExploracion.dart';
+
+class _DashboardModuleDefinition {
+  const _DashboardModuleDefinition({
+    required this.legacyKey,
+    required this.title,
+    required this.image,
+    required this.authorizedNames,
+  });
+
+  final String legacyKey;
+  final String title;
+  final String image;
+  final Set<String> authorizedNames;
+}
+
+final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
+  _DashboardModuleDefinition(
+    legacyKey: 'PERFORACIÓN TALADROS LARGOS',
+    title: 'PERFORACIÓN\nTALADROS LARGOS',
+    image: 'assets/images/perforacion_taladros.png',
+    authorizedNames: {
+      normalizeAuthorizationName('PERFORACIÓN TALADROS LARGOS'),
+      normalizeAuthorizationName('TALADRO LARGO'),
+      normalizeAuthorizationName('TALADROS LARGOS'),
+    },
+  ),
+  _DashboardModuleDefinition(
+    legacyKey: 'PERFORACIÓN HORIZONTAL',
+    title: 'PERFORACIÓN\nHORIZONTAL',
+    image: 'assets/images/perfo_horizontal.png',
+    authorizedNames: {
+      normalizeAuthorizationName('PERFORACIÓN HORIZONTAL'),
+      normalizeAuthorizationName('TALADRO HORIZONTAL'),
+      normalizeAuthorizationName('TALADROS HORIZONTAL'),
+      normalizeAuthorizationName('Taladro Horizontal'),
+    },
+  ),
+  _DashboardModuleDefinition(
+    legacyKey: 'SOSTENIMIENTO',
+    title: 'SOSTENIMIENTO',
+    image: 'assets/images/sostenimiento.png',
+    authorizedNames: {normalizeAuthorizationName('SOSTENIMIENTO')},
+  ),
+  _DashboardModuleDefinition(
+    legacyKey: 'SERVICIOS AUXILIARES',
+    title: 'SERVICIOS\nAUXILIARES',
+    image: 'assets/images/servicio_auxiliares.png',
+    authorizedNames: {
+      normalizeAuthorizationName('SERVICIOS AUXILIARES'),
+      normalizeAuthorizationName('SERVICIO AUXILIARES'),
+    },
+  ),
+  _DashboardModuleDefinition(
+    legacyKey: 'ACEROS DE PERFORACIÓN',
+    title: 'ACEROS DE\nPERFORACIÓN',
+    image: 'assets/images/aceros_de_perforacion.png',
+    authorizedNames: {
+      normalizeAuthorizationName('ACEROS DE PERFORACIÓN'),
+      normalizeAuthorizationName('ACEROS DE PERFORACION'),
+    },
+  ),
+  _DashboardModuleDefinition(
+    legacyKey: 'CARGUÍO',
+    title: 'CARGUÍO',
+    image: 'assets/images/carguio.png',
+    authorizedNames: {
+      normalizeAuthorizationName('CARGUÍO'),
+      normalizeAuthorizationName('CARGUIO'),
+    },
+  ),
+  _DashboardModuleDefinition(
+    legacyKey: 'ACARREO',
+    title: 'ACARREO',
+    image: 'assets/images/acarreo.png',
+    authorizedNames: {normalizeAuthorizationName('ACARREO')},
+  ),
+  _DashboardModuleDefinition(
+    legacyKey: 'MEDICIONES',
+    title: 'MEDICIONES',
+    image: 'assets/images/medicion.png',
+    authorizedNames: {
+      normalizeAuthorizationName('MEDICIONES'),
+      normalizeAuthorizationName('MEDICIONES TAL. HORIZONTAL'),
+      normalizeAuthorizationName('MEDICIONES TAL. LARGO'),
+    },
+  ),
+];
+
+Future<Map<String, bool>> loadDashboardAuthorizationState({
+  required String dni,
+  DatabaseHelper? databaseHelper,
+  OfflineAuthorizationRepository? authorizationRepository,
+  Map<String, dynamic>? cachedUser,
+}) async {
+  final dbHelper = databaseHelper ?? DatabaseHelper();
+  final repository =
+      authorizationRepository ?? OfflineAuthorizationRepository();
+
+  if (!await repository.hasNormalizedProcessAuth(dni)) {
+    final user = cachedUser ?? await dbHelper.getUserByDni(dni);
+    final legacyAuthorization = _decodeLegacyDashboardAuthorization(
+      user?['operaciones_autorizadas'],
+    );
+
+    return {
+      for (final module in _dashboardModuleDefinitions)
+        module.legacyKey: legacyAuthorization[module.legacyKey] == true,
+    };
+  }
+
+  final authorizedProcesses = await repository.getAuthorizedProcesses(dni);
+  final normalizedProcesses = authorizedProcesses
+      .map((process) => normalizeAuthorizationName(process.name))
+      .toSet();
+
+  return {
+    for (final module in _dashboardModuleDefinitions)
+      module.legacyKey: module.authorizedNames.any(
+        normalizedProcesses.contains,
+      ),
+  };
+}
+
+Map<String, dynamic> _decodeLegacyDashboardAuthorization(dynamic rawValue) {
+  if (rawValue is! String || rawValue.isEmpty) {
+    return const <String, dynamic>{};
+  }
+
+  try {
+    final decoded = jsonDecode(rawValue);
+    if (decoded is! Map<String, dynamic>) {
+      return const <String, dynamic>{};
+    }
+
+    return decoded;
+  } catch (_) {
+    return const <String, dynamic>{};
+  }
+}
+
 class DashboardScreen extends StatefulWidget {
   final String dni;
   final String token;
 
-  const DashboardScreen({
-    Key? key,
-    required this.dni,
-    required this.token,
-  }) : super(key: key);
+  const DashboardScreen({Key? key, required this.dni, required this.token})
+    : super(key: key);
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final Color navbarColor = const Color(0xFF1B5E6B); // Color único para todas las cards
-  
+  final Color navbarColor = const Color(
+    0xFF1B5E6B,
+  ); // Color único para todas las cards
+
   String nombreUsuario = "Cargando...";
   String rol = "Cargando...";
   Map<String, dynamic> operacionesAutorizadas = {};
@@ -44,26 +182,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return operacionesAutorizadas[operacion] == true;
   }
 
-    @override
+  @override
   void initState() {
     super.initState();
-  _cargarNombreUsuario();
-
+    _cargarNombreUsuario();
   }
 
-    Future<void> _cargarNombreUsuario() async {
+  Future<void> _cargarNombreUsuario() async {
     try {
       final dbHelper = DatabaseHelper();
       final usuario = await dbHelper.getUserByDni(widget.dni);
       if (usuario != null) {
+        final authorizedModules = await loadDashboardAuthorizationState(
+          dni: widget.dni,
+          databaseHelper: dbHelper,
+          cachedUser: usuario,
+        );
+
         setState(() {
           nombreUsuario = '${usuario['nombres']} ${usuario['apellidos']}';
           rol = usuario['rol'];
-
-          final operacionesJson = usuario['operaciones_autorizadas'];
-          if (operacionesJson != null && operacionesJson.isNotEmpty) {
-            operacionesAutorizadas = jsonDecode(operacionesJson);
-          }
+          operacionesAutorizadas = authorizedModules;
         });
       } else {
         setState(() {
@@ -107,11 +246,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => SeccionesScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => SeccionesScreen()),
                 );
-                
               },
               tooltip: 'Subir reportes',
             ),
@@ -163,120 +299,123 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               // Header compacto con información del usuario
               Container(
-  width: double.infinity,
-  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-  decoration: BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(12),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.black.withOpacity(0.05),
-        blurRadius: 8,
-        offset: const Offset(0, 2),
-      ),
-    ],
-  ),
-  child: Row(
-    children: [
-      Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: navbarColor.withOpacity(0.1),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          Icons.person,
-          size: 24,
-          color: navbarColor,
-        ),
-      ),
-      const SizedBox(width: 12),
-
-      // 👇 INFO USUARIO
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              nombreUsuario,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2C3E50),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              rol == null || rol.trim().isEmpty
-                  ? 'Sin rol asignado'
-                  : rol,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // 👇 ESTADO INTERNET
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: isOnline ? Colors.green[100] : Colors.red[100],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  isOnline ? Icons.wifi : Icons.wifi_off,
-                  size: 14,
-                  color: isOnline ? Colors.green : Colors.red,
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  isOnline ? "Online" : "Offline",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isOnline ? Colors.green[800] : Colors.red[800],
-                  ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: navbarColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.person, size: 24, color: navbarColor),
+                    ),
+                    const SizedBox(width: 12),
 
-          // 📅 Fecha
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              _getCurrentDate(),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[700],
+                    // 👇 INFO USUARIO
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nombreUsuario,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            rol == null || rol.trim().isEmpty
+                                ? 'Sin rol asignado'
+                                : rol,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // 👇 ESTADO INTERNET
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isOnline
+                                ? Colors.green[100]
+                                : Colors.red[100],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isOnline ? Icons.wifi : Icons.wifi_off,
+                                size: 14,
+                                color: isOnline ? Colors.green : Colors.red,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isOnline ? "Online" : "Offline",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isOnline
+                                      ? Colors.green[800]
+                                      : Colors.red[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+
+                        // 📅 Fecha
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            _getCurrentDate(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
-    ],
-  ),
-),
               const SizedBox(height: 20),
-              
+
               // Título de sección compacto
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -291,15 +430,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   Text(
                     '${_getModuleCount()} módulos',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               // Grid de botones
               Expanded(
                 child: LayoutBuilder(
@@ -345,24 +481,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     List<Widget> buttons = [];
 
     final modules = [
-      if (estaAutorizadoPara('PERFORACIÓN TALADROS LARGOS'))
-        {'title': 'PERFORACIÓN\nTALADROS LARGOS', 'image': 'assets/images/perforacion_taladros.png'},
-      if (estaAutorizadoPara('PERFORACIÓN HORIZONTAL'))
-        {'title': 'PERFORACIÓN\nHORIZONTAL', 'image': 'assets/images/perfo_horizontal.png'},
-      if (estaAutorizadoPara('SOSTENIMIENTO'))
-        {'title': 'SOSTENIMIENTO', 'image': 'assets/images/sostenimiento.png'},
-      if (estaAutorizadoPara('SERVICIOS AUXILIARES'))
-        {'title': 'SERVICIOS\nAUXILIARES', 'image': 'assets/images/servicio_auxiliares.png'},
-      if (estaAutorizadoPara('EXPLOSIVOS'))
-        {'title': 'EXPLOSIVOS', 'image': 'assets/images/explosivos.png'},
-      if (estaAutorizadoPara('ACEROS DE PERFORACIÓN'))
-        {'title': 'ACEROS DE\nPERFORACIÓN', 'image': 'assets/images/aceros_de_perforacion.png'},
-      if (estaAutorizadoPara('CARGUÍO'))
-        {'title': 'CARGUÍO', 'image': 'assets/images/carguio.png'},
-      if (estaAutorizadoPara('ACARREO'))
-        {'title': 'ACARREO', 'image': 'assets/images/acarreo.png'},
-      if (estaAutorizadoPara('MEDICIONES'))
-        {'title': 'MEDICIONES', 'image': 'assets/images/medicion.png'},
+      for (final module in _dashboardModuleDefinitions)
+        if (estaAutorizadoPara(module.legacyKey))
+          {'title': module.title, 'image': module.image},
     ];
 
     for (var module in modules) {
@@ -383,119 +504,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _handleModulePress(String title) {
-  switch (title) {
-    case 'PERFORACIÓN\nTALADROS LARGOS':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TaladroLargoScreen(
-            rolUsuario: '${rol}',
-            dniUsuario: '${widget.dni}',
+    switch (title) {
+      case 'PERFORACIÓN\nTALADROS LARGOS':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaladroLargoScreen(
+              rolUsuario: '${rol}',
+              dniUsuario: '${widget.dni}',
+            ),
           ),
-        ),
-      );
-      break;
+        );
+        break;
 
       case 'PERFORACIÓN\nHORIZONTAL':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TaladroHorizontalScreen(
-            rolUsuario: '$rol',
-            dniUsuario: '${widget.dni}',
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaladroHorizontalScreen(
+              rolUsuario: '$rol',
+              dniUsuario: '${widget.dni}',
+            ),
           ),
-        ),
-      );
-      break;
+        );
+        break;
 
       case 'SOSTENIMIENTO':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TaladroEmpernadorScreen(
-            rolUsuario: '$rol',
-            dniUsuario: '${widget.dni}',
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaladroEmpernadorScreen(
+              rolUsuario: '$rol',
+              dniUsuario: '${widget.dni}',
+            ),
           ),
-        ),
-      );
-      break;
+        );
+        break;
 
       case 'CARGUÍO':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TaladroCarguioScreen(
-            rolUsuario: '$rol',
-            dniUsuario: '${widget.dni}',
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaladroCarguioScreen(
+              rolUsuario: '$rol',
+              dniUsuario: '${widget.dni}',
+            ),
           ),
-        ),
-      );
-      break;
+        );
+        break;
 
       case 'ACARREO':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TaladroDumperScreen(
-            rolUsuario: '$rol',
-            dniUsuario: '${widget.dni}',
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TaladroDumperScreen(
+              rolUsuario: '$rol',
+              dniUsuario: '${widget.dni}',
+            ),
           ),
-        ),
-      );
-      break;
+        );
+        break;
 
-
-    case 'MEDICIONES':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => Selecc_Tipo_explo(
-          ),
-        ),
-      );
-      break;
-
+      case 'MEDICIONES':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => Selecc_Tipo_explo()),
+        );
+        break;
 
       case 'SERVICIOS\nAUXILIARES':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ServiciosAuxiliaresScreen(
-            rolUsuario: '$rol',
-            dniUsuario: '${widget.dni}',
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ServiciosAuxiliaresScreen(
+              rolUsuario: '$rol',
+              dniUsuario: '${widget.dni}',
+            ),
           ),
-        ),
-      );
-      break;
+        );
+        break;
 
-      case 'EXPLOSIVOS':
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => Pruebacreen(
-            dni: widget.dni
-          ),
-        ),
-      );
-      break;
-
-    default:
-      print('Módulo no configurado');
+      default:
+        print('Módulo no configurado');
+    }
   }
-}
 
   int _getModuleCount() {
-    int count = 0;
-    if (estaAutorizadoPara('PERFORACIÓN TALADROS LARGOS')) count++;
-    if (estaAutorizadoPara('PERFORACIÓN HORIZONTAL')) count++;
-    if (estaAutorizadoPara('SOSTENIMIENTO')) count++;
-    if (estaAutorizadoPara('SERVICIOS AUXILIARES')) count++;
-    if (estaAutorizadoPara('EXPLOSIVOS')) count++;
-    if (estaAutorizadoPara('ACEROS DE PERFORACIÓN')) count++;
-    if (estaAutorizadoPara('CARGUÍO')) count++;
-    if (estaAutorizadoPara('ACARREO')) count++;
-    if (estaAutorizadoPara('MEDICIONES')) count++;
-    return count;
+    return _dashboardModuleDefinitions
+        .where((module) => estaAutorizadoPara(module.legacyKey))
+        .length;
   }
 
   String _getCurrentDate() {
@@ -522,80 +619,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 12),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 14),
-          ),
+          Text(label, style: const TextStyle(fontSize: 14)),
         ],
       ),
     );
   }
 
   Future<void> _actualizarDatos(BuildContext context) async {
-  // Definir las opciones disponibles
-  final opcionesDisponibles = {
-    "Estados": true,
-    "Checklist": true,
-   "Tipos Perforación": true,
-     "Equipos": true,
-     "Secciones": true,
-    "Tipos Equipo": true,
-     "Plan Mensual": true,
-    "Plan Metraje": true,
-    "Plan Producción": true,
-    "Jefes Guardia": true,
-    "Checklist Carguio": true,
-    "Longitud Barras": true,
-  "Pernos": true,
-  "Mallas": true,
-  "Horometros": true,
-  "Origen y Destino": true,
-  "Accesorios": true,
-  "Explosivos": true,
-  "Explosivos Uni": true,
-  "Numero de retardos": true,
-  "Guardias": true,
-  };
+    // Definir las opciones disponibles
+    final opcionesDisponibles = {
+      "Periodos": true,
+      "Estados": true,
+      "Checklist": true,
+      "Tipos Perforación": true,
+      "Equipos": true,
+      "Zonas": true,
+      "Tipos Equipo": true,
+      "Plan Mensual": true,
+      "Plan Metraje": true,
+      "Plan Producción": true,
+      "Jefes Guardia": true,
+      "Checklist Carguio": true,
+      "Longitud Barras": true,
+      "Pernos": true,
+      "Mallas": true,
+      "Horometros": true,
+      "Origen y Destino": true,
+      "Accesorios": true,
+      "Numero de retardos": true,
+      "Guardias": true,
+      "Autorizaciones": true,
+      "Minas": true,
+      "Dim Zonas": true,
+      "Areas": true,
+      "Fases": true,
+      "Tipos Labor": true,
+      "Estructuras Minerales": true,
+      "Niveles": true,
+      "Alas": true,
+      "Labores": true,
+      "Dim Turnos": true,
+    };
 
-  // Mostrar diálogo de selección mejorado
-  final opcionesSeleccionadas = await showDialog<Map<String, bool>>(
-    context: context,
-    builder: (context) => ActualizacionDialog(
-      opcionesIniciales: opcionesDisponibles,
-      primaryColor: navbarColor, // Tu color primario
-    ),
-  );
-
-  // Si el usuario cancela o no selecciona nada, salir
-  if (opcionesSeleccionadas == null || opcionesSeleccionadas.isEmpty) {
-    return;
-  }
-
-  // Obtener el mes actual o el que necesites
-  final fechasService = FechasPlanMensualService();
-  final ultimaFecha = await fechasService.getUltimaFecha();
-  
-  if (ultimaFecha == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('No se encontró una fecha válida'),
-        backgroundColor: Colors.red,
+    // Mostrar diálogo de selección mejorado
+    final opcionesSeleccionadas = await showDialog<Map<String, bool>>(
+      context: context,
+      builder: (context) => ActualizacionDialog(
+        opcionesIniciales: opcionesDisponibles,
+        primaryColor: navbarColor, // Tu color primario
       ),
     );
-    return;
+
+    // Si el usuario cancela o no selecciona nada, salir
+    if (opcionesSeleccionadas == null || opcionesSeleccionadas.isEmpty) {
+      return;
+    }
+    // Crear y ejecutar el servicio de actualización
+    final actualizacionService = ActualizacionService(
+      context: context,
+      token: widget.token,
+    );
+
+    await actualizacionService.ejecutarActualizacion(opcionesSeleccionadas);
+    await _cargarNombreUsuario();
   }
-
-  // Crear y ejecutar el servicio de actualización
-  final actualizacionService = ActualizacionService(
-  context: context,
-  token: widget.token,
-  anio: ultimaFecha.fechaIngreso!,
-  mes: ultimaFecha.mes,
-);
-
-  await actualizacionService.ejecutarActualizacion(opcionesSeleccionadas);
-}
-
 
   Future<void> fetchExploracionesMina2() async {
     try {
@@ -626,9 +713,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.grey[600],
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(

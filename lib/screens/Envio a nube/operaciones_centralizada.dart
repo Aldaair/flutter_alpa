@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/AnfoChanger/detalle_carguio_screen.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/Carguio/detalle_carguio_screen.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/Dumper/detalle_dumper_screen.dart';
-import 'package:i_miner/screens/Envio%20a%20nube/Explosivos/detalle_explosivos_screen.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/Mediciones/horizontal/detalle_mediciones_screen.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/SCISSOR/detalle_carguio_screen.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/Scalamin/detalle_scalamin_screen.dart';
@@ -18,27 +17,30 @@ class SeccionesScreen extends StatefulWidget {
 }
 
 class _SeccionesScreenState extends State<SeccionesScreen> {
-  final Color primaryColor = const Color(0xFF1B5E6B); // Color corporativo principal
+  final Color primaryColor = const Color(
+    0xFF1B5E6B,
+  ); // Color corporativo principal
   final Color accentColor = const Color(0xFF2C3E50); // Color de acento oscuro
-  final Color backgroundColor = const Color(0xFFF5F7FA); // Fondo claro profesional
+  final Color backgroundColor = const Color(
+    0xFFF5F7FA,
+  ); // Fondo claro profesional
 
   final Map<String, Widget Function(BuildContext)> _pantallas = {
     "PERFORACIÓN TALADROS LARGOS": (context) =>
         DetalleSeccionScreen(tipoOperacion: "PERFORACIÓN TALADROS LARGOS"),
     "PERFORACIÓN HORIZONTAL": (context) =>
         DetalleSeccionScreenHorizontal(tipoOperacion: "PERFORACIÓN HORIZONTAL"),
-  
+
     "SOSTENIMIENTO": (context) =>
         DetalleSeccionScreenEmpernador(tipoOperacion: "SOSTENIMIENTO"),
 
     "ROMPEBANCO": (context) =>
         DetalleSeccionScreenRompeBanco(tipoOperacion: "ROMPEBANCO"),
-    
+
     "CARGUÍO": (context) =>
         DetalleSeccionScreenCarguio(tipoOperacion: "CARGUÍO"),
 
-      "DUMPER": (context) =>
-        DetalleSeccionScreenDumper(tipoOperacion: "DUMPER"),
+    "DUMPER": (context) => DetalleSeccionScreenDumper(tipoOperacion: "DUMPER"),
 
     "ANFOCHANGER": (context) =>
         DetalleSeccionScreenAnfoChanger(tipoOperacion: "ANFOCHANGER"),
@@ -48,23 +50,21 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
 
     "SCALAMIN": (context) =>
         DetalleSeccionScreenScalamin(tipoOperacion: "SCALAMIN"),
-      
-    "EXPLOSIVOS": (context) =>
-        DetalleExplosivos(tipoOperacion: "EXPLOSIVOS"),
 
-    "MEDICIONES TAL. HORIZONTAL": (context) => ListaMedicionesScreen(tipoPerforacion: "HORIZONTAL"),
+    "MEDICIONES TAL. HORIZONTAL": (context) =>
+        ListaMedicionesScreen(tipoPerforacion: "HORIZONTAL"),
   };
 
   final List<Map<String, dynamic>> _secciones = [
     {
       'nombre': "PERFORACIÓN TALADROS LARGOS",
       'icono': Icons.golf_course,
-      'descripcion': "Taladros largos para producción"
+      'descripcion': "Taladros largos para producción",
     },
     {
       'nombre': "PERFORACIÓN HORIZONTAL",
       'icono': Icons.horizontal_rule,
-      'descripcion': "Perforación horizontal y desarrollo"
+      'descripcion': "Perforación horizontal y desarrollo",
     },
     {
       'nombre': "SOSTENIMIENTO",
@@ -102,11 +102,6 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       'descripcion': "SCALAMIN generales",
     },
     {
-      'nombre': "EXPLOSIVOS",
-      'icono': Icons.warning,
-      'descripcion': "Gestión de explosivos",
-    },
-    {
       'nombre': "MEDICIONES TAL. HORIZONTAL",
       'icono': Icons.straighten,
       'descripcion': "Mediciones perforación horizontal",
@@ -114,8 +109,8 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
     {
       'nombre': "MEDICIONES TAL. LARGO",
       'icono': Icons.height,
-      'descripcion': "Mediciones perforación larga"
-    }
+      'descripcion': "Mediciones perforación larga",
+    },
   ];
 
   String searchQuery = '';
@@ -131,19 +126,14 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Colors.white,
-              backgroundColor,
-            ],
+            colors: [Colors.white, backgroundColor],
           ),
         ),
         child: Column(
           children: [
             _buildHeader(),
             _buildSearchBar(),
-            Expanded(
-              child: _buildSeccionesList(),
-            ),
+            Expanded(child: _buildSeccionesList()),
             _buildFooter(),
           ],
         ),
@@ -268,11 +258,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.grey.shade300,
-            ),
+            Icon(Icons.search_off, size: 64, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
               "No se encontraron secciones",
@@ -345,14 +331,12 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
               ? () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: _pantallas[nombre]!,
-                    ),
+                    MaterialPageRoute(builder: _pantallas[nombre]!),
                   );
                 }
               : disabled
-                  ? null
-                  : () => _mostrarDialogo(context, nombre),
+              ? null
+              : () => _mostrarDialogo(context, nombre),
           borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -379,13 +363,11 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
                   child: Icon(
                     icono,
                     size: 28,
-                    color: isAvailable
-                        ? primaryColor
-                        : Colors.grey.shade400,
+                    color: isAvailable ? primaryColor : Colors.grey.shade400,
                   ),
                 ),
                 const SizedBox(width: 16),
-                
+
                 // Contenido
                 Expanded(
                   child: Column(
@@ -454,18 +436,14 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Indicador de disponibilidad
                 Container(
                   margin: const EdgeInsets.only(left: 8),
                   child: Icon(
-                    isAvailable
-                        ? Icons.arrow_forward_ios
-                        : Icons.lock_outline,
+                    isAvailable ? Icons.arrow_forward_ios : Icons.lock_outline,
                     size: 16,
-                    color: isAvailable
-                        ? primaryColor
-                        : Colors.grey.shade400,
+                    color: isAvailable ? primaryColor : Colors.grey.shade400,
                   ),
                 ),
               ],
@@ -502,10 +480,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
               children: [
                 Text(
                   "Total de secciones",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -519,21 +494,14 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
               ],
             ),
           ),
-          Container(
-            height: 40,
-            width: 1,
-            color: Colors.grey.shade200,
-          ),
+          Container(height: 40, width: 1, color: Colors.grey.shade200),
           Expanded(
             child: Center(
               child: Column(
                 children: [
                   Text(
                     "Último acceso",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -569,18 +537,11 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
           ),
           title: Row(
             children: [
-              Icon(
-                Icons.info_outline,
-                color: primaryColor,
-                size: 24,
-              ),
+              Icon(Icons.info_outline, color: primaryColor, size: 24),
               const SizedBox(width: 12),
               const Text(
                 "Sección no disponible",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
             ],
           ),

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/models/assigned_labor.dart';
 import 'package:i_miner/models/PlanMensual.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
-
+import 'package:i_miner/services/mis_labores_service.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
   final int estadoId;
   final Map<String, dynamic>? datosIniciales;
   final String estado;
+  final String fecha;
+  final String turno;
   final Color primaryColor;
   final Function(Map<String, dynamic>) onGuardar;
 
@@ -18,6 +21,8 @@ class DialogoFormularioPerforacion extends StatefulWidget {
     required this.estadoId,
     this.datosIniciales,
     required this.estado,
+    required this.fecha,
+    required this.turno,
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
   }) : super(key: key);
@@ -31,6 +36,7 @@ class _DialogoFormularioPerforacionState
     extends State<DialogoFormularioPerforacion> {
   bool isEditable = false;
   bool isLoading = true;
+  bool usarFrentePlanificado = true;
 
   // Controladores para los campos de texto
   final TextEditingController talProdController = TextEditingController();
@@ -68,6 +74,8 @@ class _DialogoFormularioPerforacionState
   // Almacenar objetos completos para referencia
   List<PlanMensual> planesCompletos = [];
   List<TipoPerforacion> tiposPerforacionCompletos = [];
+  List<AssignedLabor> laboresAsignadas = [];
+  AssignedLabor? laborAsignadaSeleccionada;
 
   @override
   void initState() {
@@ -85,12 +93,108 @@ class _DialogoFormularioPerforacionState
         _cargarPlanesMensuales(),
         _cargarTiposPerforacion(),
         _cargarLongitudBarras(),
+        _cargarMisLabores(),
       ]);
     } catch (e) {
       print("Error cargando datos: $e");
     } finally {
       setState(() => isLoading = false);
     }
+  }
+
+  Future<void> _cargarMisLabores() async {
+    try {
+      final service = MisLaboresService();
+      final labores = await service.fetchAssignedLabores(
+        fecha: widget.fecha,
+        processName: 'PERFORACIÓN HORIZONTAL',
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        laboresAsignadas = labores;
+      });
+
+      _sincronizarFrentePlanificado();
+    } catch (e) {
+      print('Error cargando mis labores: $e');
+      usarFrentePlanificado = false;
+    }
+  }
+
+  void _sincronizarFrentePlanificado() {
+    if (laboresAsignadas.isEmpty) {
+      if (mounted) {
+        setState(() {
+          usarFrentePlanificado = false;
+        });
+      }
+      return;
+    }
+
+    final laborInicial = _buscarLaborAsignadaInicial();
+    laborAsignadaSeleccionada = laborInicial ?? laboresAsignadas.first;
+
+    final datosInicialesTienenFrenteManual =
+        (widget.datosIniciales?['labor']?.toString().isNotEmpty ?? false) &&
+        laborInicial == null;
+
+    usarFrentePlanificado = !datosInicialesTienenFrenteManual;
+    if (usarFrentePlanificado) {
+      _aplicarLaborAsignada(laborAsignadaSeleccionada!);
+    }
+  }
+
+  AssignedLabor? _buscarLaborAsignadaInicial() {
+    final laborActual = widget.datosIniciales?['labor']?.toString() ?? '';
+    final tipoLaborActual =
+        widget.datosIniciales?['tipo_labor']?.toString() ?? '';
+    final nivelActual = widget.datosIniciales?['nivel']?.toString() ?? '';
+
+    for (final labor in laboresAsignadas) {
+      if (labor.laborNombre == laborActual &&
+          labor.tipoLabor == tipoLaborActual &&
+          labor.nivel == nivelActual) {
+        return labor;
+      }
+    }
+
+    return null;
+  }
+
+  void _aplicarLaborAsignada(AssignedLabor labor) {
+    final ala = labor.ala.isNotEmpty
+        ? labor.ala
+        : _resolverAlaPlanificada(labor);
+    setState(() {
+      tipoLaborSeleccionado = labor.tipoLabor.isEmpty ? null : labor.tipoLabor;
+      laborSeleccionado = labor.laborNombre.isEmpty ? null : labor.laborNombre;
+      nivelSeleccionado = labor.nivel.isEmpty ? null : labor.nivel;
+      alaSeleccionado = ala;
+      laborAsignadaSeleccionada = labor;
+    });
+  }
+
+  String? _resolverAlaPlanificada(AssignedLabor labor) {
+    final alas = <String>{};
+
+    for (final plan in planesCompletos) {
+      if (plan.tipoLabor == labor.tipoLabor &&
+          plan.labor == labor.laborNombre &&
+          plan.nivel == labor.nivel &&
+          (plan.ala?.isNotEmpty ?? false)) {
+        alas.add(plan.ala!);
+      }
+    }
+
+    if (alas.length == 1) {
+      return alas.first;
+    }
+
+    return widget.datosIniciales?['ala']?.toString().isNotEmpty == true
+        ? widget.datosIniciales!['ala'].toString()
+        : null;
   }
 
   Future<void> _cargarLongitudBarras() async {
@@ -137,16 +241,16 @@ class _DialogoFormularioPerforacionState
       }
 
       setState(() {
-  opcionesNivel = nivelesSet.toList()..sort();
-  opcionesTipoLabor = tiposLaborSet.toList()..sort();
-  opcionesLabor = laboresSet.toList()..sort();
-  opcionesAla = alasSet.toList()..sort();
+        opcionesNivel = nivelesSet.toList()..sort();
+        opcionesTipoLabor = tiposLaborSet.toList()..sort();
+        opcionesLabor = laboresSet.toList()..sort();
+        opcionesAla = alasSet.toList()..sort();
 
-  filteredTiposLabor = List.from(opcionesTipoLabor);
-  filteredLabores = List.from(opcionesLabor);
-  filteredAlas = List.from(opcionesAla);
-  filteredNiveles = List.from(opcionesNivel);  // ← AGREGAR
-});
+        filteredTiposLabor = List.from(opcionesTipoLabor);
+        filteredLabores = List.from(opcionesLabor);
+        filteredAlas = List.from(opcionesAla);
+        filteredNiveles = List.from(opcionesNivel); // ← AGREGAR
+      });
 
       print('Niveles cargados: $opcionesNivel');
       print('Tipos Labor cargados: $opcionesTipoLabor');
@@ -349,6 +453,7 @@ class _DialogoFormularioPerforacionState
     }
 
     Map<String, dynamic> datosFormulario = {
+      'frente_origen': usarFrentePlanificado ? 'planificado' : 'otro_frente',
       'tipo_labor': tipoLaborSeleccionado ?? '',
       'labor': laborSeleccionado ?? '',
       'ala': alaSeleccionado ?? '',
@@ -441,37 +546,93 @@ class _DialogoFormularioPerforacionState
                             icon: Icons.location_on,
                             titulo: 'Ubicación',
                             children: [
-                              _buildCompactDropdownField(
-                                label: 'Tipo Labor', // 1º
-                                value: tipoLaborSeleccionado,
-                                items: filteredTiposLabor,
-                                onChanged: isEditable
-                                    ? _onTipoLaborChanged
-                                    : null,
-                                icon: Icons.construction,
-                              ),
-                              const SizedBox(width: 8),
-                              _buildCompactDropdownField(
-                                label: 'Labor', // 2º
-                                value: laborSeleccionado,
-                                items: filteredLabores,
-                                onChanged:
-                                    (tipoLaborSeleccionado != null &&
-                                        isEditable)
-                                    ? _onLaborChanged
-                                    : null,
-                                icon: Icons.factory,
-                              ),
-                              const SizedBox(width: 8),
-                              _buildCompactDropdownField(
-                                label: 'Ala', // 3º
-                                value: alaSeleccionado,
-                                items: filteredAlas,
-                                onChanged:
-                                    (laborSeleccionado != null && isEditable)
-                                    ? _onAlaChanged
-                                    : null,
-                                icon: Icons.compare_arrows,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (laboresAsignadas.isNotEmpty) ...[
+                                      SegmentedButton<bool>(
+                                        segments: const [
+                                          ButtonSegment<bool>(
+                                            value: true,
+                                            label: Text('Frente planificado'),
+                                          ),
+                                          ButtonSegment<bool>(
+                                            value: false,
+                                            label: Text('Otro frente'),
+                                          ),
+                                        ],
+                                        selected: {usarFrentePlanificado},
+                                        onSelectionChanged: isEditable
+                                            ? (selection) {
+                                                final usePlanned =
+                                                    selection.first;
+                                                setState(() {
+                                                  usarFrentePlanificado =
+                                                      usePlanned;
+                                                });
+                                                if (usePlanned &&
+                                                    laborAsignadaSeleccionada !=
+                                                        null) {
+                                                  _aplicarLaborAsignada(
+                                                    laborAsignadaSeleccionada!,
+                                                  );
+                                                }
+                                              }
+                                            : null,
+                                      ),
+                                      const SizedBox(height: 12),
+                                    ],
+                                    if (usarFrentePlanificado &&
+                                        laboresAsignadas.isNotEmpty)
+                                      _buildPlannedFrontSelector()
+                                    else
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _buildCompactDropdownField(
+                                              label: 'Tipo Labor',
+                                              value: tipoLaborSeleccionado,
+                                              items: filteredTiposLabor,
+                                              onChanged: isEditable
+                                                  ? _onTipoLaborChanged
+                                                  : null,
+                                              icon: Icons.construction,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: _buildCompactDropdownField(
+                                              label: 'Labor',
+                                              value: laborSeleccionado,
+                                              items: filteredLabores,
+                                              onChanged:
+                                                  (tipoLaborSeleccionado !=
+                                                          null &&
+                                                      isEditable)
+                                                  ? _onLaborChanged
+                                                  : null,
+                                              icon: Icons.factory,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: _buildCompactDropdownField(
+                                              label: 'Ala',
+                                              value: alaSeleccionado,
+                                              items: filteredAlas,
+                                              onChanged:
+                                                  (laborSeleccionado != null &&
+                                                      isEditable)
+                                                  ? _onAlaChanged
+                                                  : null,
+                                              icon: Icons.compare_arrows,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -950,6 +1111,54 @@ class _DialogoFormularioPerforacionState
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPlannedFrontSelector() {
+    final selected = laborAsignadaSeleccionada;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<int>(
+          value: selected?.laborId,
+          decoration: const InputDecoration(
+            labelText: 'Labor asignada',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+          items: laboresAsignadas.map((labor) {
+            return DropdownMenuItem<int>(
+              value: labor.laborId,
+              child: Text(
+                '${labor.laborNombre} | ${labor.nivel} | ${labor.estructuraMineral}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: isEditable
+              ? (laborId) {
+                  final match = laboresAsignadas.where(
+                    (labor) => labor.laborId == laborId,
+                  );
+                  if (match.isNotEmpty) {
+                    _aplicarLaborAsignada(match.first);
+                  }
+                }
+              : null,
+        ),
+        if (selected != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Hoy tienes planificado: ${selected.estructuraMineral} / Nivel ${selected.nivel} / ${selected.laborNombre}${alaSeleccionado?.isNotEmpty == true ? ' / Ala $alaSeleccionado' : ''}',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          if (selected.valorPlanificado > 0)
+            Text(
+              'Valor planificado: ${selected.valorPlanificado}',
+              style: const TextStyle(fontSize: 12),
+            ),
+        ],
+      ],
     );
   }
 }

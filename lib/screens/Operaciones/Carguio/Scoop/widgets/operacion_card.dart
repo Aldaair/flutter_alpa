@@ -13,6 +13,8 @@ class OperacionCard extends StatefulWidget {
   final Function(String?) onTurnoChanged;
   final Function(String) onFechaChanged;
   final String? dniUsuario;
+  final String? selectedOperatorName;
+  final int? selectedOperatorId;
   final Map<String, dynamic>? operacionExistente;
 
   final String fechaActual;
@@ -29,6 +31,8 @@ class OperacionCard extends StatefulWidget {
     required this.selectedTurno,
     required this.operacionExistente,
     this.dniUsuario,
+    this.selectedOperatorName,
+    this.selectedOperatorId,
     this.primaryColor = const Color(0xFF1B5E6B),
   }) : super(key: key);
 
@@ -37,16 +41,16 @@ class OperacionCard extends StatefulWidget {
 }
 
 class _OperacionCardState extends State<OperacionCard> {
-
   String? selectedEquipo;
   String? selectedCodigo;
   String? selectedJefeGuardia;
   String? selectedSeccion;
   String? operador;
-  
+  int? operadorId;
+
   String? selectedCapacidad;
-List<String> capacidadesFiltradas = [];
- Map<String, String> capacidadPorCodigo = {};
+  List<String> capacidadesFiltradas = [];
+  Map<String, String> capacidadPorCodigo = {};
 
   List<TipoEquipo> tiposEquipo = [];
   Map<int, bool> tiposSeleccionados = {};
@@ -63,106 +67,106 @@ List<String> capacidadesFiltradas = [];
   List<String> secciones = [];
 
   final Map<String, List<String>> codigosPorEquipo = {};
-  
+
   List<Equipo> equiposCompletos = [];
   List<String> codigosFiltrados = [];
 
-@override
-void initState() {
-  super.initState();
-  
-  _cargarOperadorPorDni();
-  _cargarEquipos();
-  _cargarJefesGuardia();
-  _cargarTiposEquipo();
-_cargarSecciones();
-  if (widget.operacionExistente != null) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _cargarDatosOperacionExistente();
-    });
-  }
-}
+  @override
+  void initState() {
+    super.initState();
 
-Future<void> _cargarSecciones() async {
-  try {
-    final dbHelper = DatabaseHelper();
-
-    final guardiasDB = await dbHelper.getGuardias();
-
-    setState(() {
-      secciones = guardiasDB.map((g) => g.guardia).toList()..sort();
-    });
-
-    print("Guardias cargadas: $secciones");
-
-  } catch (e) {
-    print("Error cargando guardias: $e");
-
-    setState(() {
-      secciones = [];
-    });
-  }
-}
-
-//   Future<void> _cargarSecciones() async {
-//   try {
-//     final dbHelper = DatabaseHelper();
-
-//     String tipoOperacion = 'SCOOPTRAM';
-
-//     final seccionesDB =
-//         await dbHelper.getSeccionesByProceso(tipoOperacion);
-
-//     setState(() {
-//       secciones = seccionesDB.map((s) => s.nombre).toList()..sort();
-//     });
-
-//     print("Secciones cargadas: $secciones");
-
-//   } catch (e) {
-//     print("Error cargando secciones: $e");
-//     setState(() {
-//       secciones = [];
-//     });
-//   }
-// }
-
-void _cargarDatosOperacionExistente() {
-  if (widget.operacionExistente == null) return;
-  
-  setState(() {
-    selectedEquipo = widget.operacionExistente!['equipo'];
-    selectedCodigo = widget.operacionExistente!['n_equipo'];
-    selectedCapacidad = widget.operacionExistente!['capacidad']?.toString();
-    selectedJefeGuardia = widget.operacionExistente!['jefe_guardia'];
-    selectedSeccion = widget.operacionExistente!['seccion'];
-    
-    codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
-    
-    if (selectedCodigo != null) {
-      String? capacidadString = capacidadPorCodigo[selectedCodigo];
-      if (capacidadString != null) {
-        capacidadesFiltradas = [capacidadString];
-      }
+    _cargarOperadorPorDni();
+    _cargarEquipos();
+    _cargarJefesGuardia();
+    _cargarTiposEquipo();
+    _cargarSecciones();
+    if (widget.operacionExistente != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _cargarDatosOperacionExistente();
+      });
     }
-    
-    final String? tiposJsonString = widget.operacionExistente!['tipo_equipo'];
-    
-    if (tiposJsonString != null && tiposJsonString.isNotEmpty) {
-      try {
-        Map<String, dynamic> tiposGuardados = jsonDecode(tiposJsonString);
-        
-        for (var tipo in tiposEquipo) {
-          if (tipo.id != null && tiposGuardados.containsKey(tipo.nombre)) {
-            tiposSeleccionados[tipo.id!] = tiposGuardados[tipo.nombre] as bool;
-          }
+  }
+
+  Future<void> _cargarSecciones() async {
+    try {
+      final dbHelper = DatabaseHelper();
+
+      final guardiasDB = await dbHelper.getGuardias();
+
+      setState(() {
+        secciones = guardiasDB.map((g) => g.guardia).toList()..sort();
+      });
+
+      print("Guardias cargadas: $secciones");
+    } catch (e) {
+      print("Error cargando guardias: $e");
+
+      setState(() {
+        secciones = [];
+      });
+    }
+  }
+
+  //   Future<void> _cargarSecciones() async {
+  //   try {
+  //     final dbHelper = DatabaseHelper();
+
+  //     String tipoOperacion = 'SCOOPTRAM';
+
+  //     final seccionesDB =
+  //         await dbHelper.getSeccionesByProceso(tipoOperacion);
+
+  //     setState(() {
+  //       secciones = seccionesDB.map((s) => s.nombre).toList()..sort();
+  //     });
+
+  //     print("Secciones cargadas: $secciones");
+
+  //   } catch (e) {
+  //     print("Error cargando secciones: $e");
+  //     setState(() {
+  //       secciones = [];
+  //     });
+  //   }
+  // }
+
+  void _cargarDatosOperacionExistente() {
+    if (widget.operacionExistente == null) return;
+
+    setState(() {
+      selectedEquipo = widget.operacionExistente!['equipo'];
+      selectedCodigo = widget.operacionExistente!['n_equipo'];
+      selectedCapacidad = widget.operacionExistente!['capacidad']?.toString();
+      selectedJefeGuardia = widget.operacionExistente!['jefe_guardia'];
+      selectedSeccion = widget.operacionExistente!['seccion'];
+
+      codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
+
+      if (selectedCodigo != null) {
+        String? capacidadString = capacidadPorCodigo[selectedCodigo];
+        if (capacidadString != null) {
+          capacidadesFiltradas = [capacidadString];
         }
-      } catch (e) {
-        print('Error al decodificar tipos de equipo: $e');
       }
-    }
-  });
-}
+
+      final String? tiposJsonString = widget.operacionExistente!['tipo_equipo'];
+
+      if (tiposJsonString != null && tiposJsonString.isNotEmpty) {
+        try {
+          Map<String, dynamic> tiposGuardados = jsonDecode(tiposJsonString);
+
+          for (var tipo in tiposEquipo) {
+            if (tipo.id != null && tiposGuardados.containsKey(tipo.nombre)) {
+              tiposSeleccionados[tipo.id!] =
+                  tiposGuardados[tipo.nombre] as bool;
+            }
+          }
+        } catch (e) {
+          print('Error al decodificar tipos de equipo: $e');
+        }
+      }
+    });
+  }
 
   Future<void> _cargarOperadorPorDni() async {
     if (widget.dniUsuario == null) return;
@@ -173,85 +177,92 @@ void _cargarDatosOperacionExistente() {
 
       if (usuario != null) {
         setState(() {
-          operador = '${usuario['nombres']} ${usuario['apellidos']}';
+          operadorId = usuario['operador_id'] as int?;
+          _syncDisplayedOperator(
+            fallbackName: '${usuario['nombres']} ${usuario['apellidos']}',
+          );
         });
         print('Operador cargado: $operador');
       } else {
         print('No se encontró usuario con DNI: ${widget.dniUsuario}');
         setState(() {
-          operador = operadorEjemplo;
+          _syncDisplayedOperator();
         });
       }
     } catch (e) {
       print('Error al cargar operador: $e');
       setState(() {
-        operador = operadorEjemplo;
+        _syncDisplayedOperator();
       });
     }
   }
 
-Future<void> _cargarEquipos() async {
-  try {
-    codigosPorEquipo.clear();
-    capacidadPorCodigo.clear();
+  void _syncDisplayedOperator({String? fallbackName}) {
+    operador = widget.selectedOperatorName ?? fallbackName ?? operadorEjemplo;
+  }
 
-    final dbHelper = DatabaseHelper();
-    equiposCompletos = await dbHelper.getEquipos();
+  Future<void> _cargarEquipos() async {
+    try {
+      codigosPorEquipo.clear();
+      capacidadPorCodigo.clear();
 
-    String tipoOperacion = 'SCOOPTRAM';
+      final dbHelper = DatabaseHelper();
+      equiposCompletos = await dbHelper.getEquipos();
 
-    List<Equipo> equiposFiltrados = equiposCompletos
-        .where((e) => e.proceso == tipoOperacion)
-        .toList();
+      String tipoOperacion = 'SCOOPTRAM';
 
-    Set<String> nombresEquipos = {};
+      List<Equipo> equiposFiltrados = equiposCompletos
+          .where((e) => e.matchesProceso(tipoOperacion))
+          .toList();
 
-    for (var equipo in equiposFiltrados) {
-      nombresEquipos.add(equipo.nombre);
+      Set<String> nombresEquipos = {};
 
-      codigosPorEquipo.putIfAbsent(equipo.nombre, () => []);
-      if (!codigosPorEquipo[equipo.nombre]!.contains(equipo.codigo)) {
-        codigosPorEquipo[equipo.nombre]!.add(equipo.codigo);
+      for (var equipo in equiposFiltrados) {
+        nombresEquipos.add(equipo.nombre);
+
+        codigosPorEquipo.putIfAbsent(equipo.nombre, () => []);
+        if (!codigosPorEquipo[equipo.nombre]!.contains(equipo.codigo)) {
+          codigosPorEquipo[equipo.nombre]!.add(equipo.codigo);
+        }
+
+        double capacidadValor = equipo.capacidadYd3!;
+        String capacidadString;
+
+        if (capacidadValor == capacidadValor.floorToDouble()) {
+          capacidadString = capacidadValor.toInt().toString();
+        } else {
+          capacidadString = capacidadValor.toStringAsFixed(2);
+        }
+
+        capacidadPorCodigo[equipo.codigo] = capacidadString;
       }
 
-      double capacidadValor = equipo.capacidadYd3!;
-      String capacidadString;
-      
-      if (capacidadValor == capacidadValor.floorToDouble()) {
-        capacidadString = capacidadValor.toInt().toString();
-      } else {
-        capacidadString = capacidadValor.toStringAsFixed(2);
-      }
-      
-      capacidadPorCodigo[equipo.codigo] = capacidadString;
-    }
+      setState(() {
+        equipos = nombresEquipos.toList()..sort();
 
-    setState(() {
-      equipos = nombresEquipos.toList()..sort();
+        if (widget.operacionExistente != null) {
+          selectedEquipo = widget.operacionExistente!['equipo'];
+          selectedCodigo = widget.operacionExistente!['n_equipo'];
+          selectedCapacidad = widget.operacionExistente!['capacidad']
+              ?.toString();
 
-      if (widget.operacionExistente != null) {
-        selectedEquipo = widget.operacionExistente!['equipo'];
-        selectedCodigo = widget.operacionExistente!['n_equipo'];
-        selectedCapacidad = widget.operacionExistente!['capacidad']?.toString();
-        
-        codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
-        
-        if (selectedCodigo != null) {
-          String? capacidadString = capacidadPorCodigo[selectedCodigo];
-          if (capacidadString != null) {
-            capacidadesFiltradas = [capacidadString];
+          codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
+
+          if (selectedCodigo != null) {
+            String? capacidadString = capacidadPorCodigo[selectedCodigo];
+            if (capacidadString != null) {
+              capacidadesFiltradas = [capacidadString];
+            }
           }
         }
-      }
-    });
+      });
 
-    print('Equipos cargados: ${equipos.length}');
-    print('Mapa de capacidades: $capacidadPorCodigo');
-
-  } catch (e) {
-    print("Error cargando equipos: $e");
+      print('Equipos cargados: ${equipos.length}');
+      print('Mapa de capacidades: $capacidadPorCodigo');
+    } catch (e) {
+      print("Error cargando equipos: $e");
+    }
   }
-}
 
   Future<void> _cargarJefesGuardia() async {
     try {
@@ -266,7 +277,6 @@ Future<void> _cargarEquipos() async {
       });
 
       print('Jefes de guardia cargados: $jefesGuardia');
-
     } catch (e) {
       print("Error al obtener los jefes de guardia: $e");
       setState(() {
@@ -279,27 +289,30 @@ Future<void> _cargarEquipos() async {
     try {
       final dbHelper = DatabaseHelper();
       final List<TipoEquipo> tipos = await dbHelper.getTiposEquipo();
-      
+
       setState(() {
         tiposEquipo = tipos;
-        
+
         tiposSeleccionados.clear();
         for (var tipo in tiposEquipo) {
           if (tipo.id != null) {
             tiposSeleccionados[tipo.id!] = false;
           }
         }
-        
+
         if (widget.operacionExistente != null) {
-          final String? tiposJsonString = widget.operacionExistente!['tipo_equipo'];
-          
+          final String? tiposJsonString =
+              widget.operacionExistente!['tipo_equipo'];
+
           if (tiposJsonString != null && tiposJsonString.isNotEmpty) {
             try {
               Map<String, dynamic> tiposGuardados = jsonDecode(tiposJsonString);
-              
+
               for (var tipo in tiposEquipo) {
-                if (tipo.id != null && tiposGuardados.containsKey(tipo.nombre)) {
-                  tiposSeleccionados[tipo.id!] = tiposGuardados[tipo.nombre] as bool;
+                if (tipo.id != null &&
+                    tiposGuardados.containsKey(tipo.nombre)) {
+                  tiposSeleccionados[tipo.id!] =
+                      tiposGuardados[tipo.nombre] as bool;
                 }
               }
             } catch (e) {
@@ -308,70 +321,79 @@ Future<void> _cargarEquipos() async {
           }
         }
       });
-      
+
       print('Tipos de equipo cargados: ${tiposEquipo.length}');
     } catch (e) {
       print('Error al cargar tipos de equipo: $e');
     }
   }
 
-@override
-void didUpdateWidget(covariant OperacionCard oldWidget) {
-  super.didUpdateWidget(oldWidget);
+  @override
+  void didUpdateWidget(covariant OperacionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
 
-  if (widget.operacionExistente != oldWidget.operacionExistente) {
-    if (widget.operacionExistente != null) {
-      setState(() {
-        selectedEquipo = widget.operacionExistente!['equipo'];
-        selectedCodigo = widget.operacionExistente!['n_equipo'];
-        selectedCapacidad = widget.operacionExistente!['capacidad']?.toString();
-        selectedJefeGuardia = widget.operacionExistente!['jefe_guardia'];
-        selectedSeccion = widget.operacionExistente!['seccion'];
-        
-        codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
-        
-        if (selectedCodigo != null) {
-          String? capacidadString = capacidadPorCodigo[selectedCodigo];
-          if (capacidadString != null) {
-            capacidadesFiltradas = [capacidadString];
-          }
-        }
-        
-        final String? tiposJsonString = widget.operacionExistente!['tipo_equipo'];
-        
-        if (tiposJsonString != null && tiposJsonString.isNotEmpty) {
-          try {
-            Map<String, dynamic> tiposGuardados = jsonDecode(tiposJsonString);
-            
-            for (var tipo in tiposEquipo) {
-              if (tipo.id != null && tiposGuardados.containsKey(tipo.nombre)) {
-                tiposSeleccionados[tipo.id!] = tiposGuardados[tipo.nombre] as bool;
-              }
+    if (oldWidget.selectedOperatorId != widget.selectedOperatorId ||
+        oldWidget.selectedOperatorName != widget.selectedOperatorName) {
+      _syncDisplayedOperator();
+    }
+
+    if (widget.operacionExistente != oldWidget.operacionExistente) {
+      if (widget.operacionExistente != null) {
+        setState(() {
+          selectedEquipo = widget.operacionExistente!['equipo'];
+          selectedCodigo = widget.operacionExistente!['n_equipo'];
+          selectedCapacidad = widget.operacionExistente!['capacidad']
+              ?.toString();
+          selectedJefeGuardia = widget.operacionExistente!['jefe_guardia'];
+          selectedSeccion = widget.operacionExistente!['seccion'];
+
+          codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
+
+          if (selectedCodigo != null) {
+            String? capacidadString = capacidadPorCodigo[selectedCodigo];
+            if (capacidadString != null) {
+              capacidadesFiltradas = [capacidadString];
             }
-          } catch (e) {
-            print('Error al decodificar tipos de equipo: $e');
           }
-        }
-      });
-    } else {
-      setState(() {
-        selectedEquipo = null;
-        selectedCodigo = null;
-        selectedCapacidad = null;
-        selectedJefeGuardia = null;
-        selectedSeccion = null;
-        capacidadesFiltradas = [];
-        codigosFiltrados = [];
-        
-        for (var tipo in tiposEquipo) {
-          if (tipo.id != null) {
-            tiposSeleccionados[tipo.id!] = false;
+
+          final String? tiposJsonString =
+              widget.operacionExistente!['tipo_equipo'];
+
+          if (tiposJsonString != null && tiposJsonString.isNotEmpty) {
+            try {
+              Map<String, dynamic> tiposGuardados = jsonDecode(tiposJsonString);
+
+              for (var tipo in tiposEquipo) {
+                if (tipo.id != null &&
+                    tiposGuardados.containsKey(tipo.nombre)) {
+                  tiposSeleccionados[tipo.id!] =
+                      tiposGuardados[tipo.nombre] as bool;
+                }
+              }
+            } catch (e) {
+              print('Error al decodificar tipos de equipo: $e');
+            }
           }
-        }
-      });
+        });
+      } else {
+        setState(() {
+          selectedEquipo = null;
+          selectedCodigo = null;
+          selectedCapacidad = null;
+          selectedJefeGuardia = null;
+          selectedSeccion = null;
+          capacidadesFiltradas = [];
+          codigosFiltrados = [];
+
+          for (var tipo in tiposEquipo) {
+            if (tipo.id != null) {
+              tiposSeleccionados[tipo.id!] = false;
+            }
+          }
+        });
+      }
     }
   }
-}
 
   Future<void> refrescarDatos() async {
     await Future.wait([
@@ -386,8 +408,7 @@ void didUpdateWidget(covariant OperacionCard oldWidget) {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -406,339 +427,53 @@ void didUpdateWidget(covariant OperacionCard oldWidget) {
     );
   }
 
-Widget _buildFormFields() {
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      double cardWidth = constraints.maxWidth;
-      
-      // Detectar tamaño de pantalla
-      if (cardWidth < 600) {
-        // Móviles
-        return _buildMobileLayout();
-      } else if (cardWidth >= 600 && cardWidth < 900) {
-        // Tablets (pantalla mediana)
-        return _buildTabletLayout(cardWidth);
-      } else {
-        // Desktop (pantalla grande)
-        return _buildDesktopLayout(cardWidth);
-      }
-    },
-  );
-}
+  Widget _buildFormFields() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double cardWidth = constraints.maxWidth;
 
-// Layout para móviles (pantallas < 600px)
-Widget _buildMobileLayout() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // Fila 1: Fecha y Turno
-      Row(
-        children: [
-          Expanded(child: _buildFechaField()),
-          const SizedBox(width: 10),
-          Expanded(
-            child: CustomMaterialDropdown(
-              label: 'Turno',
-              value: widget.selectedTurno,
-              items: turnos,
-              onChanged: operacionBloqueada ? null : widget.onTurnoChanged,
-              icon: Icons.access_time,
-              hint: 'Turno',
-              primaryColor: widget.primaryColor,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 12),
-      
-      // Fila 2: Equipo
-      CustomMaterialDropdown(
-        label: 'Equipo',
-        value: selectedEquipo,
-        items: equipos,
-        onChanged: operacionBloqueada
-            ? null
-            : (value) {
-                setState(() {
-                  selectedEquipo = value;
-                  selectedCodigo = null;
-                  selectedCapacidad = null;
-                  capacidadesFiltradas = [];
-                  codigosFiltrados = codigosPorEquipo[value] ?? [];
-                });
-              },
-        icon: Icons.precision_manufacturing,
-        hint: equipos.isEmpty ? 'Cargando...' : 'Equipo',
-        primaryColor: widget.primaryColor,
-      ),
-      const SizedBox(height: 12),
-      
-      // Fila 3: Código y Capacidad (2 columnas)
-      Row(
-        children: [
-          Expanded(
-            child: CustomMaterialDropdown(
-              label: 'Código',
-              value: selectedCodigo,
-              items: codigosFiltrados,
-              onChanged: operacionBloqueada || selectedEquipo == null
-                  ? null
-                  : (value) {
-                      setState(() {
-                        selectedCodigo = value;
-                        _actualizarCapacidadesPorCodigo(value!);
-                      });
-                    },
-              icon: Icons.qr_code,
-              hint: 'Código',
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: CustomMaterialDropdown(
-              label: 'Capacidad (yd³)',
-              value: selectedCapacidad,
-              items: capacidadesFiltradas,
-              onChanged: operacionBloqueada || selectedCodigo == null
-                  ? null
-                  : (value) {
-                      setState(() {
-                        selectedCapacidad = value;
-                      });
-                    },
-              icon: Icons.speed,
-              hint: selectedCodigo == null 
-                  ? 'Seleccione código' 
-                  : (capacidadesFiltradas.isEmpty ? 'Cargando...' : 'Capacidad'),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 12),
-      
-      // Fila 4: Tipo de equipo (ocupa todo el ancho)
-      _buildTipoEquipoField(),
-      const SizedBox(height: 12),
-      
-      // Fila 5: Operador y Jefe Guardia (2 columnas)
-      Row(
-        children: [
-          Expanded(child: _buildOperadorField()),
-          const SizedBox(width: 10),
-          Expanded(
-            child: CustomMaterialDropdown(
-              label: 'Jefe Guardia',
-              value: selectedJefeGuardia,
-              items: jefesGuardia,
-              onChanged: operacionBloqueada
-                  ? null
-                  : (value) => setState(() => selectedJefeGuardia = value),
-              icon: Icons.person,
-              hint: jefesGuardia.isEmpty ? 'Cargando...' : 'Jefe',
-              primaryColor: widget.primaryColor,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 12),
-      
-      // Fila 6: Sección (ocupa todo el ancho)
-      CustomMaterialDropdown(
-        label: 'Guardia',
-        value: selectedSeccion,
-        items: secciones,
-        onChanged: operacionBloqueada
-            ? null
-            : (value) => setState(() => selectedSeccion = value),
-        icon: Icons.map,
-        hint: 'Guardia',
-        primaryColor: widget.primaryColor,
-      ),
-    ],
-  );
-}
+        // Detectar tamaño de pantalla
+        if (cardWidth < 600) {
+          // Móviles
+          return _buildMobileLayout();
+        } else if (cardWidth >= 600 && cardWidth < 900) {
+          // Tablets (pantalla mediana)
+          return _buildTabletLayout(cardWidth);
+        } else {
+          // Desktop (pantalla grande)
+          return _buildDesktopLayout(cardWidth);
+        }
+      },
+    );
+  }
 
-// Layout para tablets (pantallas medianas: 600px - 900px)
-Widget _buildTabletLayout(double cardWidth) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // Fila 1: Fecha y Turno
-      Row(
-        children: [
-          Expanded(flex: 1, child: _buildFechaField()),
-          const SizedBox(width: 12),
-          Expanded(flex: 1, child: CustomMaterialDropdown(
-            label: 'Turno',
-            value: widget.selectedTurno,
-            items: turnos,
-            onChanged: operacionBloqueada ? null : widget.onTurnoChanged,
-            icon: Icons.access_time,
-            hint: 'Turno',
-            primaryColor: widget.primaryColor,
-          )),
-        ],
-      ),
-      const SizedBox(height: 16),
-      
-      // Fila 2: Equipo y Código (2 columnas)
-      Row(
-        children: [
-          Expanded(
-            child: CustomMaterialDropdown(
-              label: 'Equipo',
-              value: selectedEquipo,
-              items: equipos,
-              onChanged: operacionBloqueada
-                  ? null
-                  : (value) {
-                      setState(() {
-                        selectedEquipo = value;
-                        selectedCodigo = null;
-                        selectedCapacidad = null;
-                        capacidadesFiltradas = [];
-                        codigosFiltrados = codigosPorEquipo[value] ?? [];
-                      });
-                    },
-              icon: Icons.precision_manufacturing,
-              hint: equipos.isEmpty ? 'Cargando...' : 'Equipo',
-              primaryColor: widget.primaryColor,
+  // Layout para móviles (pantallas < 600px)
+  Widget _buildMobileLayout() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Fila 1: Fecha y Turno
+        Row(
+          children: [
+            Expanded(child: _buildFechaField()),
+            const SizedBox(width: 10),
+            Expanded(
+              child: CustomMaterialDropdown(
+                label: 'Turno',
+                value: widget.selectedTurno,
+                items: turnos,
+                onChanged: operacionBloqueada ? null : widget.onTurnoChanged,
+                icon: Icons.access_time,
+                hint: 'Turno',
+                primaryColor: widget.primaryColor,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: CustomMaterialDropdown(
-              label: 'Código',
-              value: selectedCodigo,
-              items: codigosFiltrados,
-              onChanged: operacionBloqueada || selectedEquipo == null
-                  ? null
-                  : (value) {
-                      setState(() {
-                        selectedCodigo = value;
-                        _actualizarCapacidadesPorCodigo(value!);
-                      });
-                    },
-              icon: Icons.qr_code,
-              hint: 'Código',
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      
-      // Fila 3: Capacidad y Sección (2 columnas)
-      Row(
-        children: [
-          Expanded(
-            child: CustomMaterialDropdown(
-              label: 'Capacidad (yd³)',
-              value: selectedCapacidad,
-              items: capacidadesFiltradas,
-              onChanged: operacionBloqueada || selectedCodigo == null
-                  ? null
-                  : (value) {
-                      setState(() {
-                        selectedCapacidad = value;
-                      });
-                    },
-              icon: Icons.speed,
-              hint: selectedCodigo == null 
-                  ? 'Seleccione código' 
-                  : (capacidadesFiltradas.isEmpty ? 'Cargando...' : 'Capacidad'),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: CustomMaterialDropdown(
-              label: 'Guardia',
-              value: selectedSeccion,
-              items: secciones,
-              onChanged: operacionBloqueada
-                  ? null
-                  : (value) => setState(() => selectedSeccion = value),
-              icon: Icons.map,
-              hint: 'Guardia',
-              primaryColor: widget.primaryColor,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      
-      // Fila 4: Tipo de equipo (ocupa todo el ancho)
-      _buildTipoEquipoField(),
-      const SizedBox(height: 16),
-      
-      // Fila 5: Operador y Jefe Guardia (2 columnas)
-      Row(
-        children: [
-          Expanded(child: _buildOperadorField()),
-          const SizedBox(width: 12),
-          Expanded(
-            child: CustomMaterialDropdown(
-              label: 'Jefe Guardia',
-              value: selectedJefeGuardia,
-              items: jefesGuardia,
-              onChanged: operacionBloqueada
-                  ? null
-                  : (value) => setState(() => selectedJefeGuardia = value),
-              icon: Icons.person,
-              hint: jefesGuardia.isEmpty ? 'Cargando...' : 'Jefe',
-              primaryColor: widget.primaryColor,
-            ),
-          ),
-        ],
-      ),
-    ],
-  );
-}
-
-// Layout para desktop (pantallas grandes >= 900px)
-Widget _buildDesktopLayout(double cardWidth) {
-  Map<String, double> fieldWeights = {
-    'fecha': 0.8,
-    'turno': 0.7,
-    'equipo': 1.0,
-    'codigo': 1.0,
-    'capacidad': 1.0,
-    'tipo_equipo': 1.2,
-    'operador': 1.2,
-    'jefe': 1.2,
-    'seccion': 1.0,
-  };
-
-  double scaleFactor = 1.0; // En desktop usamos el tamaño completo
-
-  return Wrap(
-    spacing: 12,
-    runSpacing: 16,
-    children: [
-      _buildFlexibleField(
-        width: _calculateFieldWidth(
-            cardWidth,
-            fieldWeights['fecha']! * scaleFactor),
-        child: _buildFechaField(),
-      ),
-      _buildFlexibleField(
-        width: _calculateFieldWidth(
-            cardWidth,
-            fieldWeights['turno']! * scaleFactor),
-        child: CustomMaterialDropdown(
-          label: 'Turno',
-          value: widget.selectedTurno,
-          items: turnos,
-          onChanged: operacionBloqueada ? null : widget.onTurnoChanged,
-          icon: Icons.access_time,
-          hint: 'Turno',
-          primaryColor: widget.primaryColor,
+          ],
         ),
-      ),
-      _buildFlexibleField(
-        width: _calculateFieldWidth(
-            cardWidth,
-            fieldWeights['equipo']! * scaleFactor),
-        child: CustomMaterialDropdown(
+        const SizedBox(height: 12),
+
+        // Fila 2: Equipo
+        CustomMaterialDropdown(
           label: 'Equipo',
           value: selectedEquipo,
           items: equipos,
@@ -757,81 +492,81 @@ Widget _buildDesktopLayout(double cardWidth) {
           hint: equipos.isEmpty ? 'Cargando...' : 'Equipo',
           primaryColor: widget.primaryColor,
         ),
-      ),
-      _buildFlexibleField(
-        width: _calculateFieldWidth(
-            cardWidth,
-            fieldWeights['codigo']! * scaleFactor),
-        child: CustomMaterialDropdown(
-          label: 'Código',
-          value: selectedCodigo,
-          items: codigosFiltrados,
-          onChanged: operacionBloqueada || selectedEquipo == null
-              ? null
-              : (value) {
-                  setState(() {
-                    selectedCodigo = value;
-                    _actualizarCapacidadesPorCodigo(value!);
-                  });
-                },
-          icon: Icons.qr_code,
-          hint: 'Código',
+        const SizedBox(height: 12),
+
+        // Fila 3: Código y Capacidad (2 columnas)
+        Row(
+          children: [
+            Expanded(
+              child: CustomMaterialDropdown(
+                label: 'Código',
+                value: selectedCodigo,
+                items: codigosFiltrados,
+                onChanged: operacionBloqueada || selectedEquipo == null
+                    ? null
+                    : (value) {
+                        setState(() {
+                          selectedCodigo = value;
+                          _actualizarCapacidadesPorCodigo(value!);
+                        });
+                      },
+                icon: Icons.qr_code,
+                hint: 'Código',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: CustomMaterialDropdown(
+                label: 'Capacidad (yd³)',
+                value: selectedCapacidad,
+                items: capacidadesFiltradas,
+                onChanged: operacionBloqueada || selectedCodigo == null
+                    ? null
+                    : (value) {
+                        setState(() {
+                          selectedCapacidad = value;
+                        });
+                      },
+                icon: Icons.speed,
+                hint: selectedCodigo == null
+                    ? 'Seleccione código'
+                    : (capacidadesFiltradas.isEmpty
+                          ? 'Cargando...'
+                          : 'Capacidad'),
+              ),
+            ),
+          ],
         ),
-      ),
-      _buildFlexibleField(
-        width: _calculateFieldWidth(
-            cardWidth,
-            fieldWeights['capacidad']! * scaleFactor),
-        child: CustomMaterialDropdown(
-          label: 'Capacidad (yd³)',
-          value: selectedCapacidad,
-          items: capacidadesFiltradas,
-          onChanged: operacionBloqueada || selectedCodigo == null
-              ? null
-              : (value) {
-                  setState(() {
-                    selectedCapacidad = value;
-                  });
-                },
-          icon: Icons.speed,
-          hint: selectedCodigo == null 
-              ? 'Seleccione código' 
-              : (capacidadesFiltradas.isEmpty ? 'Cargando...' : 'Capacidad'),
+        const SizedBox(height: 12),
+
+        // Fila 4: Tipo de equipo (ocupa todo el ancho)
+        _buildTipoEquipoField(),
+        const SizedBox(height: 12),
+
+        // Fila 5: Operador y Jefe Guardia (2 columnas)
+        Row(
+          children: [
+            Expanded(child: _buildOperadorField()),
+            const SizedBox(width: 10),
+            Expanded(
+              child: CustomMaterialDropdown(
+                label: 'Jefe Guardia',
+                value: selectedJefeGuardia,
+                items: jefesGuardia,
+                onChanged: operacionBloqueada
+                    ? null
+                    : (value) => setState(() => selectedJefeGuardia = value),
+                icon: Icons.person,
+                hint: jefesGuardia.isEmpty ? 'Cargando...' : 'Jefe',
+                primaryColor: widget.primaryColor,
+              ),
+            ),
+          ],
         ),
-      ),
-      _buildFlexibleField(
-        width: _calculateFieldWidth(
-            cardWidth,
-            fieldWeights['tipo_equipo']! * scaleFactor),
-        child: _buildTipoEquipoField(),
-      ),
-      _buildFlexibleField(
-        width: _calculateFieldWidth(
-            cardWidth,
-            fieldWeights['operador']! * scaleFactor),
-        child: _buildOperadorField(),
-      ),
-      _buildFlexibleField(
-        width: _calculateFieldWidth(
-            cardWidth,
-            fieldWeights['jefe']! * scaleFactor),
-        child: CustomMaterialDropdown(
-          label: 'Jefe Guardia',
-          value: selectedJefeGuardia,
-          items: jefesGuardia,
-          onChanged: operacionBloqueada
-              ? null
-              : (value) => setState(() => selectedJefeGuardia = value),
-          icon: Icons.person,
-          hint: jefesGuardia.isEmpty ? 'Cargando...' : 'Jefe',
-          primaryColor: widget.primaryColor,
-        ),
-      ),
-      _buildFlexibleField(
-        width: _calculateFieldWidth(
-            cardWidth,
-            fieldWeights['seccion']! * scaleFactor),
-        child: CustomMaterialDropdown(
+        const SizedBox(height: 12),
+
+        // Fila 6: Sección (ocupa todo el ancho)
+        CustomMaterialDropdown(
           label: 'Guardia',
           value: selectedSeccion,
           items: secciones,
@@ -842,22 +577,324 @@ Widget _buildDesktopLayout(double cardWidth) {
           hint: 'Guardia',
           primaryColor: widget.primaryColor,
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
+
+  // Layout para tablets (pantallas medianas: 600px - 900px)
+  Widget _buildTabletLayout(double cardWidth) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Fila 1: Fecha y Turno
+        Row(
+          children: [
+            Expanded(flex: 1, child: _buildFechaField()),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 1,
+              child: CustomMaterialDropdown(
+                label: 'Turno',
+                value: widget.selectedTurno,
+                items: turnos,
+                onChanged: operacionBloqueada ? null : widget.onTurnoChanged,
+                icon: Icons.access_time,
+                hint: 'Turno',
+                primaryColor: widget.primaryColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Fila 2: Equipo y Código (2 columnas)
+        Row(
+          children: [
+            Expanded(
+              child: CustomMaterialDropdown(
+                label: 'Equipo',
+                value: selectedEquipo,
+                items: equipos,
+                onChanged: operacionBloqueada
+                    ? null
+                    : (value) {
+                        setState(() {
+                          selectedEquipo = value;
+                          selectedCodigo = null;
+                          selectedCapacidad = null;
+                          capacidadesFiltradas = [];
+                          codigosFiltrados = codigosPorEquipo[value] ?? [];
+                        });
+                      },
+                icon: Icons.precision_manufacturing,
+                hint: equipos.isEmpty ? 'Cargando...' : 'Equipo',
+                primaryColor: widget.primaryColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CustomMaterialDropdown(
+                label: 'Código',
+                value: selectedCodigo,
+                items: codigosFiltrados,
+                onChanged: operacionBloqueada || selectedEquipo == null
+                    ? null
+                    : (value) {
+                        setState(() {
+                          selectedCodigo = value;
+                          _actualizarCapacidadesPorCodigo(value!);
+                        });
+                      },
+                icon: Icons.qr_code,
+                hint: 'Código',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Fila 3: Capacidad y Sección (2 columnas)
+        Row(
+          children: [
+            Expanded(
+              child: CustomMaterialDropdown(
+                label: 'Capacidad (yd³)',
+                value: selectedCapacidad,
+                items: capacidadesFiltradas,
+                onChanged: operacionBloqueada || selectedCodigo == null
+                    ? null
+                    : (value) {
+                        setState(() {
+                          selectedCapacidad = value;
+                        });
+                      },
+                icon: Icons.speed,
+                hint: selectedCodigo == null
+                    ? 'Seleccione código'
+                    : (capacidadesFiltradas.isEmpty
+                          ? 'Cargando...'
+                          : 'Capacidad'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CustomMaterialDropdown(
+                label: 'Guardia',
+                value: selectedSeccion,
+                items: secciones,
+                onChanged: operacionBloqueada
+                    ? null
+                    : (value) => setState(() => selectedSeccion = value),
+                icon: Icons.map,
+                hint: 'Guardia',
+                primaryColor: widget.primaryColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Fila 4: Tipo de equipo (ocupa todo el ancho)
+        _buildTipoEquipoField(),
+        const SizedBox(height: 16),
+
+        // Fila 5: Operador y Jefe Guardia (2 columnas)
+        Row(
+          children: [
+            Expanded(child: _buildOperadorField()),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CustomMaterialDropdown(
+                label: 'Jefe Guardia',
+                value: selectedJefeGuardia,
+                items: jefesGuardia,
+                onChanged: operacionBloqueada
+                    ? null
+                    : (value) => setState(() => selectedJefeGuardia = value),
+                icon: Icons.person,
+                hint: jefesGuardia.isEmpty ? 'Cargando...' : 'Jefe',
+                primaryColor: widget.primaryColor,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Layout para desktop (pantallas grandes >= 900px)
+  Widget _buildDesktopLayout(double cardWidth) {
+    Map<String, double> fieldWeights = {
+      'fecha': 0.8,
+      'turno': 0.7,
+      'equipo': 1.0,
+      'codigo': 1.0,
+      'capacidad': 1.0,
+      'tipo_equipo': 1.2,
+      'operador': 1.2,
+      'jefe': 1.2,
+      'seccion': 1.0,
+    };
+
+    double scaleFactor = 1.0; // En desktop usamos el tamaño completo
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 16,
+      children: [
+        _buildFlexibleField(
+          width: _calculateFieldWidth(
+            cardWidth,
+            fieldWeights['fecha']! * scaleFactor,
+          ),
+          child: _buildFechaField(),
+        ),
+        _buildFlexibleField(
+          width: _calculateFieldWidth(
+            cardWidth,
+            fieldWeights['turno']! * scaleFactor,
+          ),
+          child: CustomMaterialDropdown(
+            label: 'Turno',
+            value: widget.selectedTurno,
+            items: turnos,
+            onChanged: operacionBloqueada ? null : widget.onTurnoChanged,
+            icon: Icons.access_time,
+            hint: 'Turno',
+            primaryColor: widget.primaryColor,
+          ),
+        ),
+        _buildFlexibleField(
+          width: _calculateFieldWidth(
+            cardWidth,
+            fieldWeights['equipo']! * scaleFactor,
+          ),
+          child: CustomMaterialDropdown(
+            label: 'Equipo',
+            value: selectedEquipo,
+            items: equipos,
+            onChanged: operacionBloqueada
+                ? null
+                : (value) {
+                    setState(() {
+                      selectedEquipo = value;
+                      selectedCodigo = null;
+                      selectedCapacidad = null;
+                      capacidadesFiltradas = [];
+                      codigosFiltrados = codigosPorEquipo[value] ?? [];
+                    });
+                  },
+            icon: Icons.precision_manufacturing,
+            hint: equipos.isEmpty ? 'Cargando...' : 'Equipo',
+            primaryColor: widget.primaryColor,
+          ),
+        ),
+        _buildFlexibleField(
+          width: _calculateFieldWidth(
+            cardWidth,
+            fieldWeights['codigo']! * scaleFactor,
+          ),
+          child: CustomMaterialDropdown(
+            label: 'Código',
+            value: selectedCodigo,
+            items: codigosFiltrados,
+            onChanged: operacionBloqueada || selectedEquipo == null
+                ? null
+                : (value) {
+                    setState(() {
+                      selectedCodigo = value;
+                      _actualizarCapacidadesPorCodigo(value!);
+                    });
+                  },
+            icon: Icons.qr_code,
+            hint: 'Código',
+          ),
+        ),
+        _buildFlexibleField(
+          width: _calculateFieldWidth(
+            cardWidth,
+            fieldWeights['capacidad']! * scaleFactor,
+          ),
+          child: CustomMaterialDropdown(
+            label: 'Capacidad (yd³)',
+            value: selectedCapacidad,
+            items: capacidadesFiltradas,
+            onChanged: operacionBloqueada || selectedCodigo == null
+                ? null
+                : (value) {
+                    setState(() {
+                      selectedCapacidad = value;
+                    });
+                  },
+            icon: Icons.speed,
+            hint: selectedCodigo == null
+                ? 'Seleccione código'
+                : (capacidadesFiltradas.isEmpty ? 'Cargando...' : 'Capacidad'),
+          ),
+        ),
+        _buildFlexibleField(
+          width: _calculateFieldWidth(
+            cardWidth,
+            fieldWeights['tipo_equipo']! * scaleFactor,
+          ),
+          child: _buildTipoEquipoField(),
+        ),
+        _buildFlexibleField(
+          width: _calculateFieldWidth(
+            cardWidth,
+            fieldWeights['operador']! * scaleFactor,
+          ),
+          child: _buildOperadorField(),
+        ),
+        _buildFlexibleField(
+          width: _calculateFieldWidth(
+            cardWidth,
+            fieldWeights['jefe']! * scaleFactor,
+          ),
+          child: CustomMaterialDropdown(
+            label: 'Jefe Guardia',
+            value: selectedJefeGuardia,
+            items: jefesGuardia,
+            onChanged: operacionBloqueada
+                ? null
+                : (value) => setState(() => selectedJefeGuardia = value),
+            icon: Icons.person,
+            hint: jefesGuardia.isEmpty ? 'Cargando...' : 'Jefe',
+            primaryColor: widget.primaryColor,
+          ),
+        ),
+        _buildFlexibleField(
+          width: _calculateFieldWidth(
+            cardWidth,
+            fieldWeights['seccion']! * scaleFactor,
+          ),
+          child: CustomMaterialDropdown(
+            label: 'Guardia',
+            value: selectedSeccion,
+            items: secciones,
+            onChanged: operacionBloqueada
+                ? null
+                : (value) => setState(() => selectedSeccion = value),
+            icon: Icons.map,
+            hint: 'Guardia',
+            primaryColor: widget.primaryColor,
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildTipoEquipoField() {
     bool isEnabled = !operacionBloqueada;
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         border: Border.all(
-          color: isEnabled 
-            ? widget.primaryColor.withOpacity(0.5) 
-            : Colors.grey.shade300,
+          color: isEnabled
+              ? widget.primaryColor.withOpacity(0.5)
+              : Colors.grey.shade300,
         ),
         borderRadius: BorderRadius.circular(8),
         color: isEnabled ? Colors.white : Colors.grey.shade50,
@@ -875,17 +912,17 @@ Widget _buildDesktopLayout(double cardWidth) {
             ),
           ),
           const SizedBox(height: 6),
-          
+
           Wrap(
             spacing: 8,
             runSpacing: 4,
             children: tiposEquipo.map((tipo) {
               if (tipo.id == null) return const SizedBox.shrink();
-              
+
               bool isSelected = tiposSeleccionados[tipo.id!] ?? false;
-              
+
               return InkWell(
-                onTap: isEnabled 
+                onTap: isEnabled
                     ? () {
                         setState(() {
                           tiposSeleccionados[tipo.id!] = !isSelected;
@@ -894,7 +931,10 @@ Widget _buildDesktopLayout(double cardWidth) {
                     : null,
                 borderRadius: BorderRadius.circular(4),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -903,15 +943,15 @@ Widget _buildDesktopLayout(double cardWidth) {
                         height: 18,
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: isEnabled 
-                                ? (isSelected 
-                                    ? widget.primaryColor 
-                                    : Colors.grey.shade400)
+                            color: isEnabled
+                                ? (isSelected
+                                      ? widget.primaryColor
+                                      : Colors.grey.shade400)
                                 : Colors.grey.shade300,
                             width: isSelected ? 2 : 1,
                           ),
                           borderRadius: BorderRadius.circular(4),
-                          color: isSelected 
+                          color: isSelected
                               ? widget.primaryColor.withOpacity(0.1)
                               : Colors.transparent,
                         ),
@@ -928,9 +968,13 @@ Widget _buildDesktopLayout(double cardWidth) {
                         tipo.nombre,
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                          color: isEnabled 
-                              ? (isSelected ? widget.primaryColor : Colors.black87)
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: isEnabled
+                              ? (isSelected
+                                    ? widget.primaryColor
+                                    : Colors.black87)
                               : Colors.grey,
                         ),
                       ),
@@ -940,7 +984,7 @@ Widget _buildDesktopLayout(double cardWidth) {
               );
             }).toList(),
           ),
-          
+
           if (tiposEquipo.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
@@ -958,8 +1002,7 @@ Widget _buildDesktopLayout(double cardWidth) {
     );
   }
 
-  Widget _buildFlexibleField(
-      {required double width, required Widget child}) {
+  Widget _buildFlexibleField({required double width, required Widget child}) {
     return SizedBox(width: width, child: child);
   }
 
@@ -973,9 +1016,10 @@ Widget _buildDesktopLayout(double cardWidth) {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           border: Border.all(
-              color: isEnabled
-                  ? widget.primaryColor.withOpacity(0.5)
-                  : Colors.grey.shade300),
+            color: isEnabled
+                ? widget.primaryColor.withOpacity(0.5)
+                : Colors.grey.shade300,
+          ),
           borderRadius: BorderRadius.circular(8),
           color: isEnabled ? Colors.white : Colors.grey.shade50,
         ),
@@ -1033,22 +1077,19 @@ Widget _buildDesktopLayout(double cardWidth) {
               children: [
                 Text(
                   'Operador',
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 ),
                 Text(
                   operador ?? operadorEjemplo,
                   style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.person_outline,
-              size: 16,
-              color: Colors.grey.shade400),
+          Icon(Icons.person_outline, size: 16, color: Colors.grey.shade400),
         ],
       ),
     );
@@ -1064,8 +1105,7 @@ Widget _buildDesktopLayout(double cardWidth) {
           foregroundColor: Colors.white,
           elevation: 2,
           padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1074,9 +1114,7 @@ Widget _buildDesktopLayout(double cardWidth) {
             SizedBox(width: 6),
             Text(
               'CREAR OPERACIÓN',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -1084,13 +1122,13 @@ Widget _buildDesktopLayout(double cardWidth) {
     );
   }
 
-double _calculateFieldWidth(double totalWidth, double weight) {
-  double totalWeights = 0.8 + 0.7 + 1.0 + 1.0 + 1.0 + 1.2 + 1.2 + 1.2 + 1.0;
-  double spacing = 12 * 8;
-  double padding = 16 * 2;
-  double availableWidth = totalWidth - spacing - padding;
-  return (availableWidth * weight) / totalWeights;
-}
+  double _calculateFieldWidth(double totalWidth, double weight) {
+    double totalWeights = 0.8 + 0.7 + 1.0 + 1.0 + 1.0 + 1.2 + 1.2 + 1.2 + 1.0;
+    double spacing = 12 * 8;
+    double padding = 16 * 2;
+    double availableWidth = totalWidth - spacing - padding;
+    return (availableWidth * weight) / totalWeights;
+  }
 
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
@@ -1110,81 +1148,86 @@ double _calculateFieldWidth(double totalWidth, double weight) {
     }
   }
 
-void _actualizarCapacidadesPorCodigo(String codigo) {
-  String? capacidadString = capacidadPorCodigo[codigo];
-  
-  if (capacidadString != null) {
-    setState(() {
-      capacidadesFiltradas = [capacidadString];
-      selectedCapacidad = capacidadString;
-    });
-    
-    print('Capacidad seleccionada automáticamente: $capacidadString para código: $codigo');
-  } else {
-    setState(() {
-      capacidadesFiltradas = [];
-      selectedCapacidad = null;
-    });
-  }
-}
+  void _actualizarCapacidadesPorCodigo(String codigo) {
+    String? capacidadString = capacidadPorCodigo[codigo];
 
-void _crearOperacion() {
-  if (widget.selectedTurno == null ||
-      selectedEquipo == null ||
-      selectedCodigo == null ||
-      selectedCapacidad == null ||
-      selectedJefeGuardia == null ||
-      selectedSeccion == null) {
-    _showSnackbar('Complete todos los campos', Colors.orange);
-    return;
-  }
+    if (capacidadString != null) {
+      setState(() {
+        capacidadesFiltradas = [capacidadString];
+        selectedCapacidad = capacidadString;
+      });
 
-  bool algunTipoSeleccionado = tiposSeleccionados.values.contains(true);
-  if (!algunTipoSeleccionado) {
-    _showSnackbar('Seleccione al menos un tipo de equipo', Colors.orange);
-    return;
-  }
-
-  Map<String, bool> tiposMap = {};
-  for (var tipo in tiposEquipo) {
-    if (tipo.id != null) {
-      tiposMap[tipo.nombre] = tiposSeleccionados[tipo.id!] ?? false;
+      print(
+        'Capacidad seleccionada automáticamente: $capacidadString para código: $codigo',
+      );
+    } else {
+      setState(() {
+        capacidadesFiltradas = [];
+        selectedCapacidad = null;
+      });
     }
   }
 
-  String tiposJsonString = jsonEncode(tiposMap);
+  void _crearOperacion() {
+    if (widget.selectedTurno == null ||
+        selectedEquipo == null ||
+        selectedCodigo == null ||
+        selectedCapacidad == null ||
+        selectedJefeGuardia == null ||
+        selectedSeccion == null) {
+      _showSnackbar('Complete todos los campos', Colors.orange);
+      return;
+    }
 
-  widget.onOperacionCreada({
-    'turno': widget.selectedTurno,
-    'equipo': selectedEquipo,
-    'n_equipo': selectedCodigo,
-    'capacidad': selectedCapacidad,
-    'tipo_equipo': tiposJsonString,
-    'operador': operador ?? operadorEjemplo,
-    'jefe_guardia': selectedJefeGuardia,
-    'seccion': selectedSeccion,
-    'fecha': widget.fechaActual,
-  });
+    bool algunTipoSeleccionado = tiposSeleccionados.values.contains(true);
+    if (!algunTipoSeleccionado) {
+      _showSnackbar('Seleccione al menos un tipo de equipo', Colors.orange);
+      return;
+    }
 
-  setState(() {
-    selectedEquipo = null;
-    selectedCodigo = null;
-    selectedCapacidad = null;
-    selectedJefeGuardia = null;
-    selectedSeccion = null;
-    capacidadesFiltradas = [];
-    
+    Map<String, bool> tiposMap = {};
     for (var tipo in tiposEquipo) {
       if (tipo.id != null) {
-        tiposSeleccionados[tipo.id!] = false;
+        tiposMap[tipo.nombre] = tiposSeleccionados[tipo.id!] ?? false;
       }
     }
-    
-    codigosFiltrados = [];
-  });
 
-  _showSnackbar('Operación creada exitosamente', Colors.green);
-}
+    String tiposJsonString = jsonEncode(tiposMap);
+
+    widget.onOperacionCreada({
+      'turno': widget.selectedTurno,
+      'equipo': selectedEquipo,
+      'n_equipo': selectedCodigo,
+      'capacidad': selectedCapacidad,
+      'tipo_equipo': tiposJsonString,
+      'operador': operador ?? operadorEjemplo,
+      'actor_dni': widget.dniUsuario,
+      'actor_operador_id': operadorId,
+      'operador_id': widget.selectedOperatorId ?? operadorId,
+      'jefe_guardia': selectedJefeGuardia,
+      'seccion': selectedSeccion,
+      'fecha': widget.fechaActual,
+    });
+
+    setState(() {
+      selectedEquipo = null;
+      selectedCodigo = null;
+      selectedCapacidad = null;
+      selectedJefeGuardia = null;
+      selectedSeccion = null;
+      capacidadesFiltradas = [];
+
+      for (var tipo in tiposEquipo) {
+        if (tipo.id != null) {
+          tiposSeleccionados[tipo.id!] = false;
+        }
+      }
+
+      codigosFiltrados = [];
+    });
+
+    _showSnackbar('Operación creada exitosamente', Colors.green);
+  }
 
   void _showSnackbar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/screens/Dash/reporte_sreen.dart';
 import 'package:i_miner/services/api_service.dart';
+import 'package:i_miner/services/mis_labores_service.dart';
 import 'package:i_miner/services/user_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,7 +15,6 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-
   bool remember = true;
   bool obscureText = true;
 
@@ -21,113 +22,111 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController passController = TextEditingController();
   bool isLoading = false;
 
-String errorMsg = '';
+  String errorMsg = '';
 
-Future<void> handleLogin() async {
-  setState(() {
-    isLoading = true;
-  });
+  Future<void> handleLogin() async {
+    setState(() {
+      isLoading = true;
+    });
 
-  final dni = dniController.text;
-  final pass = passController.text;
+    final dni = dniController.text;
+    final pass = passController.text;
 
-  try {
-
-    /// 1️⃣ LOGIN ONLINE
     try {
-      final token = await ApiService().login(dni, pass);
-      final userData = await UserService().getUserProfile(token);
+      /// 1️⃣ LOGIN ONLINE
+      try {
+        final token = await ApiService().login(dni, pass);
+        await UserService().syncOfflineProfileSnapshot(
+          dni: dni,
+          token: token,
+          password: pass,
+        );
+        await MisLaboresService().prefetchAssignedLaboresForDate(
+          fecha: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        );
 
-      await DatabaseHelper().setCurrentUserDni(dni);
-      await DatabaseHelper().saveUser(userData, pass);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DashboardScreen(
-            token: token,
-            dni: dni,
-          ),
-        ),
-      );
-
-      return;
-
-    } catch (e, stack) {
-      errorMsg = "LOGIN ONLINE:\n$e\n\n$stack";
-      print(errorMsg);
-    }
-
-    /// 2️⃣ LOGIN OFFLINE
-    try {
-      await DatabaseHelper().setCurrentUserDni(dni);
-
-      if (await DatabaseHelper().loginOffline(dni, pass)) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => DashboardScreen(
-              token: "offline",
-              dni: dni,
-            ),
+            builder: (context) => DashboardScreen(token: token, dni: dni),
           ),
         );
+
         return;
+      } on UserProfileContractException catch (e, stack) {
+        errorMsg = 'LOGIN ONLINE CONTRACT ERROR:\n$e\n\n$stack';
+        print(errorMsg);
+        _showLoginError(errorMsg);
+        return;
+      } catch (e, stack) {
+        errorMsg = "LOGIN ONLINE:\n$e\n\n$stack";
+        print(errorMsg);
       }
 
-    } catch (offlineError, stack) {
-      errorMsg += "\n\nOFFLINE:\n$offlineError\n\n$stack";
-      print(errorMsg);
+      /// 2️⃣ LOGIN OFFLINE
+      try {
+        await DatabaseHelper().setCurrentUserDni(dni);
+
+        if (await DatabaseHelper().loginOffline(dni, pass)) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DashboardScreen(token: "offline", dni: dni),
+            ),
+          );
+          return;
+        }
+      } catch (offlineError, stack) {
+        errorMsg += "\n\nOFFLINE:\n$offlineError\n\n$stack";
+        print(errorMsg);
+      }
+
+      /// 3️⃣ SI TODO FALLA
+      _showLoginError(errorMsg);
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
-
-    /// 3️⃣ SI TODO FALLA
-    _showLoginError(errorMsg);
-
-  } finally {
-    setState(() {
-      isLoading = false;
-    });
   }
-}
 
-void _showLoginError(String error) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text("Error completo"),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: SingleChildScrollView(
-          child: SelectableText(
-            error.isNotEmpty
-                ? error
-                : "Inicio de sesión fallido. Verifique sus credenciales.",
-            style: const TextStyle(fontSize: 12),
+  void _showLoginError(String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Error completo"),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: SelectableText(
+              error.isNotEmpty
+                  ? error
+                  : "Inicio de sesión fallido. Verifique sus credenciales.",
+              style: const TextStyle(fontSize: 12),
+            ),
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: error));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Error copiado")));
+            },
+            child: const Text("Copiar"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cerrar"),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Clipboard.setData(ClipboardData(text: error));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Error copiado")),
-            );
-          },
-          child: const Text("Copiar"),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cerrar"),
-        ),
-      ],
-    ),
-  );
-}
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: const Color(0xFF2B8C99),
 
@@ -136,13 +135,8 @@ void _showLoginError(String error) {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-
             /// LOGO
-            Image.asset(
-  'assets/images/logo.png',
-  height: 70,
-  width: 70,
-),
+            Image.asset('assets/images/logo.png', height: 70, width: 70),
 
             const SizedBox(height: 10),
 
@@ -159,7 +153,7 @@ void _showLoginError(String error) {
               icon: Icons.email,
               hint: "Ingrese Usuario o id",
               controller: dniController,
-              isPassword: false
+              isPassword: false,
             ),
 
             const SizedBox(height: 15),
@@ -169,7 +163,7 @@ void _showLoginError(String error) {
               icon: Icons.lock,
               hint: "Ingrese la contraseña",
               controller: passController,
-              isPassword: true
+              isPassword: true,
             ),
 
             const SizedBox(height: 15),
@@ -179,7 +173,7 @@ void _showLoginError(String error) {
               children: [
                 Checkbox(
                   value: remember,
-                  onChanged: (value){
+                  onChanged: (value) {
                     setState(() {
                       remember = value!;
                     });
@@ -187,10 +181,7 @@ void _showLoginError(String error) {
                   activeColor: Colors.white,
                 ),
 
-                const Text(
-                  "Recordarme",
-                  style: TextStyle(color: Colors.white),
-                )
+                const Text("Recordarme", style: TextStyle(color: Colors.white)),
               ],
             ),
 
@@ -216,7 +207,6 @@ void _showLoginError(String error) {
             /// BOTONES
             Row(
               children: [
-
                 Expanded(
                   child: button("Salir", () {
                     Navigator.pop(context);
@@ -226,14 +216,13 @@ void _showLoginError(String error) {
                 const SizedBox(width: 20),
 
                 Expanded(
-  child: button(
-    isLoading ? "Ingresando..." : "Ingresar",
-    isLoading ? () {} : handleLogin,
-  ),
-),
+                  child: button(
+                    isLoading ? "Ingresando..." : "Ingresar",
+                    isLoading ? () {} : handleLogin,
+                  ),
+                ),
               ],
-            )
-
+            ),
           ],
         ),
       ),
@@ -244,9 +233,8 @@ void _showLoginError(String error) {
     required IconData icon,
     required String hint,
     required TextEditingController controller,
-    required bool isPassword
-  }){
-
+    required bool isPassword,
+  }) {
     return Container(
       height: 55,
       decoration: BoxDecoration(
@@ -257,7 +245,6 @@ void _showLoginError(String error) {
 
       child: Row(
         children: [
-
           Icon(icon, color: Colors.white70),
 
           const SizedBox(width: 10),
@@ -275,26 +262,24 @@ void _showLoginError(String error) {
             ),
           ),
 
-          if(isPassword)
-GestureDetector(
-  onTap: (){
-    setState(() {
-      obscureText = !obscureText;
-    });
-  },
-  child: Icon(
-    obscureText
-        ? Icons.visibility
-        : Icons.visibility_off,
-    color: Colors.white70,
-  ),
-)
+          if (isPassword)
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  obscureText = !obscureText;
+                });
+              },
+              child: Icon(
+                obscureText ? Icons.visibility : Icons.visibility_off,
+                color: Colors.white70,
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget button(String text, VoidCallback onPressed){
+  Widget button(String text, VoidCallback onPressed) {
     return Container(
       height: 50,
       decoration: BoxDecoration(
@@ -308,10 +293,7 @@ GestureDetector(
           child: Center(
             child: Text(
               text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ),
         ),

@@ -112,7 +112,15 @@ class SyncService {
 
     final ids = pendientes.map<int>((e) => e['id'] as int).toSet();
 
-    final jsonData = await exportService.prepararDatosParaExportar(ids, data);
+    final jsonData = await exportService.prepararDatosParaExportar(
+      ids,
+      pendientes,
+    );
+
+    if (jsonData.isEmpty) {
+      print("✔️ $tipo sin registros exportables");
+      return;
+    }
 
     /// quitar local_id
     final dataParaEnviar = jsonData.map((item) {

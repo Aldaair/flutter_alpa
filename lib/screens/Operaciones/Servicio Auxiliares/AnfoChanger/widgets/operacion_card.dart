@@ -12,6 +12,8 @@ class OperacionAnfochangerCard extends StatefulWidget {
   final Function(String?) onTurnoChanged;
   final Function(String) onFechaChanged;
   final String? dniUsuario;
+  final String? selectedOperatorName;
+  final int? selectedOperatorId;
   final Map<String, dynamic>? operacionExistente;
 
   final String fechaActual;
@@ -28,11 +30,14 @@ class OperacionAnfochangerCard extends StatefulWidget {
     required this.selectedTurno,
     required this.operacionExistente,
     this.dniUsuario,
+    this.selectedOperatorName,
+    this.selectedOperatorId,
     this.primaryColor = const Color(0xFF1B5E6B),
   }) : super(key: key);
 
   @override
-  State<OperacionAnfochangerCard> createState() => _OperacionAnfochangerCardState();
+  State<OperacionAnfochangerCard> createState() =>
+      _OperacionAnfochangerCardState();
 }
 
 class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
@@ -40,6 +45,7 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
   String? selectedCodigo;
   String? selectedJefeGuardia;
   String? operador;
+  int? operadorId;
 
   bool get operacionBloqueada => widget.operacionExistente != null;
 
@@ -92,19 +98,22 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
 
       if (usuario != null) {
         setState(() {
-          operador = '${usuario['nombres']} ${usuario['apellidos']}';
+          operadorId = usuario['operador_id'] as int?;
+          _syncDisplayedOperator(
+            fallbackName: '${usuario['nombres']} ${usuario['apellidos']}',
+          );
         });
         print('Operador cargado: $operador');
       } else {
         print('No se encontró usuario con DNI: ${widget.dniUsuario}');
         setState(() {
-          operador = operadorEjemplo;
+          _syncDisplayedOperator();
         });
       }
     } catch (e) {
       print('Error al cargar operador: $e');
       setState(() {
-        operador = operadorEjemplo;
+        _syncDisplayedOperator();
       });
     }
   }
@@ -120,7 +129,7 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
       String tipoOperacion = 'ANFOCHANGER';
 
       List<Equipo> equiposFiltrados = equiposCompletos
-          .where((e) => e.proceso == tipoOperacion)
+          .where((e) => e.matchesProceso(tipoOperacion))
           .toList();
 
       Set<String> nombresEquipos = {};
@@ -148,7 +157,6 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
       });
 
       print('Equipos Anfochanger cargados: ${equipos.length}');
-
     } catch (e) {
       print("Error cargando equipos: $e");
     }
@@ -172,9 +180,18 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
     }
   }
 
+  void _syncDisplayedOperator({String? fallbackName}) {
+    operador = widget.selectedOperatorName ?? fallbackName ?? operadorEjemplo;
+  }
+
   @override
   void didUpdateWidget(covariant OperacionAnfochangerCard oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.selectedOperatorId != widget.selectedOperatorId ||
+        oldWidget.selectedOperatorName != widget.selectedOperatorName) {
+      _syncDisplayedOperator();
+    }
 
     if (widget.operacionExistente != oldWidget.operacionExistente) {
       if (widget.operacionExistente != null) {
@@ -244,22 +261,28 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
         double scaleFactor = cardWidth > 900
             ? 1.0
             : cardWidth > 700
-                ? 0.9
-                : cardWidth > 500
-                    ? 0.8
-                    : 0.7;
+            ? 0.9
+            : cardWidth > 500
+            ? 0.8
+            : 0.7;
 
         return Wrap(
           spacing: 10,
           runSpacing: 12,
           children: [
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['fecha']! * scaleFactor),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['fecha']! * scaleFactor,
+              ),
               child: _buildFechaField(),
             ),
 
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['turno']! * scaleFactor),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['turno']! * scaleFactor,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Turno',
                 value: widget.selectedTurno,
@@ -272,7 +295,10 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
             ),
 
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['equipo']! * scaleFactor),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['equipo']! * scaleFactor,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Equipo',
                 value: selectedEquipo,
@@ -293,7 +319,10 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
             ),
 
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['codigo']! * scaleFactor),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['codigo']! * scaleFactor,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Código',
                 value: selectedCodigo,
@@ -311,12 +340,18 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
             ),
 
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['operador']! * scaleFactor),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['operador']! * scaleFactor,
+              ),
               child: _buildOperadorField(),
             ),
 
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['jefe']! * scaleFactor),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['jefe']! * scaleFactor,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Jefe Guardia',
                 value: selectedJefeGuardia,
@@ -414,7 +449,10 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
                 ),
                 Text(
                   operador ?? operadorEjemplo,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -491,6 +529,9 @@ class _OperacionAnfochangerCardState extends State<OperacionAnfochangerCard> {
       'equipo': selectedEquipo,
       'n_equipo': selectedCodigo,
       'operador': operador ?? operadorEjemplo,
+      'actor_dni': widget.dniUsuario,
+      'actor_operador_id': operadorId,
+      'operador_id': widget.selectedOperatorId ?? operadorId,
       'jefe_guardia': selectedJefeGuardia,
       'fecha': widget.fechaActual,
     });

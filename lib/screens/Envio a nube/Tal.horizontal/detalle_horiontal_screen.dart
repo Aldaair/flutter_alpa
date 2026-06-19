@@ -22,10 +22,12 @@ class DetalleSeccionScreenHorizontal extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<DetalleSeccionScreenHorizontal> createState() => _DetalleSeccionHorizontalScreenState();
+  State<DetalleSeccionScreenHorizontal> createState() =>
+      _DetalleSeccionHorizontalScreenState();
 }
 
-class _DetalleSeccionHorizontalScreenState extends State<DetalleSeccionScreenHorizontal> {
+class _DetalleSeccionHorizontalScreenState
+    extends State<DetalleSeccionScreenHorizontal> {
   List<Map<String, dynamic>> operacionData = [];
   Set<int> selectedItems = {};
   bool isLoading = true;
@@ -50,7 +52,7 @@ class _DetalleSeccionHorizontalScreenState extends State<DetalleSeccionScreenHor
       setState(() {
         operacionData = data;
         isLoading = false;
-        mensajeUsuario = data.isEmpty 
+        mensajeUsuario = data.isEmpty
             ? "No se encontraron registros para ${widget.tipoOperacion}"
             : "Datos cargados correctamente";
       });
@@ -64,32 +66,41 @@ class _DetalleSeccionHorizontalScreenState extends State<DetalleSeccionScreenHor
   }
 
   void _handleItemTap(int id) {
-  final item = operacionData.firstWhere((e) => e['id'] == id);
+    final item = operacionData.firstWhere((e) => e['id'] == id);
 
-  // 🚫 BLOQUEO SI YA FUE ENVIADO
-  if (item['envio'] == 1) {
-    _mostrarAdvertencia(
-      'Registro ya enviado',
-      'Este registro ya fue enviado y no se puede seleccionar nuevamente.',
-    );
-    return;
-  }
-
-  setState(() {
-    if (selectedItems.contains(id)) {
-      selectedItems.remove(id);
-    } else {
-      selectedItems.add(id);
+    // 🚫 BLOQUEO SI YA FUE ENVIADO
+    if (item['envio'] == 1) {
+      _mostrarAdvertencia(
+        'Registro ya enviado',
+        'Este registro ya fue enviado y no se puede seleccionar nuevamente.',
+      );
+      return;
     }
-  });
-}
+
+    if (!_isExportableApiV2Row(item)) {
+      _mostrarAdvertencia(
+        'Record not exportable',
+        'Only syncable Taladro Horizontal API v2 rows can be exported.',
+      );
+      return;
+    }
+
+    setState(() {
+      if (selectedItems.contains(id)) {
+        selectedItems.remove(id);
+      } else {
+        selectedItems.add(id);
+      }
+    });
+  }
 
   void _confirmarEliminacion() {
     showDialog(
       context: context,
       builder: (context) => ConfirmacionDialog(
         titulo: 'Eliminar registros',
-        mensaje: '¿Estás seguro de eliminar ${selectedItems.length} registro(s)?\nEsta acción no se puede deshacer.',
+        mensaje:
+            '¿Estás seguro de eliminar ${selectedItems.length} registro(s)?\nEsta acción no se puede deshacer.',
         textoConfirmar: 'Eliminar',
         confirmColor: Colors.red,
         onConfirmar: _eliminarRegistrosSeleccionados,
@@ -103,7 +114,8 @@ class _DetalleSeccionHorizontalScreenState extends State<DetalleSeccionScreenHor
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const CargaDialog(mensaje: 'Eliminando registros...'),
+      builder: (context) =>
+          const CargaDialog(mensaje: 'Eliminando registros...'),
     );
 
     try {
@@ -149,15 +161,24 @@ class _DetalleSeccionHorizontalScreenState extends State<DetalleSeccionScreenHor
 
       Navigator.pop(context); // Cierra loading
 
+      if (jsonDataList.isEmpty) {
+        _mostrarAdvertencia(
+          'No exportable records',
+          'The selected rows are not syncable Taladro Horizontal API v2 records.',
+        );
+        return;
+      }
+
       final jsonString = _exportarService.formatearJson(jsonDataList);
 
       bool? confirmado = await showDialog<bool>(
         context: context,
-        builder: (context) => _buildJsonPreviewDialog(jsonString, jsonDataList.length),
+        builder: (context) =>
+            _buildJsonPreviewDialog(jsonString, jsonDataList.length),
       );
 
       if (confirmado == true) {
-         await _enviarDatosALaNube(jsonDataList);
+        await _enviarDatosALaNube(jsonDataList);
       }
     } catch (e) {
       Navigator.pop(context); // Cierra loading
@@ -210,45 +231,45 @@ class _DetalleSeccionHorizontalScreenState extends State<DetalleSeccionScreenHor
               ),
             ),
             Expanded(
-  child: Padding(
-    padding: const EdgeInsets.all(20),
-    child: Column(
-      children: [
-        Text(
-          'Se enviarán $cantidad operaciones a la nube',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Text(
+                      'Se enviarán $cantidad operaciones a la nube',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                child: SelectableText(
-                  jsonString,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                  ),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: SingleChildScrollView(
+                            child: SelectableText(
+                              jsonString,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-        ),
-      ],
-    ),
-  ),
-),
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -272,7 +293,10 @@ class _DetalleSeccionHorizontalScreenState extends State<DetalleSeccionScreenHor
                     style: ElevatedButton.styleFrom(
                       backgroundColor: widget.primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text('Enviar a la nube'),
                   ),
@@ -285,55 +309,56 @@ class _DetalleSeccionHorizontalScreenState extends State<DetalleSeccionScreenHor
     );
   }
 
-Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
-  final operacionService = OperacionesService();
+  Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
+    final operacionService = OperacionesService();
 
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => const CargaDialog(mensaje: 'Enviando a la nube...'),
-  );
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const CargaDialog(mensaje: 'Enviando a la nube...'),
+    );
 
-  try {
-    // 🔥 quitar local_id
-    final dataParaEnviar = jsonData.map((item) {
-      final copia = Map<String, dynamic>.from(item);
-      copia.remove('local_id');
-      return copia;
-    }).toList();
+    try {
+      // 🔥 quitar local_id
+      final dataParaEnviar = jsonData.map((item) {
+        final copia = Map<String, dynamic>.from(item);
+        copia.remove('local_id');
+        return copia;
+      }).toList();
 
-    // 🔥 CAMBIO CLAVE → tipo horizontal
-    final success = await operacionService.crear('tal_horizontal', dataParaEnviar);
-
-    Navigator.pop(context);
-
-    if (success) {
-      // marcar como enviados
-      for (var item in jsonData) {
-        int localId = item['local_id'];
-        await _dbHelper.actualizarEnvioHorizontal(localId);
-      }
-
-      await _fetchOperacionData();
-      setState(() => selectedItems.clear());
-
-      showDialog(
-        context: context,
-        builder: (context) => ExitoDialog(
-          titulo: '¡Envío exitoso!',
-          mensaje: 'Se enviaron ${jsonData.length} operaciones correctamente',
-        ),
+      // 🔥 CAMBIO CLAVE → tipo horizontal
+      final success = await operacionService.crear(
+        'tal_horizontal',
+        dataParaEnviar,
       );
 
-    } else {
-      _mostrarError('Error al enviar datos al servidor');
-    }
+      Navigator.pop(context);
 
-  } catch (e) {
-    Navigator.pop(context);
-    _mostrarError('Error en envío: ${e.toString()}');
+      if (success) {
+        // marcar como enviados
+        for (var item in jsonData) {
+          int localId = item['local_id'];
+          await _dbHelper.actualizarEnvioHorizontal(localId);
+        }
+
+        await _fetchOperacionData();
+        setState(() => selectedItems.clear());
+
+        showDialog(
+          context: context,
+          builder: (context) => ExitoDialog(
+            titulo: '¡Envío exitoso!',
+            mensaje: 'Se enviaron ${jsonData.length} operaciones correctamente',
+          ),
+        );
+      } else {
+        _mostrarError('Error al enviar datos al servidor');
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      _mostrarError('Error en envío: ${e.toString()}');
+    }
   }
-}
 
   void _mostrarError(String mensaje) {
     showDialog(
@@ -367,6 +392,10 @@ Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
     );
   }
 
+  bool _isExportableApiV2Row(Map<String, dynamic> item) {
+    return item['identity_version'] == 2 && item['syncable'] == 1;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -384,12 +413,12 @@ Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
             child: isLoading
                 ? const LoadingState()
                 : operacionData.isEmpty
-                    ? EmptyState(
-                        mensaje: mensajeUsuario,
-                        subtitulo: 'No hay registros disponibles',
-                        icono: Icons.inbox,
-                      )
-                    : _buildOperacionesList(),
+                ? EmptyState(
+                    mensaje: mensajeUsuario,
+                    subtitulo: 'No hay registros disponibles',
+                    icono: Icons.inbox,
+                  )
+                : _buildOperacionesList(),
           ),
         ],
       ),

@@ -1,0 +1,61 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Flutter app on Dart ^3.11.1 with Provider, sqflite, HTTP, and offline sync.
+  Architecture: Screen-driven UI with service/config/data layers and user-scoped SQLite persistence.
+  Testing: flutter_test is available, but only the default widget smoke test exists.
+  Style: flutter_lints defaults, flutter analyze for static checks, no repo CI workflows detected.
+
+strict_tdd: true
+
+testing:
+  detected: 2026-06-17
+  runner:
+    command: flutter test
+    framework: flutter_test
+  layers:
+    unit:
+      available: true
+      tool: flutter_test
+    integration:
+      available: false
+      tool: ""
+    e2e:
+      available: false
+      tool: ""
+  coverage:
+    available: true
+    command: flutter test --coverage
+  quality:
+    linter:
+      available: true
+      command: flutter analyze
+    type_checker:
+      available: true
+      command: flutter analyze
+    formatter:
+      available: true
+      command: dart format .
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes.
+  specs:
+    - Use Given/When/Then for scenarios.
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY).
+  design:
+    - Document architecture decisions with rationale.
+    - Include diagrams only when the flow is complex enough to need them.
+  tasks:
+    - Group tasks by phase and keep them completable in one session.
+    - Keep tasks explicit about tests and verification impact.
+  apply:
+    - Follow existing Flutter and package import patterns in the repo.
+    tdd: true
+    test_command: flutter test
+  verify:
+    test_command: flutter test
+    build_command: flutter analyze
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas.

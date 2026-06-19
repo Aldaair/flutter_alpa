@@ -1,3 +1,5 @@
+// ignore_for_file: use_rethrow_when_possible, avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:i_miner/screens/Dash/actualizacion_dialog.dart';
 import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual.dart';
@@ -5,35 +7,38 @@ import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mens
 import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual_produccion.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceAccesorio.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceChecklistTelemando.dart';
-import 'package:i_miner/services/get%20nube/llamadas/ApiServiceExplosivo.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceHorometros%20.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceJefeGuardia.dart';
-import 'package:i_miner/services/get%20nube/llamadas/ApiServiceNumeroRetardos.dart';
-import 'package:i_miner/services/get%20nube/llamadas/ApiServiceSeccion.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceTipoEquipo.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceTipoPerforacion.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_checklist.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_estado.dart';
-import 'package:i_miner/services/get%20nube/llamadas/api_service_explosivos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_guardia.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_longitud_barras.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_mallas.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_origen_destino.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_pernos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_services_Equipo.dart';
+import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/services/user_service.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_zona.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_periodos.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_minas.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_dim_zonas.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_areas.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_fases.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_tipo_labores.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_estructuras_minerales.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_niveles.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_alas.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_labores.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_dim_turnos.dart';
 
 class ActualizacionService {
   final BuildContext context;
   final String token;
-  final int anio;
-  final String? mes;
 
-  ActualizacionService({
-    required this.context,
-    required this.token,
-    required this.anio,
-    this.mes,
-  });
+  ActualizacionService({required this.context, required this.token});
 
   // Mapeo de funciones de actualización
   late final Map<String, Future<void> Function()> _requests;
@@ -44,26 +49,33 @@ class ActualizacionService {
       "Checklist": fetchCheckList,
       "Checklist Carguio": fetchChecklistTelemando,
       "Tipos Perforación": fetchTiposPerforacion,
-      "Secciones": fetchSecciones,
+      //"Secciones": fetchSecciones,
       "Equipos": fetchEquipo,
       "Tipos Equipo": () => fetchTiposEquipo(token),
       "Longitud Barras": fetchLongitudBarras,
       "Pernos": fetchPernos,
       "Mallas": fetchMallas,
       "Horometros": fetchHorometros,
-      "Plan Mensual": () => fetchPlanMensualConFecha(),
-      "Plan Metraje": () => fetchPlanMetrajeConFecha(),
-      "Plan Producción": () => fetchPlanProduccionConFecha(),
-      "Origen y Destino":() => fetchOrigenDestino(),
-      "Accesorios":() => fetchAccesorios(),
-      "Explosivos":() => fetchExplosivos(),
-      "Explosivos Uni":() => fetchExplosivosUni(),
-      "Numero de retardos":() => fetchNumeroRetardos(),
-      "Jefes Guardia":
-          fetchJefesGuardia,
-          "Guardias": fetchGuardias,
-      // "Procesos Acero": fetchProcesosAcero,
-      // "Operadores Acero": fetchOperadores,
+      //"Plan Mensual": () => fetchPlanMensualConFecha(),
+      "Plan Metraje": () => fetchPlanMetrajeTL(),
+      //"Plan Producción": () => fetchPlanProduccionConFecha(),
+      "Origen y Destino": () => fetchOrigenDestino(),
+      "Accesorios": () => fetchAccesorios(),
+      //"Explosivos":() => fetchExplosivos(),
+      //"Explosivos Uni":() => fetchExplosivosUni(),
+      //"Numero de retardos":() => fetchNumeroRetardos(),
+      "Jefes Guardia": fetchJefesGuardia,
+      "Guardias": fetchGuardias,
+      "Minas": fetchMinas,
+      "Dim Zonas": fetchDimZonas,
+      "Areas": fetchAreas,
+      "Fases": fetchFases,
+      "Tipos Labor": fetchTiposLabor,
+      "Estructuras Minerales": fetchEstructurasMinerales,
+      "Niveles": fetchNiveles,
+      "Alas": fetchAlas,
+      "Labores": fetchLabores,
+      "Dim Turnos": fetchDimTurnos,
     };
   }
 
@@ -246,23 +258,6 @@ class ActualizacionService {
     }
   }
 
-  Future<void> fetchSecciones() async {
-    final apiService = ApiServiceSeccion();
-
-    try {
-      final secciones = await apiService.fetchSecciones(token);
-
-      print("✅ Secciones guardadas en SQLite:");
-
-      for (var seccion in secciones) {
-        print("Sección: ${seccion.nombre} | Proceso: ${seccion.proceso}");
-      }
-    } catch (e) {
-      print("❌ Error al actualizar secciones: $e");
-      throw e;
-    }
-  }
-
   Future<void> fetchEquipo() async {
     final apiService = ApiServiceEquipo();
 
@@ -362,118 +357,19 @@ class ActualizacionService {
   }
 
   Future<void> fetchAccesorios() async {
-  final apiService = ApiServiceAccesorio();
+    final apiService = ApiServiceAccesorio();
 
-  try {
-    await apiService.fetchAccesorios(token);
+    try {
+      await apiService.fetchAccesorios(token);
 
-    print("✅ Accesorios guardados en SQLite correctamente");
-  } catch (e) {
-    print("❌ Error al actualizar accesorios: $e");
-    throw e;
-  }
-}
-
-Future<void> fetchExplosivos() async {
-  final apiService = ApiServiceExplosivo();
-
-  try {
-    await apiService.fetchExplosivos(token);
-
-    print("✅ Explosivos guardados en SQLite correctamente");
-  } catch (e) {
-    print("❌ Error al actualizar explosivos: $e");
-    throw e;
-  }
-}
-
-Future<void> fetchExplosivosUni() async {
-  final apiService = ApiServiceExplosivosUni();
-
-  try {
-    await apiService.fetchExplosivos(token);
-
-    print("✅ ExplosivosUni guardados en SQLite correctamente");
-  } catch (e) {
-    print("❌ Error al actualizar ExplosivosUni: $e");
-    throw e;
-  }
-}
-
-Future<void> fetchNumeroRetardos() async {
-  final apiService = ApiServiceNumeroRetardos();
-
-  try {
-    final data = await apiService.fetchUltimo(token);
-
-    if (data != null) {
-      print("✅ Último NumeroRetardos guardado en SQLite correctamente");
-    } else {
-      print("⚠️ No hay registros de NumeroRetardos en el servidor");
+      print("✅ Accesorios guardados en SQLite correctamente");
+    } catch (e) {
+      print("❌ Error al actualizar accesorios: $e");
+      throw e;
     }
-
-  } catch (e) {
-    print("❌ Error al actualizar NumeroRetardos: $e");
-    throw e;
   }
-}
 
   Future<void> fetchDestinatarios() async {
-    // Tu implementación
-  }
-
-  Future<void> fetchPlanMensualConFecha() async {
-    final apiService = ApiServicePlanMensual();
-
-    try {
-      final planes = await apiService.fetchPlanesMensuales(token, anio, mes!);
-
-      print("✅ Plan Mensual actualizado:");
-
-      for (var plan in planes) {
-        print("Plan: ${plan.toMap()}");
-      }
-    } catch (e) {
-      print("❌ Error al actualizar Plan Mensual: $e");
-      throw e;
-    }
-  }
-
-  Future<void> fetchPlanMetrajeConFecha() async {
-    final apiService = ApiServicePlanMetraje();
-
-    try {
-      final planes = await apiService.fetchPlanesMetraje(token, anio, mes!);
-
-      print("✅ Plan Metraje actualizado:");
-
-      for (var plan in planes) {
-        print("Plan: ${plan.toMap()}");
-      }
-    } catch (e) {
-      print("❌ Error al actualizar Plan Metraje: $e");
-      throw e;
-    }
-  }
-
-  Future<void> fetchPlanProduccionConFecha() async {
-    final apiService = ApiServicePlanProduccion();
-
-    try {
-      final planes = await apiService.fetchPlanesProduccion(token, anio, mes!);
-
-      print("✅ Plan Producción actualizado:");
-
-      for (var plan in planes) {
-        print("Plan: ${plan.toJson()}");
-      }
-    } catch (e) {
-      print("❌ Error al actualizar Plan Producción: $e");
-      throw e;
-    }
-  }
-
-  Future<void> fetchToneladas() async {
     // Tu implementación
   }
 
@@ -514,22 +410,24 @@ Future<void> fetchNumeroRetardos() async {
   }
 
   Future<void> fetchOrigenDestino() async {
-  final apiService = ApiServiceOrigenDestino();
+    final apiService = ApiServiceOrigenDestino();
 
-  try {
-    final items = await apiService.fetchOrigenDestino(token);
+    try {
+      final items = await apiService.fetchOrigenDestino(token);
 
-    print("✅ OrigenDestino guardado en SQLite:");
+      print("✅ OrigenDestino guardado en SQLite:");
 
-    for (var item in items) {
-      print("Proceso: ${item.proceso} | Tipo: ${item.tipo} | Nombre: ${item.nombre}");
+      for (var item in items) {
+        print(
+          "Proceso: ${item.proceso} | Tipo: ${item.tipo} | Nombre: ${item.nombre}",
+        );
+      }
+    } catch (e) {
+      print("❌ Error al actualizar origen_destino: $e");
+      throw e;
     }
-
-  } catch (e) {
-    print("❌ Error al actualizar origen_destino: $e");
-    throw e;
   }
-}
+
   Future<void> fetchPdfsDelMes() async {}
 
   Future<void> fetchJefesGuardia() async {
@@ -550,25 +448,284 @@ Future<void> fetchNumeroRetardos() async {
   }
 
   Future<void> fetchGuardias() async {
-  final apiService = ApiServiceGuardia();
+    final apiService = ApiServiceGuardia();
 
-  try {
-    final guardias = await apiService.fetchGuardias(token);
+    try {
+      final guardias = await apiService.fetchGuardias(token);
 
-    print("✅ Guardias guardadas en SQLite:");
+      print("✅ Guardias guardadas en SQLite:");
 
-    for (var guardia in guardias) {
-      print("Guardia: ${guardia.guardia}");
+      for (var guardia in guardias) {
+        print("Guardia: ${guardia.guardia}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar guardias: $e");
+      throw e;
     }
-  } catch (e) {
-    print("❌ Error al actualizar guardias: $e");
-    throw e;
   }
-}
 
   Future<void> fetchProcesosAcero() async {}
 
   Future<void> fetchOperadores() async {
     // Tu implementación
+  }
+
+  Future<void> fetchZonas() async {
+    final apiService = ApiServiceZona();
+
+    try {
+      final zonas = await apiService.fetchZonas(token);
+
+      print("✅ Zonas guardadas en SQLite:");
+
+      for (var zona in zonas) {
+        print(
+          "Zona: ${zona.nombre} | Mina: ${zona.minaId} | Codigo: ${zona.codigo}",
+        );
+      }
+    } catch (e) {
+      print("❌ Error al actualizar zonas: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchPeriodos() async {
+    final apiService = ApiServicePeriodos();
+
+    try {
+      final periodos = await apiService.fetchPeriodos(token);
+
+      print("✅ Periodos guardados en SQLite:");
+
+      for (final periodo in periodos) {
+        print(
+          "Periodo: ${periodo.periodoId} | ${periodo.tipo} ${periodo.numero}/${periodo.anno}",
+        );
+      }
+    } catch (e) {
+      print("❌ Error al actualizar periodos: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchPlanMetrajeTL() async {
+    final apiService = ApiServicePlanMetraje();
+
+    try {
+      await fetchPeriodos();
+      final periodoVigente = await DatabaseHelper().getPeriodoVigente();
+      final periodoId = periodoVigente?.periodoId;
+
+      print(
+        '🗓️ Periodo vigente TL: periodoId=${periodoVigente?.periodoId}, tipo=${periodoVigente?.tipo}, numero=${periodoVigente?.numero}, anno=${periodoVigente?.anno}, inicio=${periodoVigente?.fechaInicio}, fin=${periodoVigente?.fechaFin}',
+      );
+
+      if (periodoId == null) {
+        throw Exception(
+          'No se pudo resolver el periodo vigente desde dim_periodo para Plan Metraje.',
+        );
+      }
+
+      final planes = await apiService.fetchPlanesMetraje(token, periodoId);
+
+      print("✅ Plan Metraje TL guardado en SQLite:");
+
+      for (final plan in planes) {
+        print(
+          "Labor: ${plan.laborNombre} | Dia: ${plan.dia} | Valor: ${plan.valor}",
+        );
+      }
+    } catch (e) {
+      print("❌ Error al actualizar Plan Metraje: $e");
+      throw e;
+    }
+  }
+
+  Future<void> refreshOfflineAuthorizationSnapshot() async {
+    try {
+      await UserService().syncOfflineProfileSnapshot(
+        dni: '',
+        token: token,
+        databaseHelper: DatabaseHelper(),
+      );
+      print('✅ Offline authorization snapshot refreshed');
+    } catch (e) {
+      print('❌ Error refreshing offline authorization snapshot: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> fetchMinas() async {
+    final apiService = ApiServiceMinas();
+
+    try {
+      final minas = await apiService.fetchMinas(token);
+
+      print("✅ Minas guardadas en SQLite:");
+
+      for (final mina in minas) {
+        print("Mina: ${mina.nombre} | Codigo: ${mina.codigo}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar minas: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchDimZonas() async {
+    final apiService = ApiServiceDimZonas();
+
+    try {
+      final zonas = await apiService.fetchDimZonas(token);
+
+      print("✅ Catálogo zonas guardado en SQLite:");
+
+      for (final zona in zonas) {
+        print("Zona: ${zona.nombre} | MinaId: ${zona.minaId}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar catálogo zonas: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchAreas() async {
+    final apiService = ApiServiceAreas();
+
+    try {
+      final areas = await apiService.fetchAreas(token);
+
+      print("✅ Areas guardadas en SQLite:");
+
+      for (final area in areas) {
+        print("Area: ${area.nombre} | ZonaId: ${area.zonaId}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar areas: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchFases() async {
+    final apiService = ApiServiceFases();
+
+    try {
+      final fases = await apiService.fetchFases(token);
+
+      print("✅ Fases guardadas en SQLite:");
+
+      for (final fase in fases) {
+        print("Fase: ${fase.nombre} | Codigo: ${fase.codigo}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar fases: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchTiposLabor() async {
+    final apiService = ApiServiceTipoLabores();
+
+    try {
+      final tipos = await apiService.fetchTiposLabor(token);
+
+      print("✅ Tipos de labor guardados en SQLite:");
+
+      for (final tipo in tipos) {
+        print("Tipo labor: ${tipo.nombre} | Codigo: ${tipo.codigo}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar tipos de labor: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchEstructurasMinerales() async {
+    final apiService = ApiServiceEstructurasMinerales();
+
+    try {
+      final estructuras = await apiService.fetchEstructurasMinerales(token);
+
+      print("✅ Estructuras minerales guardadas en SQLite:");
+
+      for (final estructura in estructuras) {
+        print(
+          "Estructura: ${estructura.nombre} | Codigo: ${estructura.codigo}",
+        );
+      }
+    } catch (e) {
+      print("❌ Error al actualizar estructuras minerales: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchNiveles() async {
+    final apiService = ApiServiceNiveles();
+
+    try {
+      final niveles = await apiService.fetchNiveles(token);
+
+      print("✅ Niveles guardados en SQLite:");
+
+      for (final nivel in niveles) {
+        print("Nivel: ${nivel.nombre} | Numero: ${nivel.numero}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar niveles: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchAlas() async {
+    final apiService = ApiServiceAlas();
+
+    try {
+      final alas = await apiService.fetchAlas(token);
+
+      print("✅ Alas guardadas en SQLite:");
+
+      for (final ala in alas) {
+        print(
+          "Ala: ${ala.nombre} | Codigo: ${ala.codigo} | Orden: ${ala.orden}",
+        );
+      }
+    } catch (e) {
+      print("❌ Error al actualizar alas: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchLabores() async {
+    final apiService = ApiServiceLabores();
+
+    try {
+      final labores = await apiService.fetchLabores(token);
+
+      print("✅ Labores guardadas en SQLite:");
+
+      for (final labor in labores) {
+        print("Labor: ${labor.nombreLabor} | MinaId: ${labor.minaId}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar labores: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchDimTurnos() async {
+    final apiService = ApiServiceDimTurnos();
+
+    try {
+      final turnos = await apiService.fetchDimTurnos(token);
+
+      print("✅ Turnos guardados en SQLite:");
+
+      for (final turno in turnos) {
+        print("Turno: ${turno.nombre} | Codigo: ${turno.codigo}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar turnos: $e");
+      throw e;
+    }
   }
 }
