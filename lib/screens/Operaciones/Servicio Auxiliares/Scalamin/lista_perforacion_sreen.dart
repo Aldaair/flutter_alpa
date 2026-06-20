@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialog_check_imagen.dart';
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_checklist.dart';
+import 'package:i_miner/screens/widgets/dialogo_checklist.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_condiciones_equipo.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_confirmar_cierre.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_formulario_perforacion.dart';
@@ -1179,6 +1179,8 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
           operacionId: operacionId,
           estado: estado,
           checklistData: checklistData, // ✅ pasamos los datos cargados
+          onSaveChecklist: (id, data) =>
+              DatabaseHelper().updateCheckListScalamin(id, data),
           primaryColor: primaryColor,
         );
       },

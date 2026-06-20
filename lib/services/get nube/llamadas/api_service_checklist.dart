@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:i_miner/config/api/api_config.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/checklist_item.dart';
-
+import 'package:sqflite/sqflite.dart';
 
 class ApiServiceCheckList {
   final DatabaseHelper _dbHelper = DatabaseHelper();
@@ -13,9 +13,7 @@ class ApiServiceCheckList {
     try {
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}${ApiConfig.checklistEndpoint}'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -24,27 +22,32 @@ class ApiServiceCheckList {
             .map((data) => CheckListItem.fromJson(data))
             .toList();
 
-        // Eliminar datos antiguos antes de insertar nuevos
+        // Eliminar datos antiguos antes de insertar nuevos en DB compartida.
         await _dbHelper.deleteAll('checklist_items');
 
-        // Guardar en DB local sin el id
+        // Guardar en DB compartida
         await saveCheckListToLocalDB(items);
 
         return items;
       } else {
-        throw Exception('Error al cargar el checklist. Código: ${response.statusCode}');
+        throw Exception(
+          'Error al cargar el checklist. Código: ${response.statusCode}',
+        );
       }
     } catch (error) {
       throw Exception('Error en la solicitud: $error');
     }
   }
 
-  /// Guardar checklist en la base de datos local
+  /// Guardar checklist en la base de datos compartida
   Future<void> saveCheckListToLocalDB(List<CheckListItem> items) async {
+    final db = await _dbHelper.sharedCatalogDatabase;
     for (var item in items) {
-      Map<String, dynamic> itemData = item.toMap();
-      itemData.remove('id'); // No insertar id si es autoincremental local
-      await _dbHelper.insert('checklist_items', itemData);
+      await db.insert(
+        'checklist_items',
+        item.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
   }
 }

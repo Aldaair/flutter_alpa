@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/config/data/horizontal_create_flow.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/dialog_check_imagen.dart';
-import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/dialogo_checklist.dart';
+import 'package:i_miner/screens/widgets/dialogo_checklist.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/dialogo_condiciones_equipo.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/dialogo_confirmar_cierre.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/dialogo_formulario_perforacion.dart';
@@ -1213,6 +1213,8 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
           operacionId: operacionId,
           estado: estado,
           checklistData: checklistData, // ✅ pasamos los datos cargados
+          onSaveChecklist: (id, data) =>
+              DatabaseHelper().updateCheckListHorizontal(id, data),
           primaryColor: primaryColor,
         );
       },

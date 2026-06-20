@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:i_miner/config/data/database_helper.dart';
 
 class DialogoChecklist extends StatefulWidget {
   final int operacionId;
   final String estado;
   final List<Map<String, dynamic>> checklistData;
+  final Future<bool> Function(int operacionId, List<Map<String, dynamic>> data)
+  onSaveChecklist;
   final Color primaryColor;
 
   const DialogoChecklist({
-    Key? key,
+    super.key,
     required this.operacionId,
     required this.estado,
     required this.checklistData,
+    required this.onSaveChecklist,
     this.primaryColor = const Color(0xFF1B5E6B),
-  }) : super(key: key);
+  });
 
   @override
   State<DialogoChecklist> createState() => _DialogoChecklistState();
@@ -29,7 +30,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
   @override
   void initState() {
     super.initState();
-    isEditable = widget.estado.toLowerCase() != "cerrado";
+    isEditable = widget.estado.toLowerCase() != 'cerrado';
     _inicializarChecklist();
   }
 
@@ -41,48 +42,38 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
       return;
     }
 
-    // Agrupar items por categoría
-    Map<String, List<ChecklistItem>> tempMap = {};
-    
+    final tempMap = <String, List<ChecklistItem>>{};
+
     for (int i = 0; i < widget.checklistData.length; i++) {
-      var item = widget.checklistData[i];
-      String categoria = item['categoria'] ?? 'Sin categoría';
-      
-      ChecklistItem checklistItem = ChecklistItem(
+      final item = widget.checklistData[i];
+      final categoria = item['categoria'] ?? 'Sin categoria';
+
+      final checklistItem = ChecklistItem(
         i + 1,
-        item['descripcion'] ?? 'Sin descripción',
+        item['descripcion'] ?? 'Sin descripcion',
         value: item['decision'] == 1
             ? true
             : item['decision'] == 0
-                ? false
-                : null,
+            ? false
+            : null,
         observaciones: item['observacion'] ?? '',
       );
-      
-      if (!tempMap.containsKey(categoria)) {
-        tempMap[categoria] = [];
-      }
+
+      tempMap.putIfAbsent(categoria, () => []);
       tempMap[categoria]!.add(checklistItem);
     }
-    
+
     checklistPorCategoria = tempMap;
     categorias = tempMap.keys.toList();
-    
-    // Inicializar todos los estados como expandidos (abiertos)
-    expandedState = {};
-    for (var categoria in categorias) {
-      expandedState[categoria] = true;
-    }
+    expandedState = {for (final categoria in categorias) categoria: true};
   }
 
   Future<void> _guardarChecklist() async {
-    // Crear una lista plana para guardar manteniendo el orden original
-    List<Map<String, dynamic>> datosAGuardar =
-        List<Map<String, dynamic>>.from(widget.checklistData);
-    
+    final datosAGuardar = List<Map<String, dynamic>>.from(widget.checklistData);
+
     int index = 0;
-    for (var categoria in categorias) {
-      for (var item in checklistPorCategoria[categoria]!) {
+    for (final categoria in categorias) {
+      for (final item in checklistPorCategoria[categoria]!) {
         if (index < datosAGuardar.length) {
           datosAGuardar[index]['decision'] = item.value == true ? 1 : 0;
           datosAGuardar[index]['observacion'] = item.observaciones;
@@ -91,8 +82,12 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
       }
     }
 
-    bool guardado = await DatabaseHelper()
-        .updateCheckList(widget.operacionId, datosAGuardar);
+    final guardado = await widget.onSaveChecklist(
+      widget.operacionId,
+      datosAGuardar,
+    );
+
+    if (!mounted) return;
 
     if (guardado) {
       _mostrarSnackbar('Checklist guardado correctamente', Colors.green);
@@ -104,8 +99,8 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
 
   void _marcarTodosSi() {
     setState(() {
-      for (var categoria in categorias) {
-        for (var item in checklistPorCategoria[categoria]!) {
+      for (final categoria in categorias) {
+        for (final item in checklistPorCategoria[categoria]!) {
           item.value = true;
           item.showObservaciones = false;
         }
@@ -115,8 +110,8 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
 
   void _marcarTodosNo() {
     setState(() {
-      for (var categoria in categorias) {
-        for (var item in checklistPorCategoria[categoria]!) {
+      for (final categoria in categorias) {
+        for (final item in checklistPorCategoria[categoria]!) {
           item.value = false;
           item.showObservaciones = true;
         }
@@ -126,8 +121,8 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
 
   void _limpiarTodo() {
     setState(() {
-      for (var categoria in categorias) {
-        for (var item in checklistPorCategoria[categoria]!) {
+      for (final categoria in categorias) {
+        for (final item in checklistPorCategoria[categoria]!) {
           item.value = null;
           item.showObservaciones = false;
           item.observaciones = '';
@@ -145,7 +140,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
 
   void _expandirTodas() {
     setState(() {
-      for (var categoria in categorias) {
+      for (final categoria in categorias) {
         expandedState[categoria] = true;
       }
     });
@@ -153,7 +148,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
 
   void _colapsarTodas() {
     setState(() {
-      for (var categoria in categorias) {
+      for (final categoria in categorias) {
         expandedState[categoria] = false;
       }
     });
@@ -172,8 +167,8 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
 
   @override
   void dispose() {
-    for (var categoria in categorias) {
-      for (var item in checklistPorCategoria[categoria]!) {
+    for (final categoria in categorias) {
+      for (final item in checklistPorCategoria[categoria]!) {
         item.dispose();
       }
     }
@@ -183,9 +178,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: MediaQuery.of(context).size.width * 0.8,
         constraints: BoxConstraints(
@@ -199,7 +192,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -226,7 +218,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
-                      'Checklist de Operación',
+                      'Checklist de Operacion',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -255,8 +247,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                 ],
               ),
             ),
-
-            // Mensaje si no hay items en el checklist
             if (checklistPorCategoria.isEmpty)
               Expanded(
                 child: Center(
@@ -279,7 +269,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Esta operación no tiene items definidos',
+                        'Esta operacion no tiene items definidos',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade500,
@@ -293,7 +283,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
               Expanded(
                 child: Column(
                   children: [
-                    // Botones de acción rápida y control de expansión
                     if (isEditable && checklistPorCategoria.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -305,7 +294,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // Botones para expandir/colapsar todas
                             Row(
                               children: [
                                 _buildAccionRapida(
@@ -323,11 +311,10 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                                 ),
                               ],
                             ),
-                            // Botones de marcado rápido
                             Row(
                               children: [
                                 _buildAccionRapida(
-                                  label: 'Todos Sí',
+                                  label: 'Todos Si',
                                   icon: Icons.check_circle_outline,
                                   color: Colors.green,
                                   onPressed: _marcarTodosSi,
@@ -351,22 +338,21 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                           ],
                         ),
                       ),
-
-                    // Lista de categorías con checklist
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         child: ListView.separated(
                           itemCount: categorias.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 16),
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 16),
                           itemBuilder: (context, index) {
                             final categoria = categorias[index];
                             final items = checklistPorCategoria[categoria]!;
                             final isExpanded = expandedState[categoria] ?? true;
-                            
+
                             return _buildCategoriaCard(
-                              categoria, 
-                              items, 
+                              categoria,
+                              items,
                               isExpanded,
                             );
                           },
@@ -376,14 +362,10 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                   ],
                 ),
               ),
-
-            // Footer
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey.shade200),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey.shade200)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -445,15 +427,14 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
   }
 
   Widget _buildCategoriaCard(
-    String categoria, 
-    List<ChecklistItem> items, 
+    String categoria,
+    List<ChecklistItem> items,
     bool isExpanded,
   ) {
-    // Calcular progreso de la categoría
-    int totalItems = items.length;
-    int itemsCompletados = items.where((item) => item.value != null).length;
-    double progreso = totalItems > 0 ? itemsCompletados / totalItems : 0;
-    
+    final totalItems = items.length;
+    final itemsCompletados = items.where((item) => item.value != null).length;
+    final progreso = totalItems > 0 ? itemsCompletados / totalItems : 0.0;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -470,7 +451,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
       ),
       child: Column(
         children: [
-          // Header de la categoría (clickeable)
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -480,7 +460,10 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                 topRight: Radius.circular(12),
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: widget.primaryColor.withOpacity(0.05),
                   borderRadius: const BorderRadius.only(
@@ -489,13 +472,14 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                   ),
                   border: Border(
                     bottom: BorderSide(
-                      color: isExpanded ? Colors.grey.shade300 : Colors.transparent,
+                      color: isExpanded
+                          ? Colors.grey.shade300
+                          : Colors.transparent,
                     ),
                   ),
                 ),
                 child: Row(
                   children: [
-                    // Icono de categoría
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
@@ -509,7 +493,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // Título de categoría y contador
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -533,7 +516,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                         ],
                       ),
                     ),
-                    // Barra de progreso
                     Container(
                       width: 80,
                       height: 4,
@@ -553,7 +535,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                         ),
                       ),
                     ),
-                    // Botón de expandir/colapsar
                     Icon(
                       isExpanded ? Icons.expand_less : Icons.expand_more,
                       color: widget.primaryColor,
@@ -564,7 +545,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
               ),
             ),
           ),
-          // Items del checklist (mostrar solo si está expandido)
           if (isExpanded)
             Padding(
               padding: const EdgeInsets.all(16),
@@ -621,7 +601,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
   }
 
   Widget _buildChecklistItem(ChecklistItem item) {
-    // Sincronizar controlador con el texto
     if (item.observacionesController.text != item.observaciones) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (item.observacionesController.text != item.observaciones) {
@@ -639,7 +618,10 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
       child: Column(
         children: [
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
             leading: Container(
               width: 24,
               height: 24,
@@ -660,16 +642,13 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
             ),
             title: Text(
               item.title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
             trailing: isEditable
                 ? Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildOpcionRadio(item, true, 'Sí'),
+                      _buildOpcionRadio(item, true, 'Si'),
                       const SizedBox(width: 4),
                       _buildOpcionRadio(item, false, 'No'),
                       const SizedBox(width: 4),
@@ -796,13 +775,13 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: item.value == value 
-              ? widget.primaryColor 
+          color: item.value == value
+              ? widget.primaryColor
               : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: item.value == value 
-                ? widget.primaryColor 
+            color: item.value == value
+                ? widget.primaryColor
                 : Colors.grey.shade300,
           ),
         ),
@@ -825,13 +804,12 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
   }
 
   String _getTextForValue(bool? value) {
-    if (value == true) return 'SÍ';
+    if (value == true) return 'SI';
     if (value == false) return 'NO';
     return 'PENDIENTE';
   }
 }
 
-// Clase ChecklistItem (adaptada del código original)
 class ChecklistItem {
   final int id;
   final String title;

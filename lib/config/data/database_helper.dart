@@ -37,7 +37,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 15;
+  static const int _sharedCatalogDbVersion = 16;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -432,6 +432,17 @@ CREATE TABLE IF NOT EXISTS tipo_perforaciones (
   permitido_medicion INTEGER NOT NULL DEFAULT 0
 )
 ''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS checklist_items (
+  id INTEGER PRIMARY KEY,
+  proceso_id INTEGER,
+  proceso TEXT NOT NULL,
+  categoria TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  orden INTEGER
+)
+''');
   }
 
   Future<void> _onUpgradeSharedCatalogDatabase(
@@ -752,6 +763,32 @@ CREATE TABLE equipo_horometro_tipos (
   PRIMARY KEY (equipo_id, tipo_horometro_id)
 )
 ''');
+      }
+    }
+
+    if (oldVersion < 16) {
+      if (!await _tablaExiste(db, 'checklist_items')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS checklist_items (
+  id INTEGER PRIMARY KEY,
+  proceso_id INTEGER,
+  proceso TEXT NOT NULL,
+  categoria TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  orden INTEGER
+)
+''');
+      } else {
+        if (!await _columnaExiste(db, 'checklist_items', 'proceso_id')) {
+          await db.execute(
+            'ALTER TABLE checklist_items ADD COLUMN proceso_id INTEGER',
+          );
+        }
+        if (!await _columnaExiste(db, 'checklist_items', 'orden')) {
+          await db.execute(
+            'ALTER TABLE checklist_items ADD COLUMN orden INTEGER',
+          );
+        }
       }
     }
   }
@@ -2553,6 +2590,7 @@ CREATE TABLE UsuarioEquipo (
     'Equipo',
     'tipo_horometro',
     'equipo_horometro_tipos',
+    'checklist_items',
     'Seccion',
     'Guardia',
     'jefe_guardias',
@@ -2788,11 +2826,12 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Map<String, dynamic>>> getCheckListByProceso(
     String proceso,
   ) async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
     final result = await db.query(
       'checklist_items',
       where: 'proceso = ?',
       whereArgs: [proceso],
+      orderBy: 'orden ASC, id ASC',
     );
     return result;
   }

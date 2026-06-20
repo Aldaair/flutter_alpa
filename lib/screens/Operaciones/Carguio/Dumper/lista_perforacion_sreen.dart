@@ -4,7 +4,7 @@ import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/DialogoChecklistTelemando.dart';
 import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/DialogoProgramaTrabajo.dart';
 import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/dialog_check_imagen.dart';
-import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/dialogo_checklist.dart';
+import 'package:i_miner/screens/widgets/dialogo_checklist.dart';
 import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/dialogo_condiciones_equipo.dart';
 import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/dialogo_confirmar_cierre.dart';
 import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/dialogo_formulario_perforacion.dart';
@@ -1206,6 +1206,8 @@ class _TaladroDumperScreen2State extends State<TaladroDumperScreen2> {
           operacionId: operacionId,
           estado: estado,
           checklistData: checklistData, // ✅ pasamos los datos cargados
+          onSaveChecklist: (id, data) =>
+              DatabaseHelper().updateCheckListDumper(id, data),
           primaryColor: primaryColor,
         );
       },
