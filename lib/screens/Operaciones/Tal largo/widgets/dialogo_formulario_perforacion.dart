@@ -255,7 +255,9 @@ class _DialogoFormularioPerforacionState
   }
 
   void _sincronizarFrentePlanificado() {
-    print('🔍 _sincronizarFrentePlanificado → laboresAsignadas.isEmpty=${laboresAsignadas.isEmpty}, usarFrentePlanificado=$usarFrentePlanificado, ubicacionesPlanCompletas.length=${ubicacionesPlanCompletas.length}');
+    print(
+      '🔍 _sincronizarFrentePlanificado → laboresAsignadas.isEmpty=${laboresAsignadas.isEmpty}, usarFrentePlanificado=$usarFrentePlanificado, ubicacionesPlanCompletas.length=${ubicacionesPlanCompletas.length}',
+    );
     if (laboresAsignadas.isEmpty) {
       if (mounted) {
         setState(() {
@@ -297,7 +299,6 @@ class _DialogoFormularioPerforacionState
 
   void _aplicarLaborAsignada(AssignedLabor labor) {
     final ubicacion = _resolverUbicacionPlanificada(labor);
-    print('🔍 _aplicarLaborAsignada → labor=${labor.laborNombre}, nivel=${labor.nivel}, tipoLabor=${labor.tipoLabor}, ubicacion encontrada=${ubicacion != null}');
     final ala = ubicacion?.ala ?? _resolverAlaPlanificada(labor);
 
     setState(() {
@@ -374,9 +375,9 @@ class _DialogoFormularioPerforacionState
     final estructura = estructurasMineralesCatalogo
         .cast<DimEstructuraMineral?>()
         .firstWhere(
-      (e) => e?.estructuraMineralId == labor.estructuraMineralId,
-      orElse: () => null,
-    );
+          (e) => e?.estructuraMineralId == labor.estructuraMineralId,
+          orElse: () => null,
+        );
     final nivel = nivelesCatalogo.cast<DimNivel?>().firstWhere(
       (n) => n?.nivelId == labor.nivelId,
       orElse: () => null,
@@ -482,7 +483,9 @@ class _DialogoFormularioPerforacionState
 
       ubicacionesPlanCompletas = _buildPlanLocations();
 
-      print('🔍 _cargarPlanesProduccionYMetraje → ${planesProduccionCompletos.length} planes prod, ${planesMetrajeCompletos.length} planes metraje, ${ubicacionesPlanCompletas.length} ubicaciones');
+      print(
+        '🔍 _cargarPlanesProduccionYMetraje → ${planesProduccionCompletos.length} planes prod, ${planesMetrajeCompletos.length} planes metraje, ${ubicacionesPlanCompletas.length} ubicaciones',
+      );
 
       final minasSet = <String>{};
       final zonasSet = <String>{};
@@ -739,9 +742,7 @@ class _DialogoFormularioPerforacionState
   }
 
   void _actualizarFiltrosDesdeCatalogos() {
-    filteredMinas = _uniqueSorted(
-      minasCatalogo.map((m) => m.nombre),
-    );
+    filteredMinas = _uniqueSorted(minasCatalogo.map((m) => m.nombre));
     filteredZonas = _uniqueSorted(
       zonasCatalogo
           .where(
@@ -750,8 +751,7 @@ class _DialogoFormularioPerforacionState
                 (z.minaId != null &&
                     minasCatalogo.any(
                       (m) =>
-                          m.minaId == z.minaId &&
-                          m.nombre == minaSeleccionada,
+                          m.minaId == z.minaId && m.nombre == minaSeleccionada,
                     )),
           )
           .map((z) => z.nombre),
@@ -765,9 +765,7 @@ class _DialogoFormularioPerforacionState
                       (z) =>
                           z.zonaId == a.zonaId &&
                           zonasCatalogo.any(
-                            (zs) =>
-                                zs.nombre == minaSeleccionada ||
-                                true,
+                            (zs) => zs.nombre == minaSeleccionada || true,
                           ),
                     )) &&
                 (zonaSeleccionada == null ||
@@ -780,24 +778,14 @@ class _DialogoFormularioPerforacionState
           )
           .map((a) => a.nombre),
     );
-    filteredFases = _uniqueSorted(
-      fasesCatalogo.map((f) => f.nombre),
-    );
+    filteredFases = _uniqueSorted(fasesCatalogo.map((f) => f.nombre));
     filteredEstructurasMinerales = _uniqueSorted(
       estructurasMineralesCatalogo.map((e) => e.nombre),
     );
-    filteredNiveles = _uniqueSorted(
-      nivelesCatalogo.map((n) => n.nombre),
-    );
-    filteredTiposLabor = _uniqueSorted(
-      tiposLaborCatalogo.map((t) => t.nombre),
-    );
-    filteredLabores = _uniqueSorted(
-      laboresCatalogo.map((l) => l.nombreLabor),
-    );
-    filteredAlas = _uniqueSorted(
-      alasCatalogo.map((a) => a.nombre),
-    );
+    filteredNiveles = _uniqueSorted(nivelesCatalogo.map((n) => n.nombre));
+    filteredTiposLabor = _uniqueSorted(tiposLaborCatalogo.map((t) => t.nombre));
+    filteredLabores = _uniqueSorted(laboresCatalogo.map((l) => l.nombreLabor));
+    filteredAlas = _uniqueSorted(alasCatalogo.map((a) => a.nombre));
 
     _clearSelectionsIfMissing();
   }
@@ -898,19 +886,24 @@ class _DialogoFormularioPerforacionState
         nTaladrosProduccionController.text =
             widget.datosIniciales!['n_taladros_produccion']?.toString() ?? '';
         metrosPerforadosProduccionController.text =
-            widget.datosIniciales!['metros_perforados_produccion']?.toString() ?? '';
+            widget.datosIniciales!['metros_perforados_produccion']
+                ?.toString() ??
+            '';
         nTaladrosRimadosController.text =
             widget.datosIniciales!['n_taladros_rimados']?.toString() ?? '';
         metrosPerforadosRimadosController.text =
-            widget.datosIniciales!['metros_perforados_rimados']?.toString() ?? '';
+            widget.datosIniciales!['metros_perforados_rimados']?.toString() ??
+            '';
         nTaladrosAlivioController.text =
             widget.datosIniciales!['n_taladros_alivio']?.toString() ?? '';
         metrosPerforadosAlivioController.text =
-            widget.datosIniciales!['metros_perforados_alivio']?.toString() ?? '';
+            widget.datosIniciales!['metros_perforados_alivio']?.toString() ??
+            '';
         nTaladrosRepasoController.text =
             widget.datosIniciales!['n_taladros_repaso']?.toString() ?? '';
         metrosPerforadosRepasoController.text =
-            widget.datosIniciales!['metros_perforados_repaso']?.toString() ?? '';
+            widget.datosIniciales!['metros_perforados_repaso']?.toString() ??
+            '';
 
         longitudBarraSeleccionada = widget.datosIniciales!['long_barras']
             ?.toString();
@@ -936,10 +929,7 @@ class _DialogoFormularioPerforacionState
     }
 
     if (laborSeleccionado == null || laborSeleccionado!.isEmpty) {
-      _mostrarSnackbar(
-        'Debe seleccionar un frente de trabajo',
-        Colors.orange,
-      );
+      _mostrarSnackbar('Debe seleccionar un frente de trabajo', Colors.orange);
       return;
     }
 
@@ -963,20 +953,16 @@ class _DialogoFormularioPerforacionState
           int.tryParse(nTaladrosProduccionController.text) ?? 0,
       'metros_perforados_produccion':
           double.tryParse(metrosPerforadosProduccionController.text) ?? 0.0,
-      'n_taladros_rimados':
-          int.tryParse(nTaladrosRimadosController.text) ?? 0,
+      'n_taladros_rimados': int.tryParse(nTaladrosRimadosController.text) ?? 0,
       'metros_perforados_rimados':
           double.tryParse(metrosPerforadosRimadosController.text) ?? 0.0,
-      'n_taladros_alivio':
-          int.tryParse(nTaladrosAlivioController.text) ?? 0,
+      'n_taladros_alivio': int.tryParse(nTaladrosAlivioController.text) ?? 0,
       'metros_perforados_alivio':
           double.tryParse(metrosPerforadosAlivioController.text) ?? 0.0,
-      'n_taladros_repaso':
-          int.tryParse(nTaladrosRepasoController.text) ?? 0,
+      'n_taladros_repaso': int.tryParse(nTaladrosRepasoController.text) ?? 0,
       'metros_perforados_repaso':
           double.tryParse(metrosPerforadosRepasoController.text) ?? 0.0,
-      'long_barras':
-          double.tryParse(longitudBarraSeleccionada ?? '') ?? 0.0,
+      'long_barras': double.tryParse(longitudBarraSeleccionada ?? '') ?? 0.0,
       'num_barras': int.tryParse(numBarrasController.text) ?? 0,
       'tipo_perforacion': tipoPerforacionSeleccionado ?? '',
       'tipo_perforacion_id': _obtenerIdTipoPerforacion(
@@ -1680,10 +1666,9 @@ class _DialogoFormularioPerforacionState
 
   Widget _buildManualFrontSelectors() {
     final planLaborIds = planMetrajeTLCompletos.map((p) => p.laborId).toSet();
-    final laboresFiltradas = laboresCatalogo
-        .where((l) => planLaborIds.contains(l.laborId))
-        .toList()
-      ..sort((a, b) => a.nombreLabor.compareTo(b.nombreLabor));
+    final laboresFiltradas =
+        laboresCatalogo.where((l) => planLaborIds.contains(l.laborId)).toList()
+          ..sort((a, b) => a.nombreLabor.compareTo(b.nombreLabor));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1699,10 +1684,7 @@ class _DialogoFormularioPerforacionState
           items: laboresFiltradas.map((labor) {
             return DropdownMenuItem<int>(
               value: labor.laborId,
-              child: Text(
-                labor.nombreLabor,
-                overflow: TextOverflow.ellipsis,
-              ),
+              child: Text(labor.nombreLabor, overflow: TextOverflow.ellipsis),
             );
           }).toList(),
           onChanged: isEditable
@@ -1810,8 +1792,10 @@ class _DialogoFormularioPerforacionState
 
     setState(() {
       final existentes = ubicacionesPlanCompletas
-          .map((u) =>
-              '${u.mina}|${u.zona}|${u.area}|${u.fase}|${u.estructuraMineral}|${u.nivel}|${u.tipoLabor}|${u.labor}')
+          .map(
+            (u) =>
+                '${u.mina}|${u.zona}|${u.area}|${u.fase}|${u.estructuraMineral}|${u.nivel}|${u.tipoLabor}|${u.labor}',
+          )
           .toSet();
 
       for (final ubicacion in nuevasUbicaciones) {
@@ -1823,18 +1807,10 @@ class _DialogoFormularioPerforacionState
         }
       }
 
-      opcionesMina = _uniqueSorted(
-        ubicacionesPlanCompletas.map((u) => u.mina),
-      );
-      opcionesZona = _uniqueSorted(
-        ubicacionesPlanCompletas.map((u) => u.zona),
-      );
-      opcionesArea = _uniqueSorted(
-        ubicacionesPlanCompletas.map((u) => u.area),
-      );
-      opcionesFase = _uniqueSorted(
-        ubicacionesPlanCompletas.map((u) => u.fase),
-      );
+      opcionesMina = _uniqueSorted(ubicacionesPlanCompletas.map((u) => u.mina));
+      opcionesZona = _uniqueSorted(ubicacionesPlanCompletas.map((u) => u.zona));
+      opcionesArea = _uniqueSorted(ubicacionesPlanCompletas.map((u) => u.area));
+      opcionesFase = _uniqueSorted(ubicacionesPlanCompletas.map((u) => u.fase));
       opcionesEstructuraMineral = _uniqueSorted(
         ubicacionesPlanCompletas.map((u) => u.estructuraMineral),
       );
@@ -1848,9 +1824,7 @@ class _DialogoFormularioPerforacionState
         ubicacionesPlanCompletas.map((u) => u.labor),
       );
       opcionesAla = _uniqueSorted(
-        ubicacionesPlanCompletas
-            .map((u) => u.ala)
-            .where((a) => a.isNotEmpty),
+        ubicacionesPlanCompletas.map((u) => u.ala).where((a) => a.isNotEmpty),
       );
     });
 
