@@ -33,9 +33,6 @@ class MisLaboresService {
   }) async {
     final currentUser = await _resolveCurrentUser();
     final currentUserDni = currentUser['dni']?.toString();
-    final currentUserId = _asInt(
-      currentUser['operador_id'] ?? currentUser['user_id'],
-    );
 
     if (currentUserDni == null || currentUserDni.isEmpty) {
       return const [];
@@ -50,11 +47,7 @@ class MisLaboresService {
 
     final token = await _apiService.getToken();
     if (token == null || token.isEmpty) {
-      return _loadFromLocalCache(
-        fecha: fecha,
-        procesoId: processId,
-        userId: currentUserId,
-      );
+      return const [];
     }
 
     final uri = Uri.parse(
@@ -82,25 +75,10 @@ class MisLaboresService {
       }
 
       final laboresRows = _extractLaboresRows(decoded);
-      await _databaseHelper.replaceLocalPlanLabores(
-        fecha: fecha,
-        procesoId: processId,
-        userId: _asInt(decoded['user_id']) ?? currentUserId,
-        turno: decoded['turno']?.toString(),
-        turnoCodigo:
-            decoded['turno_codigo']?.toString() ??
-            decoded['turno_id']?.toString(),
-        procesoNombre: decoded['proceso_nombre']?.toString() ?? processName,
-        labores: laboresRows,
-      );
 
       return laboresRows.map(AssignedLabor.fromJson).toList();
     } catch (_) {
-      return _loadFromLocalCache(
-        fecha: fecha,
-        procesoId: processId,
-        userId: currentUserId,
-      );
+      return const [];
     }
   }
 
@@ -158,27 +136,4 @@ class MisLaboresService {
         .toList();
   }
 
-  Future<List<AssignedLabor>> _loadFromLocalCache({
-    required String fecha,
-    required int procesoId,
-    int? userId,
-  }) async {
-    final rows = await _databaseHelper.getLocalPlanLabores(
-      fecha: fecha,
-      procesoId: procesoId,
-      userId: userId,
-    );
-
-    return rows.map(AssignedLabor.fromJson).toList();
-  }
-
-  int? _asInt(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-    if (value is int) {
-      return value;
-    }
-    return int.tryParse(value.toString());
-  }
 }

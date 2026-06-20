@@ -13,6 +13,7 @@ import 'package:i_miner/models/DimEstructuraMineral.dart';
 import 'package:i_miner/models/DimNivel.dart';
 import 'package:i_miner/models/DimAla.dart';
 import 'package:i_miner/models/DimLabor.dart';
+import 'package:i_miner/models/PlanMetrajeTL.dart';
 import 'package:i_miner/services/mis_labores_service.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
@@ -148,6 +149,7 @@ class _DialogoFormularioPerforacionState
   // Almacenar objetos completos
   List<PlanProduccion> planesProduccionCompletos = [];
   List<PlanMetraje> planesMetrajeCompletos = [];
+  List<PlanMetrajeTL> planMetrajeTLCompletos = [];
   List<_LongHolePlanLocation> ubicacionesPlanCompletas = [];
   List<TipoPerforacion> tiposPerforacionCompletos = [];
   List<AssignedLabor> laboresAsignadas = [];
@@ -171,7 +173,10 @@ class _DialogoFormularioPerforacionState
         _cargarLongitudBarras(),
         _cargarMisLabores(),
         _cargarCatalogos(),
+        _cargarPlanMetrajeTL(),
       ]);
+
+      await _resolverUbicacionesPlanMetrajeTL();
     } catch (e) {
       print("Error cargando datos: $e");
     } finally {
@@ -201,6 +206,19 @@ class _DialogoFormularioPerforacionState
     } catch (e) {
       print('Error cargando mis labores: $e');
       usarFrentePlanificado = false;
+    }
+  }
+
+  Future<void> _cargarPlanMetrajeTL() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final data = await dbHelper.getPlanesMetrajeTL();
+      setState(() {
+        planMetrajeTLCompletos = data;
+      });
+      print('🔍 _cargarPlanMetrajeTL → ${data.length} registros');
+    } catch (e) {
+      print('Error cargando PlanMetrajeTL: $e');
     }
   }
 
@@ -298,6 +316,15 @@ class _DialogoFormularioPerforacionState
   }
 
   _LongHolePlanLocation? _resolverUbicacionPlanificada(AssignedLabor labor) {
+    final tlPlan = planMetrajeTLCompletos.cast<PlanMetrajeTL?>().firstWhere(
+      (p) => p?.laborId == labor.laborId,
+      orElse: () => null,
+    );
+    if (tlPlan != null) {
+      final result = _resolverUbicacionPorLaborId(tlPlan.laborId);
+      if (result != null) return result;
+    }
+
     for (final ubicacion in ubicacionesPlanCompletas) {
       final matchesAla = labor.ala.isEmpty || ubicacion.ala == labor.ala;
       final matchesEstructura =
@@ -314,6 +341,67 @@ class _DialogoFormularioPerforacionState
     }
 
     return null;
+  }
+
+  _LongHolePlanLocation? _resolverUbicacionPorLaborId(int laborId) {
+    final labor = laboresCatalogo.cast<DimLabor?>().firstWhere(
+      (l) => l?.laborId == laborId,
+      orElse: () => null,
+    );
+    if (labor == null) return null;
+
+    final mina = minasCatalogo.cast<DimMina?>().firstWhere(
+      (m) => m?.minaId == labor.minaId,
+      orElse: () => null,
+    );
+    final zona = zonasCatalogo.cast<DimZona?>().firstWhere(
+      (z) => z?.zonaId == labor.zonaId,
+      orElse: () => null,
+    );
+    final area = areasCatalogo.cast<DimArea?>().firstWhere(
+      (a) => a?.areaId == labor.areaId,
+      orElse: () => null,
+    );
+    final fase = fasesCatalogo.cast<DimFase?>().firstWhere(
+      (f) => f?.faseId == labor.faseId,
+      orElse: () => null,
+    );
+    final tipoLabor = tiposLaborCatalogo.cast<DimTipoLabor?>().firstWhere(
+      (t) => t?.tipoLaborId == labor.tipoLaborId,
+      orElse: () => null,
+    );
+    final estructura = estructurasMineralesCatalogo
+        .cast<DimEstructuraMineral?>()
+        .firstWhere(
+      (e) => e?.estructuraMineralId == labor.estructuraMineralId,
+      orElse: () => null,
+    );
+    final nivel = nivelesCatalogo.cast<DimNivel?>().firstWhere(
+      (n) => n?.nivelId == labor.nivelId,
+      orElse: () => null,
+    );
+
+    if (mina == null ||
+        zona == null ||
+        area == null ||
+        fase == null ||
+        tipoLabor == null ||
+        estructura == null ||
+        nivel == null) {
+      return null;
+    }
+
+    return _LongHolePlanLocation(
+      mina: mina.nombre,
+      zona: zona.nombre,
+      area: area.nombre,
+      fase: fase.nombre,
+      estructuraMineral: estructura.nombre,
+      nivel: nivel.nombre,
+      tipoLabor: tipoLabor.nombre,
+      labor: labor.nombreLabor,
+      ala: '',
+    );
   }
 
   String? _resolverAlaPlanificada(AssignedLabor labor) {
@@ -1842,6 +1930,68 @@ class _DialogoFormularioPerforacionState
     }
 
     return unique.values.toList();
+  }
+
+  Future<void> _resolverUbicacionesPlanMetrajeTL() async {
+    final nuevasUbicaciones = <_LongHolePlanLocation>[];
+
+    for (final plan in planMetrajeTLCompletos) {
+      final location = _resolverUbicacionPorLaborId(plan.laborId);
+      if (location != null) {
+        nuevasUbicaciones.add(location);
+      }
+    }
+
+    if (nuevasUbicaciones.isEmpty) return;
+
+    setState(() {
+      final existentes = ubicacionesPlanCompletas
+          .map((u) =>
+              '${u.mina}|${u.zona}|${u.area}|${u.fase}|${u.estructuraMineral}|${u.nivel}|${u.tipoLabor}|${u.labor}')
+          .toSet();
+
+      for (final ubicacion in nuevasUbicaciones) {
+        final key =
+            '${ubicacion.mina}|${ubicacion.zona}|${ubicacion.area}|${ubicacion.fase}|${ubicacion.estructuraMineral}|${ubicacion.nivel}|${ubicacion.tipoLabor}|${ubicacion.labor}';
+        if (!existentes.contains(key)) {
+          ubicacionesPlanCompletas.add(ubicacion);
+          existentes.add(key);
+        }
+      }
+
+      opcionesMina = _uniqueSorted(
+        ubicacionesPlanCompletas.map((u) => u.mina),
+      );
+      opcionesZona = _uniqueSorted(
+        ubicacionesPlanCompletas.map((u) => u.zona),
+      );
+      opcionesArea = _uniqueSorted(
+        ubicacionesPlanCompletas.map((u) => u.area),
+      );
+      opcionesFase = _uniqueSorted(
+        ubicacionesPlanCompletas.map((u) => u.fase),
+      );
+      opcionesEstructuraMineral = _uniqueSorted(
+        ubicacionesPlanCompletas.map((u) => u.estructuraMineral),
+      );
+      opcionesNivel = _uniqueSorted(
+        ubicacionesPlanCompletas.map((u) => u.nivel),
+      );
+      opcionesTipoLabor = _uniqueSorted(
+        ubicacionesPlanCompletas.map((u) => u.tipoLabor),
+      );
+      opcionesLabor = _uniqueSorted(
+        ubicacionesPlanCompletas.map((u) => u.labor),
+      );
+      opcionesAla = _uniqueSorted(
+        ubicacionesPlanCompletas
+            .map((u) => u.ala)
+            .where((a) => a.isNotEmpty),
+      );
+    });
+
+    _actualizarFiltros();
+    _sincronizarFrentePlanificado();
   }
 
   _LongHolePlanLocation? _locationFromPlan({

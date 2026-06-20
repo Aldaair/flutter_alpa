@@ -36,11 +36,11 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 11;
+  static const int _sharedCatalogDbVersion = 13;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
-  static const int _currentDbVersion = 23;
+  static const int _currentDbVersion = 24;
 
   DatabaseHelper._internal() {
     // Inicialización única para evitar múltiples llamadas
@@ -382,6 +382,31 @@ CREATE TABLE IF NOT EXISTS procesos (
   nombre_abreviado TEXT
 )
 ''');
+
+    // v12 tables
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS planes_metrajes_avances (
+  plan_metraje_avance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  labor_id INTEGER NOT NULL,
+  periodo_id INTEGER NOT NULL,
+  turno_id INTEGER NOT NULL,
+  ley_id INTEGER NOT NULL,
+  dia INTEGER NOT NULL,
+  valor REAL NOT NULL
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS planes_produccion (
+  plan_produccion_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  labor_id INTEGER NOT NULL,
+  periodo_id INTEGER NOT NULL,
+  turno_id INTEGER NOT NULL,
+  ley_id INTEGER NOT NULL,
+  dia INTEGER NOT NULL,
+  valor REAL NOT NULL
+)
+''');
   }
 
   Future<void> _onUpgradeSharedCatalogDatabase(
@@ -618,6 +643,40 @@ CREATE TABLE IF NOT EXISTS procesos (
 )
 ''');
       }
+    }
+
+    if (oldVersion < 12) {
+      if (!await _tablaExiste(db, 'planes_metrajes_avances')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS planes_metrajes_avances (
+  plan_metraje_avance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  labor_id INTEGER NOT NULL,
+  periodo_id INTEGER NOT NULL,
+  turno_id INTEGER NOT NULL,
+  ley_id INTEGER NOT NULL,
+  dia INTEGER NOT NULL,
+  valor REAL NOT NULL
+)
+''');
+      }
+
+      if (!await _tablaExiste(db, 'planes_produccion')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS planes_produccion (
+  plan_produccion_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  labor_id INTEGER NOT NULL,
+  periodo_id INTEGER NOT NULL,
+  turno_id INTEGER NOT NULL,
+  ley_id INTEGER NOT NULL,
+  dia INTEGER NOT NULL,
+  valor REAL NOT NULL
+)
+''');
+      }
+    }
+
+    if (oldVersion < 13) {
+      await db.execute('DROP TABLE IF EXISTS planes_metraje_tl');
     }
   }
 
@@ -1426,24 +1485,6 @@ CREATE TABLE numero_retardos (
 )
 ''');
 
-    await db.execute('''
-CREATE TABLE plan_labores (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL,
-  turno TEXT,
-  turno_codigo TEXT,
-  proceso_nombre TEXT,
-  labor_id INTEGER,
-  labor_nombre TEXT,
-  estructura_mineral TEXT,
-  nivel TEXT,
-  ala TEXT,
-  tipo_labor TEXT,
-  valor_planificado REAL
-)
-''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -2227,26 +2268,10 @@ CREATE TABLE UsuarioEquipo (
 )
 ''');
       }
-      if (!await _tablaExiste(db, 'plan_labores')) {
-        await db.execute('''
-CREATE TABLE plan_labores (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL,
-  turno TEXT,
-  turno_codigo TEXT,
-  proceso_nombre TEXT,
-  labor_id INTEGER,
-  labor_nombre TEXT,
-  estructura_mineral TEXT,
-  nivel TEXT,
-  ala TEXT,
-  tipo_labor TEXT,
-  valor_planificado REAL
-)
-''');
-      }
+    }
+
+    if (oldVersion < 24) {
+      await db.execute('DROP TABLE IF EXISTS plan_labores');
     }
   }
 
@@ -2282,6 +2307,8 @@ CREATE TABLE plan_labores (
     'ala',
     'labores',
     'dim_turno',
+    'planes_metrajes_avances',
+    'planes_produccion',
   };
 
   Future<Database> _getDbForTable(String table) async {
@@ -2427,49 +2454,6 @@ CREATE TABLE plan_labores (
         }
       }
     });
-  }
-
-  Future<void> replaceLocalPlanLabores({
-    required String fecha,
-    required int procesoId,
-    required int? userId,
-    String? turno,
-    String? turnoCodigo,
-    String? procesoNombre,
-    required List<Map<String, dynamic>> labores,
-  }) async {
-    final db = await database;
-    await db.transaction((txn) async {
-      await txn.delete(
-        'plan_labores',
-        where: 'fecha = ? AND proceso_id = ? AND user_id = ?',
-        whereArgs: [fecha, procesoId, userId],
-      );
-      for (final labor in labores) {
-        await txn.insert('plan_labores', {
-          'fecha': fecha,
-          'proceso_id': procesoId,
-          'user_id': userId,
-          'turno': turno ?? '',
-          'turno_codigo': turnoCodigo ?? '',
-          'proceso_nombre': procesoNombre ?? '',
-          ...labor,
-        });
-      }
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> getLocalPlanLabores({
-    required String fecha,
-    required int procesoId,
-    int? userId,
-  }) async {
-    final db = await database;
-    return await db.query(
-      'plan_labores',
-      where: 'fecha = ? AND proceso_id = ? AND user_id = ?',
-      whereArgs: [fecha, procesoId, userId ?? 0],
-    );
   }
 
   //Login cuando no hay conexion
@@ -2763,6 +2747,12 @@ CREATE TABLE plan_labores (
     final List<Map<String, dynamic>> maps = await db.query('PlanMetraje');
 
     return List.generate(maps.length, (i) => PlanMetraje.fromJson(maps[i]));
+  }
+
+  Future<List<PlanMetrajeTL>> getPlanesMetrajeTL() async {
+    final db = await sharedCatalogDatabase;
+    final List<Map<String, dynamic>> maps = await db.query('PlanMetrajeTL');
+    return List.generate(maps.length, (i) => PlanMetrajeTL.fromJson(maps[i]));
   }
 
   Future<List<Map<String, dynamic>>> getLongitudBarrasPorProceso(
