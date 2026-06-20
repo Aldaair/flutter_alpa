@@ -64,11 +64,11 @@ class ExportarHorizontalService {
         "modelo_equipo": operacion['modelo_equipo'] ?? "",
         "estado": operacion['estado'] ?? "activo",
         "envio": operacion['envio'] ?? 0,
-        "registros": jsonEncode(estados),
-        "horometros": jsonEncode(horometros),
-        "condiciones_equipo": jsonEncode(condiciones),
-        "check_list": jsonEncode(checklist),
-        "control_llantas": jsonEncode(controlLlantas),
+        "registros": estados,
+        "horometros": horometros,
+        "condiciones_equipo": condiciones,
+        "check_list": checklist,
+        "control_llantas": controlLlantas,
       });
     }
 

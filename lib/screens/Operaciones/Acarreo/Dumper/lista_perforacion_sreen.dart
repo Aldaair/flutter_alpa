@@ -737,22 +737,21 @@ class _TaladroDumperScreenState extends State<TaladroDumperScreen> {
           ? (estadosDelMismoTipo.last['numero'] as int) + 1
           : 1;
 
-      // IMPORTANTE: Crear el objeto operacion con TODOS los campos de perforación
+      // IMPORTANTE: Crear el objeto operacion con TODOS los campos de Dumper
       Map<String, dynamic> operacionData = {
-        'nivel': data['nivel'] ?? '',
-        'tipo_labor': data['tipo_labor'] ?? '',
-        'labor': data['labor'] ?? '',
-        'ala': data['ala'] ?? '',
-        'tal_prod': data['tal_prod'] ?? '',
-        'tal_rimados': data['tal_rimados'] ?? '',
-        'tal_alivio': data['tal_alivio'] ?? '',
-        'tal_repaso': data['tal_repaso'] ?? '',
-        'long_barras': data['long_barras'] ?? '',
-        'num_barras': data['num_barras'] ?? '',
-        'tipo_perforacion': data['tipo_perforacion'] ?? '',
+        'nivel_inicio': data['nivel_inicio'] ?? '',
+        'tipo_labor_inicio': data['tipo_labor_inicio'] ?? '',
+        'labor_inicio': data['labor_inicio'] ?? '',
+        'ala_inicio': data['ala_inicio'] ?? '',
+        'nivel_fin': data['nivel_fin'] ?? '',
+        'tipo_labor_fin': data['tipo_labor_fin'] ?? '',
+        'labor_fin': data['labor_fin'] ?? '',
+        'ala_fin': data['ala_fin'] ?? '',
+        'n_viajes': data['n_viajes'] ?? '',
+        'observaciones': data['observaciones'] ?? '',
       };
 
-      // Crear nuevo estado con todos los campos de perforación
+      // Crear nuevo estado con todos los campos de Dumper
       Map<String, dynamic>? nuevoEstado = await DatabaseHelper()
           .createEstadoDumper(
             operacionActual!['id'],

@@ -68,15 +68,14 @@ class ExportarDumperService {
         "estado": operacion['estado'] ?? "activo",
         "envio": operacion['envio'] ?? 0,
 
-        /// 🔥 STRING
-        "tipo_equipo": jsonEncode(tipoEquipo),
-        "registros": jsonEncode(registros),
-        "horometros": jsonEncode(horometros),
-        "condiciones_equipo": jsonEncode(condiciones),
-        "check_list": jsonEncode(checklist),
-        "check_list_telemando": jsonEncode(checklistTelemando),
-        "control_llantas": jsonEncode(controlLlantas),
-        "programa_trabajo": jsonEncode(programaTrabajo),
+        "tipo_equipo": tipoEquipo,
+        "registros": registros,
+        "horometros": horometros,
+        "condiciones_equipo": condiciones,
+        "check_list": checklist,
+        "check_list_telemando": checklistTelemando,
+        "control_llantas": controlLlantas,
+        "programa_trabajo": programaTrabajo,
       });
     }
 

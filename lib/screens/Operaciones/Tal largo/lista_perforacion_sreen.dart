@@ -749,13 +749,18 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
         'tipo_labor': data['tipo_labor'] ?? '',
         'labor': data['labor'] ?? '',
         'ala': data['ala'] ?? '',
-        'tal_prod': data['tal_prod'] ?? '',
-        'tal_rimados': data['tal_rimados'] ?? '',
-        'tal_alivio': data['tal_alivio'] ?? '',
-        'tal_repaso': data['tal_repaso'] ?? '',
+        'n_taladros_produccion': data['n_taladros_produccion'] ?? '',
+        'metros_perforados_produccion': data['metros_perforados_produccion'] ?? '',
+        'n_taladros_rimados': data['n_taladros_rimados'] ?? '',
+        'metros_perforados_rimados': data['metros_perforados_rimados'] ?? '',
+        'n_taladros_alivio': data['n_taladros_alivio'] ?? '',
+        'metros_perforados_alivio': data['metros_perforados_alivio'] ?? '',
+        'n_taladros_repaso': data['n_taladros_repaso'] ?? '',
+        'metros_perforados_repaso': data['metros_perforados_repaso'] ?? '',
         'long_barras': data['long_barras'] ?? '',
         'num_barras': data['num_barras'] ?? '',
         'tipo_perforacion': data['tipo_perforacion'] ?? '',
+        'tipo_perforacion_id': data['tipo_perforacion_id'],
       };
 
       // Crear nuevo estado con todos los campos de perforación

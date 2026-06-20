@@ -894,27 +894,28 @@ class _DialogoFormularioPerforacionState
             ? widget.datosIniciales!['tipo_perforacion']
             : null;
 
-        // Cargar nuevos campos
+        // Cargar nuevos campos — .toString() porque se guardan como int/double
         nTaladrosProduccionController.text =
-            widget.datosIniciales!['n_taladros_produccion'] ?? '';
+            widget.datosIniciales!['n_taladros_produccion']?.toString() ?? '';
         metrosPerforadosProduccionController.text =
-            widget.datosIniciales!['metros_perforados_produccion'] ?? '';
+            widget.datosIniciales!['metros_perforados_produccion']?.toString() ?? '';
         nTaladrosRimadosController.text =
-            widget.datosIniciales!['n_taladros_rimados'] ?? '';
+            widget.datosIniciales!['n_taladros_rimados']?.toString() ?? '';
         metrosPerforadosRimadosController.text =
-            widget.datosIniciales!['metros_perforados_rimados'] ?? '';
+            widget.datosIniciales!['metros_perforados_rimados']?.toString() ?? '';
         nTaladrosAlivioController.text =
-            widget.datosIniciales!['n_taladros_alivio'] ?? '';
+            widget.datosIniciales!['n_taladros_alivio']?.toString() ?? '';
         metrosPerforadosAlivioController.text =
-            widget.datosIniciales!['metros_perforados_alivio'] ?? '';
+            widget.datosIniciales!['metros_perforados_alivio']?.toString() ?? '';
         nTaladrosRepasoController.text =
-            widget.datosIniciales!['n_taladros_repaso'] ?? '';
+            widget.datosIniciales!['n_taladros_repaso']?.toString() ?? '';
         metrosPerforadosRepasoController.text =
-            widget.datosIniciales!['metros_perforados_repaso'] ?? '';
+            widget.datosIniciales!['metros_perforados_repaso']?.toString() ?? '';
 
         longitudBarraSeleccionada = widget.datosIniciales!['long_barras']
             ?.toString();
-        numBarrasController.text = widget.datosIniciales!['num_barras'] ?? '';
+        numBarrasController.text =
+            widget.datosIniciales!['num_barras']?.toString() ?? '';
         observacionesController.text =
             widget.datosIniciales!['observaciones'] ?? '';
       });

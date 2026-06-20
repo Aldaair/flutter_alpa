@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:i_miner/screens/Envio%20a%20nube/AnfoChanger/detalle_carguio_screen.dart';
-import 'package:i_miner/screens/Envio%20a%20nube/Carguio/detalle_carguio_screen.dart';
-import 'package:i_miner/screens/Envio%20a%20nube/Dumper/detalle_dumper_screen.dart';
+import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/Mediciones/horizontal/detalle_mediciones_screen.dart';
-import 'package:i_miner/screens/Envio%20a%20nube/SCISSOR/detalle_carguio_screen.dart';
-import 'package:i_miner/screens/Envio%20a%20nube/Scalamin/detalle_scalamin_screen.dart';
-import 'package:i_miner/screens/Envio%20a%20nube/Sostenimiento/detalle_empernador_screen.dart';
-import 'package:i_miner/screens/Envio%20a%20nube/Rompebancos/detalle_rompebancos_screen.dart';
-import 'package:i_miner/screens/Envio%20a%20nube/Tal.horizontal/detalle_horiontal_screen.dart';
-import 'package:i_miner/screens/Envio%20a%20nube/Tal.largo/detalle_largo_screen.dart';
+import 'package:i_miner/screens/widgets/envio%20nube/detalle_envio_screen.dart';
+import 'package:i_miner/services/envio%20nube/AnfoChanger/exportar_service.dart';
+import 'package:i_miner/services/envio%20nube/Carguio/exportar_service.dart';
+import 'package:i_miner/services/envio%20nube/Dumper/ExportarDumperService.dart';
+import 'package:i_miner/services/envio%20nube/Rompebancos/exportar_service.dart';
+import 'package:i_miner/services/envio%20nube/Scalamin/ExportarScalaminService.dart';
+import 'package:i_miner/services/envio%20nube/SCISSOR/exportar_service.dart';
+import 'package:i_miner/services/envio%20nube/Sostenimiento/exportar_service.dart';
+import 'package:i_miner/services/envio%20nube/horizontal/exportar_service.dart';
+import 'package:i_miner/services/envio%20nube/largo/exportar_service.dart';
 
 class SeccionesScreen extends StatefulWidget {
   @override
@@ -25,35 +27,137 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
     0xFFF5F7FA,
   ); // Fondo claro profesional
 
-  final Map<String, Widget Function(BuildContext)> _pantallas = {
-    "PERFORACIÓN TALADROS LARGOS": (context) =>
-        DetalleSeccionScreen(tipoOperacion: "PERFORACIÓN TALADROS LARGOS"),
-    "PERFORACIÓN HORIZONTAL": (context) =>
-        DetalleSeccionScreenHorizontal(tipoOperacion: "PERFORACIÓN HORIZONTAL"),
+  late final DatabaseHelper _db;
+  late final Map<String, Widget Function(BuildContext)> _pantallas;
 
-    "SOSTENIMIENTO": (context) =>
-        DetalleSeccionScreenEmpernador(tipoOperacion: "SOSTENIMIENTO"),
+  @override
+  void initState() {
+    super.initState();
+    _db = DatabaseHelper();
+    _pantallas = {
+      "PERFORACIÓN TALADROS LARGOS": (context) => DetalleEnvioScreen(
+        tipoOperacion: "PERFORACIÓN TALADROS LARGOS",
+        endpointTipo: "tal_largo",
+        fetchOperaciones: () => _db.getOperacionesTaladroLargo(),
+        eliminarRegistro: (id) =>
+            _db.eliminarOperacionTalLargoFisico(id).then((v) => v > 0),
+        marcarComoEnviado: (id) => _db.actualizarEnvio(id),
+        prepararDatosExportar: (ids, data) =>
+            ExportarService(_db).prepararDatosParaExportar(ids, data),
+        formatearJson: (data) => ExportarService(_db).formatearJson(data),
+      ),
 
-    "ROMPEBANCO": (context) =>
-        DetalleSeccionScreenRompeBanco(tipoOperacion: "ROMPEBANCO"),
+      "PERFORACIÓN HORIZONTAL": (context) => DetalleEnvioScreen(
+        tipoOperacion: "PERFORACIÓN HORIZONTAL",
+        endpointTipo: "tal_horizontal",
+        fetchOperaciones: () => _db.getOperacionesTaladroHorizontal(),
+        eliminarRegistro: (id) =>
+            _db.eliminarOperacionTalHorizontalFisico(id).then((v) => v > 0),
+        marcarComoEnviado: (id) => _db.actualizarEnvioHorizontal(id),
+        prepararDatosExportar: (ids, data) =>
+            ExportarHorizontalService(_db).prepararDatosParaExportar(ids, data),
+        formatearJson: (data) =>
+            ExportarHorizontalService(_db).formatearJson(data),
+        isItemExportable: (item) =>
+            item['identity_version'] == 2 && item['syncable'] == 1,
+      ),
 
-    "CARGUÍO": (context) =>
-        DetalleSeccionScreenCarguio(tipoOperacion: "CARGUÍO"),
+      "SOSTENIMIENTO": (context) => DetalleEnvioScreen(
+        tipoOperacion: "SOSTENIMIENTO",
+        endpointTipo: "empernador",
+        fetchOperaciones: () => _db.getOperacionesTaladroEmpernador(),
+        eliminarRegistro: (id) =>
+            _db.eliminarOperacionTalEmpernadorFisico(id).then((v) => v > 0),
+        marcarComoEnviado: (id) => _db.actualizarEnvioEmpernador(id),
+        prepararDatosExportar: (ids, data) =>
+            ExportarEmpernadorService(_db).prepararDatosParaExportar(ids, data),
+        formatearJson: (data) =>
+            ExportarEmpernadorService(_db).formatearJson(data),
+      ),
 
-    "DUMPER": (context) => DetalleSeccionScreenDumper(tipoOperacion: "DUMPER"),
+      "ROMPEBANCO": (context) => DetalleEnvioScreen(
+        tipoOperacion: "ROMPEBANCO",
+        endpointTipo: "rompebanco",
+        fetchOperaciones: () => _db.getOperacionesTaladroRompeBaco(),
+        eliminarRegistro: (id) =>
+            _db.eliminarOperacionTalRompeBacoFisico(id).then((v) => v > 0),
+        marcarComoEnviado: (id) => _db.actualizarEnvioRompeBancos(id),
+        prepararDatosExportar: (ids, data) =>
+            ExportarRompebancoService(_db).prepararDatosParaExportar(ids, data),
+        formatearJson: (data) =>
+            ExportarRompebancoService(_db).formatearJson(data),
+      ),
 
-    "ANFOCHANGER": (context) =>
-        DetalleSeccionScreenAnfoChanger(tipoOperacion: "ANFOCHANGER"),
+      "CARGUÍO": (context) => DetalleEnvioScreen(
+        tipoOperacion: "CARGUÍO",
+        endpointTipo: "carguio",
+        fetchOperaciones: () => _db.getOperacionesTaladroCarguio(),
+        eliminarRegistro: (id) =>
+            _db.eliminarOperacionTalCarguioFisico(id).then((v) => v > 0),
+        marcarComoEnviado: (id) => _db.actualizarEnvioCarguio(id),
+        prepararDatosExportar: (ids, data) =>
+            ExportarCarguioService(_db).prepararDatosParaExportar(ids, data),
+        formatearJson: (data) =>
+            ExportarCarguioService(_db).formatearJson(data),
+      ),
 
-    "SCISSOR": (context) =>
-        DetalleSeccionScreenSCISSOR(tipoOperacion: "SCISSOR"),
+      "DUMPER": (context) => DetalleEnvioScreen(
+        tipoOperacion: "DUMPER",
+        endpointTipo: "dumper",
+        fetchOperaciones: () => _db.getOperacionesTaladroDumper(),
+        eliminarRegistro: (id) =>
+            _db.eliminarOperacionTalDumperFisico(id).then((v) => v > 0),
+        marcarComoEnviado: (id) => _db.actualizarEnvioDumper(id),
+        prepararDatosExportar: (ids, data) =>
+            ExportarDumperService(_db).prepararDatosParaExportar(ids, data),
+        formatearJson: (data) =>
+            ExportarDumperService(_db).formatearJson(data),
+      ),
 
-    "SCALAMIN": (context) =>
-        DetalleSeccionScreenScalamin(tipoOperacion: "SCALAMIN"),
+      "ANFOCHANGER": (context) => DetalleEnvioScreen(
+        tipoOperacion: "ANFOCHANGER",
+        endpointTipo: "anfochanger",
+        fetchOperaciones: () => _db.getOperacionesTaladroAnfoChanger(),
+        eliminarRegistro: (id) =>
+            _db.eliminarOperacionTalAnfochangerFisico(id).then((v) => v > 0),
+        marcarComoEnviado: (id) => _db.actualizarEnvioRAnfoChanger(id),
+        prepararDatosExportar: (ids, data) =>
+            ExportarAnfoChangerService(_db)
+                .prepararDatosParaExportar(ids, data),
+        formatearJson: (data) =>
+            ExportarAnfoChangerService(_db).formatearJson(data),
+      ),
 
-    "MEDICIONES TAL. HORIZONTAL": (context) =>
-        ListaMedicionesScreen(tipoPerforacion: "HORIZONTAL"),
-  };
+      "SCISSOR": (context) => DetalleEnvioScreen(
+        tipoOperacion: "SCISSOR",
+        endpointTipo: "scissor",
+        fetchOperaciones: () => _db.getOperacionesTaladroscissor(),
+        eliminarRegistro: (id) =>
+            _db.eliminarOperacionTalScissorFisico(id).then((v) => v > 0),
+        marcarComoEnviado: (id) => _db.actualizarEnvioscissor(id),
+        prepararDatosExportar: (ids, data) =>
+            ExportarScissorService(_db).prepararDatosParaExportar(ids, data),
+        formatearJson: (data) =>
+            ExportarScissorService(_db).formatearJson(data),
+      ),
+
+      "SCALAMIN": (context) => DetalleEnvioScreen(
+        tipoOperacion: "SCALAMIN",
+        endpointTipo: "scalamin",
+        fetchOperaciones: () => _db.getOperacionesTaladroScalamin(),
+        eliminarRegistro: (id) =>
+            _db.eliminarOperacionTalScalaminFisico(id).then((v) => v > 0),
+        marcarComoEnviado: (id) => _db.actualizarEnvioScalamin(id),
+        prepararDatosExportar: (ids, data) =>
+            ExportarScalaminService(_db).prepararDatosParaExportar(ids, data),
+        formatearJson: (data) =>
+            ExportarScalaminService(_db).formatearJson(data),
+      ),
+
+      "MEDICIONES TAL. HORIZONTAL": (context) =>
+          ListaMedicionesScreen(tipoPerforacion: "HORIZONTAL"),
+    };
+  }
 
   final List<Map<String, dynamic>> _secciones = [
     {

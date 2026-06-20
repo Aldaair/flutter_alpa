@@ -62,18 +62,16 @@ class ExportarEmpernadorService {
         "equipo": operacion['equipo'] ?? "",
         "n_equipo": operacion['n_equipo'] ?? "",
 
-        // 🔥 IMPORTANTE: STRING
-        "tipo_equipo": jsonEncode(tipoEquipo),
+        "tipo_equipo": tipoEquipo,
 
         "estado": operacion['estado'] ?? "activo",
         "envio": operacion['envio'] ?? 0,
 
-        // 🔥 TODO STRING (porque Sequelize TEXT)
-        "registros": jsonEncode(estados),
-        "horometros": jsonEncode(horometros),
-        "condiciones_equipo": jsonEncode(condiciones),
-        "check_list": jsonEncode(checklist),
-        "control_llantas": jsonEncode(controlLlantas),
+        "registros": estados,
+        "horometros": horometros,
+        "condiciones_equipo": condiciones,
+        "check_list": checklist,
+        "control_llantas": controlLlantas,
       });
     }
 

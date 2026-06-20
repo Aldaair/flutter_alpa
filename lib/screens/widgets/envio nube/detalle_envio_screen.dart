@@ -1,56 +1,68 @@
 import 'package:flutter/material.dart';
-import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/barra_seleccion.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/carga_dialog.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/confirmacion_dialog.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/empty_state.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/exito_dialog.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/loading_state.dart';
-import 'package:i_miner/services/envio%20nube/AnfoChanger/exportar_service.dart';
 import 'package:i_miner/services/envio%20nube/operaciones_service.dart';
 
-import '../../widgets/envio nube/operacion_card.dart';
+import 'operacion_card.dart';
 
-class DetalleSeccionScreenAnfoChanger extends StatefulWidget {
+class DetalleEnvioScreen extends StatefulWidget {
   final String tipoOperacion;
   final Color primaryColor;
 
-  const DetalleSeccionScreenAnfoChanger({
+  final Future<List<Map<String, dynamic>>> Function() fetchOperaciones;
+  final Future<bool> Function(int id) eliminarRegistro;
+  final Future<void> Function(int localId) marcarComoEnviado;
+
+  final Future<List<Map<String, dynamic>>> Function(
+    Set<int>,
+    List<Map<String, dynamic>>,
+  ) prepararDatosExportar;
+  final String Function(List<Map<String, dynamic>>) formatearJson;
+
+  final String endpointTipo;
+  final bool Function(Map<String, dynamic>)? isItemExportable;
+
+  const DetalleEnvioScreen({
     Key? key,
     required this.tipoOperacion,
+    required this.endpointTipo,
+    required this.fetchOperaciones,
+    required this.eliminarRegistro,
+    required this.marcarComoEnviado,
+    required this.prepararDatosExportar,
+    required this.formatearJson,
     this.primaryColor = const Color(0xFF1B5E6B),
+    this.isItemExportable,
   }) : super(key: key);
 
   @override
-  State<DetalleSeccionScreenAnfoChanger> createState() => _DetalleSeccionAnfoChangerScreenState();
+  State<DetalleEnvioScreen> createState() => _DetalleEnvioScreenState();
 }
 
-class _DetalleSeccionAnfoChangerScreenState extends State<DetalleSeccionScreenAnfoChanger> {
+class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
   List<Map<String, dynamic>> operacionData = [];
   Set<int> selectedItems = {};
   bool isLoading = true;
   String mensajeUsuario = "Cargando registros...";
 
-  late DatabaseHelper _dbHelper;
-  late ExportarAnfoChangerService _exportarService;
-
   @override
   void initState() {
     super.initState();
-    _dbHelper = DatabaseHelper();
-    _exportarService = ExportarAnfoChangerService(_dbHelper);
     _fetchOperacionData();
   }
 
   Future<void> _fetchOperacionData() async {
     try {
-      List<Map<String, dynamic>> data = await _dbHelper
-          .getOperacionesTaladroAnfoChanger();
+      final data = await widget.fetchOperaciones();
 
       setState(() {
         operacionData = data;
         isLoading = false;
-        mensajeUsuario = data.isEmpty 
+        mensajeUsuario = data.isEmpty
             ? "No se encontraron registros para ${widget.tipoOperacion}"
             : "Datos cargados correctamente";
       });
@@ -64,32 +76,41 @@ class _DetalleSeccionAnfoChangerScreenState extends State<DetalleSeccionScreenAn
   }
 
   void _handleItemTap(int id) {
-  final item = operacionData.firstWhere((e) => e['id'] == id);
+    final item = operacionData.firstWhere((e) => e['id'] == id);
 
-  // 🚫 BLOQUEO SI YA FUE ENVIADO
-  if (item['envio'] == 1) {
-    _mostrarAdvertencia(
-      'Registro ya enviado',
-      'Este registro ya fue enviado y no se puede seleccionar nuevamente.',
-    );
-    return;
-  }
-
-  setState(() {
-    if (selectedItems.contains(id)) {
-      selectedItems.remove(id);
-    } else {
-      selectedItems.add(id);
+    if (item['envio'] == 1) {
+      _mostrarAdvertencia(
+        'Registro ya enviado',
+        'Este registro ya fue enviado y no se puede seleccionar nuevamente.',
+      );
+      return;
     }
-  });
-}
+
+    if (widget.isItemExportable != null &&
+        !widget.isItemExportable!(item)) {
+      _mostrarAdvertencia(
+        'Registro no exportable',
+        'Este registro no cumple los requisitos para ser exportado.',
+      );
+      return;
+    }
+
+    setState(() {
+      if (selectedItems.contains(id)) {
+        selectedItems.remove(id);
+      } else {
+        selectedItems.add(id);
+      }
+    });
+  }
 
   void _confirmarEliminacion() {
     showDialog(
       context: context,
       builder: (context) => ConfirmacionDialog(
         titulo: 'Eliminar registros',
-        mensaje: '¿Estás seguro de eliminar ${selectedItems.length} registro(s)?\nEsta acción no se puede deshacer.',
+        mensaje:
+            '¿Estás seguro de eliminar ${selectedItems.length} registro(s)?\nEsta acción no se puede deshacer.',
         textoConfirmar: 'Eliminar',
         confirmColor: Colors.red,
         onConfirmar: _eliminarRegistrosSeleccionados,
@@ -103,18 +124,20 @@ class _DetalleSeccionAnfoChangerScreenState extends State<DetalleSeccionScreenAn
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const CargaDialog(mensaje: 'Eliminando registros...'),
+      builder: (context) =>
+          const CargaDialog(mensaje: 'Eliminando registros...'),
     );
 
     try {
       int totalEliminados = 0;
 
       for (var id in selectedItems) {
-        int result = await _dbHelper.eliminarOperacionTalAnfochangerFisico(id);
-        if (result > 0) totalEliminados++;
+        final result = await widget.eliminarRegistro(id);
+        if (result) totalEliminados++;
       }
 
-      Navigator.pop(context); // Cierra loading
+      if (!mounted) return;
+      Navigator.pop(context);
       await _fetchOperacionData();
 
       setState(() => selectedItems.clear());
@@ -123,11 +146,13 @@ class _DetalleSeccionAnfoChangerScreenState extends State<DetalleSeccionScreenAn
         context: context,
         builder: (context) => ExitoDialog(
           titulo: 'Eliminación exitosa',
-          mensaje: 'Se eliminaron $totalEliminados registro(s) correctamente',
+          mensaje:
+              'Se eliminaron $totalEliminados registro(s) correctamente',
         ),
       );
     } catch (e) {
-      Navigator.pop(context); // Cierra loading
+      if (!mounted) return;
+      Navigator.pop(context);
       _mostrarError('Error al eliminar: ${e.toString()}');
     }
   }
@@ -138,29 +163,41 @@ class _DetalleSeccionAnfoChangerScreenState extends State<DetalleSeccionScreenAn
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const CargaDialog(mensaje: 'Preparando datos...'),
+      builder: (context) =>
+          const CargaDialog(mensaje: 'Preparando datos...'),
     );
 
     try {
-      final jsonDataList = await _exportarService.prepararDatosParaExportar(
+      final jsonDataList = await widget.prepararDatosExportar(
         selectedItems,
         operacionData,
       );
 
-      Navigator.pop(context); // Cierra loading
+      if (!mounted) return;
+      Navigator.pop(context);
 
-      final jsonString = _exportarService.formatearJson(jsonDataList);
+      if (jsonDataList.isEmpty) {
+        _mostrarAdvertencia(
+          'Sin datos exportables',
+          'Los registros seleccionados no contienen datos válidos para exportar.',
+        );
+        return;
+      }
 
-      bool? confirmado = await showDialog<bool>(
+      final jsonString = widget.formatearJson(jsonDataList);
+
+      final confirmado = await showDialog<bool>(
         context: context,
-        builder: (context) => _buildJsonPreviewDialog(jsonString, jsonDataList.length),
+        builder: (context) =>
+            _buildJsonPreviewDialog(jsonString, jsonDataList.length),
       );
 
       if (confirmado == true) {
-         await _enviarDatosALaNube(jsonDataList);
+        await _enviarDatosALaNube(jsonDataList);
       }
     } catch (e) {
-      Navigator.pop(context); // Cierra loading
+      if (!mounted) return;
+      Navigator.pop(context);
       _mostrarError('Error al preparar datos: ${e.toString()}');
     }
   }
@@ -195,7 +232,8 @@ class _DetalleSeccionAnfoChangerScreenState extends State<DetalleSeccionScreenAn
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.cloud_upload, color: Colors.white),
+                    child:
+                        const Icon(Icons.cloud_upload, color: Colors.white),
                   ),
                   const SizedBox(width: 12),
                   const Text(
@@ -210,45 +248,45 @@ class _DetalleSeccionAnfoChangerScreenState extends State<DetalleSeccionScreenAn
               ),
             ),
             Expanded(
-  child: Padding(
-    padding: const EdgeInsets.all(20),
-    child: Column(
-      children: [
-        Text(
-          'Se enviarán $cantidad operaciones a la nube',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                child: SelectableText(
-                  jsonString,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 11,
-                  ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Text(
+                      'Se enviarán $cantidad operaciones a la nube',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border:
+                              Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: SingleChildScrollView(
+                            child: SelectableText(
+                              jsonString,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-        ),
-      ],
-    ),
-  ),
-),
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -257,7 +295,8 @@ class _DetalleSeccionAnfoChangerScreenState extends State<DetalleSeccionScreenAn
                   bottomLeft: Radius.circular(20),
                   bottomRight: Radius.circular(20),
                 ),
-                border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                border: Border(
+                    top: BorderSide(color: Colors.grey.shade200)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -272,7 +311,8 @@ class _DetalleSeccionAnfoChangerScreenState extends State<DetalleSeccionScreenAn
                     style: ElevatedButton.styleFrom(
                       backgroundColor: widget.primaryColor,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                     ),
                     child: const Text('Enviar a la nube'),
                   ),
@@ -285,55 +325,57 @@ class _DetalleSeccionAnfoChangerScreenState extends State<DetalleSeccionScreenAn
     );
   }
 
-Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
-  final operacionService = OperacionesService();
+  Future<void> _enviarDatosALaNube(
+      List<Map<String, dynamic>> jsonData) async {
+    final operacionService = OperacionesService();
 
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => const CargaDialog(mensaje: 'Enviando a la nube...'),
-  );
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          const CargaDialog(mensaje: 'Enviando a la nube...'),
+    );
 
-  try {
-    /// 🔥 quitar local_id antes de enviar
-    final dataParaEnviar = jsonData.map((item) {
-      final copia = Map<String, dynamic>.from(item);
-      copia.remove('local_id');
-      return copia;
-    }).toList();
+    try {
+      final dataParaEnviar = jsonData.map((item) {
+        final copia = Map<String, dynamic>.from(item);
+        copia.remove('local_id');
+        return copia;
+      }).toList();
 
-    /// 🔥 ENVÍO MASIVO (ANFOCHANGER)
-    final success = await operacionService.crear('anfochanger', dataParaEnviar);
+      final success =
+          await operacionService.crear(widget.endpointTipo, dataParaEnviar);
 
-    Navigator.pop(context);
+      if (!mounted) return;
+      Navigator.pop(context);
 
-    if (success) {
-      /// 🔥 marcar como enviados
-      for (var item in jsonData) {
-        int localId = item['local_id'];
-        await _dbHelper.actualizarEnvioRAnfoChanger(localId);
+      if (success) {
+        for (var item in jsonData) {
+          final localId = item['local_id'] as int;
+          await widget.marcarComoEnviado(localId);
+        }
+
+        await _fetchOperacionData();
+        setState(() => selectedItems.clear());
+
+        showDialog(
+          context: context,
+          builder: (context) => ExitoDialog(
+            titulo: '¡Envío exitoso!',
+            mensaje:
+                'Se enviaron ${jsonData.length} operaciones correctamente',
+          ),
+        );
+      } else {
+        _mostrarError('Error al enviar datos al servidor');
       }
-
-      await _fetchOperacionData();
-      setState(() => selectedItems.clear());
-
-      showDialog(
-        context: context,
-        builder: (context) => ExitoDialog(
-          titulo: '¡Envío exitoso!',
-          mensaje: 'Se enviaron ${jsonData.length} operaciones correctamente',
-        ),
-      );
-
-    } else {
-      _mostrarError('Error al enviar datos al servidor');
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      _mostrarError('Error en envío: ${e.toString()}');
     }
-
-  } catch (e) {
-    Navigator.pop(context);
-    _mostrarError('Error en envío: ${e.toString()}');
   }
-}
+
   void _mostrarError(String mensaje) {
     showDialog(
       context: context,
@@ -411,7 +453,8 @@ Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
           Expanded(
             child: Text(
               widget.tipoOperacion,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w600),
               overflow: TextOverflow.ellipsis,
             ),
           ),

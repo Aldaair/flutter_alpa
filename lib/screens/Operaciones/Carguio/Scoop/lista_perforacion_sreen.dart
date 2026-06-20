@@ -737,22 +737,19 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
           ? (estadosDelMismoTipo.last['numero'] as int) + 1
           : 1;
 
-      // IMPORTANTE: Crear el objeto operacion con TODOS los campos de perforación
+      // IMPORTANTE: Crear el objeto operacion con TODOS los campos de Carguío
       Map<String, dynamic> operacionData = {
-        'nivel': data['nivel'] ?? '',
-        'tipo_labor': data['tipo_labor'] ?? '',
-        'labor': data['labor'] ?? '',
-        'ala': data['ala'] ?? '',
-        'tal_prod': data['tal_prod'] ?? '',
-        'tal_rimados': data['tal_rimados'] ?? '',
-        'tal_alivio': data['tal_alivio'] ?? '',
-        'tal_repaso': data['tal_repaso'] ?? '',
-        'long_barras': data['long_barras'] ?? '',
-        'num_barras': data['num_barras'] ?? '',
-        'tipo_perforacion': data['tipo_perforacion'] ?? '',
+        'nivel_inicio': data['nivel_inicio'] ?? '',
+        'tipo_labor_inicio': data['tipo_labor_inicio'] ?? '',
+        'labor_inicio': data['labor_inicio'] ?? '',
+        'ala_inicio': data['ala_inicio'] ?? '',
+        'ubicacion_destino_id': data['ubicacion_destino_id'],
+        'ubicacion_destino': data['ubicacion_destino'] ?? '',
+        'n_cucharas': data['n_cucharas'] ?? '',
+        'observaciones': data['observaciones'] ?? '',
       };
 
-      // Crear nuevo estado con todos los campos de perforación
+      // Crear nuevo estado con todos los campos de Carguío
       Map<String, dynamic>? nuevoEstado = await DatabaseHelper()
           .createEstadoCarguio(
             operacionActual!['id'],

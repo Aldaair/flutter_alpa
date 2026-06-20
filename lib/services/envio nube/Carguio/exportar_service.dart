@@ -65,20 +65,18 @@ class ExportarCarguioService {
         "n_equipo": operacion['n_equipo'] ?? "",
         "capacidad": operacion['capacidad'] ?? "",
 
-        /// 🔥 IMPORTANTE → STRING
-        "tipo_equipo": jsonEncode(tipoEquipo),
+        "tipo_equipo": tipoEquipo,
 
         "estado": operacion['estado'] ?? "activo",
         "envio": operacion['envio'] ?? 0,
 
-        /// 🔥 TODOS STRING
-        "registros": jsonEncode(registros),
-        "horometros": jsonEncode(horometros),
-        "condiciones_equipo": jsonEncode(condiciones),
-        "check_list": jsonEncode(checklist),
-        "check_list_telemando": jsonEncode(checklistTelemando),
-        "control_llantas": jsonEncode(controlLlantas),
-        "programa_trabajo": jsonEncode(programaTrabajo),
+        "registros": registros,
+        "horometros": horometros,
+        "condiciones_equipo": condiciones,
+        "check_list": checklist,
+        "check_list_telemando": checklistTelemando,
+        "control_llantas": controlLlantas,
+        "programa_trabajo": programaTrabajo,
       });
     }
 

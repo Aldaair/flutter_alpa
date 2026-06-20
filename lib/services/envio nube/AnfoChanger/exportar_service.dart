@@ -63,12 +63,11 @@ class ExportarAnfoChangerService {
         "estado": operacion['estado'] ?? "activo",
         "envio": operacion['envio'] ?? 0,
 
-        /// 🔥 TODO como STRING (porque tu API usa TEXT)
-        "registros": jsonEncode(registros),
-        "horometros": jsonEncode(horometros),
-        "condiciones_equipo": jsonEncode(condiciones),
-        "check_list": jsonEncode(checklist),
-        "control_llantas": jsonEncode(controlLlantas),
+        "registros": registros,
+        "horometros": horometros,
+        "condiciones_equipo": condiciones,
+        "check_list": checklist,
+        "control_llantas": controlLlantas,
       });
     }
 

@@ -731,22 +731,22 @@ class _TaladroEmpernadorScreenState extends State<TaladroEmpernadorScreen> {
           ? (estadosDelMismoTipo.last['numero'] as int) + 1
           : 1;
 
-      // IMPORTANTE: Crear el objeto operacion con TODOS los campos de perforación
+      // IMPORTANTE: Crear el objeto operacion con TODOS los campos de Sostenimiento
       Map<String, dynamic> operacionData = {
         'nivel': data['nivel'] ?? '',
         'tipo_labor': data['tipo_labor'] ?? '',
         'labor': data['labor'] ?? '',
         'ala': data['ala'] ?? '',
-        'tal_prod': data['tal_prod'] ?? '',
-        'tal_rimados': data['tal_rimados'] ?? '',
-        'tal_alivio': data['tal_alivio'] ?? '',
-        'tal_repaso': data['tal_repaso'] ?? '',
-        'long_barras': data['long_barras'] ?? '',
-        'num_barras': data['num_barras'] ?? '',
-        'tipo_perforacion': data['tipo_perforacion'] ?? '',
+        'tipo_pernos': data['tipo_pernos'] ?? '',
+        'log_pernos': data['log_pernos'] ?? '',
+        'n_pernos_instalados': data['n_pernos_instalados'] ?? '',
+        'tipo_malla': data['tipo_malla'] ?? '',
+        'mt52_malla': data['mt52_malla'] ?? '',
+        'sistematico_puntual': data['sistematico_puntual'] ?? '',
+        'observaciones': data['observaciones'] ?? '',
       };
 
-      // Crear nuevo estado con todos los campos de perforación
+      // Crear nuevo estado con todos los campos de Sostenimiento
       Map<String, dynamic>? nuevoEstado = await DatabaseHelper()
           .createEstadoEmpernador(
             operacionActual!['id'],
