@@ -6,7 +6,7 @@ import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widge
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_condiciones_equipo.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_confirmar_cierre.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_formulario_perforacion.dart';
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_horometro.dart';
+import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_no_operativo_formulario_perforacion.dart'
     show DialogoFormularioNoOpePerforacion;
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/show_registro_operacion.dart';
@@ -1190,9 +1190,31 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
     int operacionId = operacionActual!['id'];
     String estado = operacionActual!['estado'] ?? 'OPERATIVO';
 
+    int? equipoId = operacionActual!['equipo_id'] as int?;
+    if (equipoId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              const Text('La operación no tiene un equipo asociado'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     // Cargar los horómetros existentes
     Map<String, dynamic> horometrosData = await DatabaseHelper()
         .getHorometrosByOperacionIdScalamin(operacionId);
+
+    final tipos = await DatabaseHelper()
+        .getEquipoHorometroTiposByEquipoId(equipoId);
+    final horometroDefs = tipos.isNotEmpty
+        ? tipos
+            .map((t) => HorometroDef.fromRawNombre(
+                t['tipo_horometro_nombre'] as String))
+            .toList()
+        : <HorometroDef>[];
 
     showDialog(
       context: context,
@@ -1200,8 +1222,16 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
         return DialogoHorometro(
           operacionId: operacionId,
           estado: estado,
-          horometrosData: horometrosData, // Pasar los datos cargados
+          horometrosData: horometrosData,
           primaryColor: primaryColor,
+          horometroDefs: horometroDefs,
+          onSave: (id, map) =>
+              DatabaseHelper().updateHorometrosScalamin(id, map),
+          headerTitle: 'Horómetros - Scalamin',
+          headerSubtitle: 'Diesel y Percusión',
+          showFinalEqualWarning: false,
+          useZeroForInop: true,
+          useNameInError: true,
         );
       },
     );

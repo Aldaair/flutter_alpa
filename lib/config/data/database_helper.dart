@@ -2612,6 +2612,16 @@ CREATE TABLE UsuarioEquipo (
     );
   }
 
+  Future<List<Map<String, dynamic>>> getEquipoHorometroTiposByEquipoId(
+      int equipoId) async {
+    final db = await sharedCatalogDatabase;
+    return await db.query(
+      'equipo_horometro_tipos',
+      where: 'equipo_id = ?',
+      whereArgs: [equipoId],
+    );
+  }
+
   //PARA TODOS LAS OPERACIONES------------------------------------------------------------
 
   Future<List<String>> getJefesGuardiaNombres() async {

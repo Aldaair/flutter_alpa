@@ -6,7 +6,7 @@ import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_checklis
 import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_condiciones_equipo.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_confirmar_cierre.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_formulario_perforacion.dart';
-import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_horometro.dart';
+import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_no_operativo_formulario_perforacion.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/show_registro_operacion.dart';
 import 'package:i_miner/screens/widgets/operator_selector_card.dart';
@@ -750,7 +750,8 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
         'labor': data['labor'] ?? '',
         'ala': data['ala'] ?? '',
         'n_taladros_produccion': data['n_taladros_produccion'] ?? '',
-        'metros_perforados_produccion': data['metros_perforados_produccion'] ?? '',
+        'metros_perforados_produccion':
+            data['metros_perforados_produccion'] ?? '',
         'n_taladros_rimados': data['n_taladros_rimados'] ?? '',
         'metros_perforados_rimados': data['metros_perforados_rimados'] ?? '',
         'n_taladros_alivio': data['n_taladros_alivio'] ?? '',
@@ -1217,10 +1218,37 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
     // Usar el ID real de la operación, no el código
     int operacionId = operacionActual!['id'];
     String estado = operacionActual!['estado'] ?? 'OPERATIVO';
+    print("🔍 Operación actual para horómetro:");
+    print(operacionActual);
+
+    int? equipoId = operacionActual!['equipo_id'] as int?;
+    if (equipoId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('La operación no tiene un equipo asociado'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     // Cargar los horómetros existentes
     Map<String, dynamic> horometrosData = await DatabaseHelper()
         .getHorometrosByOperacionId(operacionId);
+
+    final tipos = await DatabaseHelper().getEquipoHorometroTiposByEquipoId(
+      equipoId,
+    );
+    final horometroDefs = tipos.isNotEmpty
+        ? tipos
+              .map(
+                (t) => HorometroDef.fromRawNombre(
+                  t['tipo_horometro_nombre'] as String,
+                ),
+              )
+              .toList()
+        : <HorometroDef>[];
 
     showDialog(
       context: context,
@@ -1228,8 +1256,10 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
         return DialogoHorometro(
           operacionId: operacionId,
           estado: estado,
-          horometrosData: horometrosData, // Pasar los datos cargados
+          horometrosData: horometrosData,
           primaryColor: primaryColor,
+          horometroDefs: horometroDefs,
+          onSave: (id, map) => DatabaseHelper().updateHorometros(id, map),
         );
       },
     );

@@ -8,7 +8,7 @@ import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_checkl
 import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_condiciones_equipo.dart';
 import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_confirmar_cierre.dart';
 import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_formulario_perforacion.dart';
-import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_horometro.dart';
+import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
 import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_no_operativo_formulario_perforacion.dart';
 import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/show_registro_operacion.dart';
 import 'package:i_miner/screens/widgets/operator_selector_card.dart';
@@ -1249,9 +1249,31 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
     int operacionId = operacionActual!['id'];
     String estado = operacionActual!['estado'] ?? 'OPERATIVO';
 
+    int? equipoId = operacionActual!['equipo_id'] as int?;
+    if (equipoId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              const Text('La operación no tiene un equipo asociado'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     // Cargar los horómetros existentes
     Map<String, dynamic> horometrosData = await DatabaseHelper()
         .getHorometrosByOperacionIdCarguio(operacionId);
+
+    final tipos = await DatabaseHelper()
+        .getEquipoHorometroTiposByEquipoId(equipoId);
+    final horometroDefs = tipos.isNotEmpty
+        ? tipos
+            .map((t) => HorometroDef.fromRawNombre(
+                t['tipo_horometro_nombre'] as String))
+            .toList()
+        : <HorometroDef>[];
 
     showDialog(
       context: context,
@@ -1259,8 +1281,12 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
         return DialogoHorometro(
           operacionId: operacionId,
           estado: estado,
-          horometrosData: horometrosData, // Pasar los datos cargados
+          horometrosData: horometrosData,
           primaryColor: primaryColor,
+          horometroDefs: horometroDefs,
+          onSave: (id, map) =>
+              DatabaseHelper().updateHorometrosCarguio(id, map),
+          enableResponsive: true,
         );
       },
     );

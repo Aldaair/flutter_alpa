@@ -6,7 +6,7 @@ import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Rompebancos/wi
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Rompebancos/widgets/dialogo_condiciones_equipo.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Rompebancos/widgets/dialogo_confirmar_cierre.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Rompebancos/widgets/dialogo_formulario_perforacion.dart';
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Rompebancos/widgets/dialogo_horometro.dart';
+import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Rompebancos/widgets/dialogo_no_operativo_formulario_perforacion.dart'
     show DialogoFormularioNoOpePerforacion;
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Rompebancos/widgets/show_registro_operacion.dart';
@@ -1194,9 +1194,31 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
     int operacionId = operacionActual!['id'];
     String estado = operacionActual!['estado'] ?? 'OPERATIVO';
 
+    int? equipoId = operacionActual!['equipo_id'] as int?;
+    if (equipoId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              const Text('La operación no tiene un equipo asociado'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     // Cargar los horómetros existentes
     Map<String, dynamic> horometrosData = await DatabaseHelper()
         .getHorometrosByOperacionIdRompeBaco(operacionId);
+
+    final tipos = await DatabaseHelper()
+        .getEquipoHorometroTiposByEquipoId(equipoId);
+    final horometroDefs = tipos.isNotEmpty
+        ? tipos
+            .map((t) => HorometroDef.fromRawNombre(
+                t['tipo_horometro_nombre'] as String))
+            .toList()
+        : <HorometroDef>[];
 
     showDialog(
       context: context,
@@ -1204,8 +1226,16 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
         return DialogoHorometro(
           operacionId: operacionId,
           estado: estado,
-          horometrosData: horometrosData, // Pasar los datos cargados
+          horometrosData: horometrosData,
           primaryColor: primaryColor,
+          horometroDefs: horometroDefs,
+          onSave: (id, map) =>
+              DatabaseHelper().updateHorometrosRompeBaco(id, map),
+          headerTitle: 'Horómetros - Rompebanco',
+          headerSubtitle: 'Diesel y Percusión',
+          showFinalEqualWarning: false,
+          useZeroForInop: true,
+          useNameInError: true,
         );
       },
     );
