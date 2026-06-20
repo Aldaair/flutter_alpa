@@ -13,7 +13,8 @@ import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_no_ope
 import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/show_registro_operacion.dart';
 import 'package:i_miner/screens/widgets/operator_selector_card.dart';
 
-import 'widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card_config.dart';
 import 'widgets/botones_estado.dart';
 import 'widgets/tabla_operaciones.dart';
 import 'widgets/botones_acciones_inferiores.dart'; // Asegúrate de importar el nuevo archivo
@@ -295,6 +296,13 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
                   },
                   onOperacionCreada: _handleNuevaOperacion,
                   primaryColor: primaryColor,
+                  config: const OperacionCardConfig(
+                    proceso: 'SCOOPTRAM',
+                    mostrarCapacidad: true,
+                    mostrarTipoEquipo: true,
+                    claveCodigo: 'n_equipo',
+                    claveJefeGuardia: 'jefe_guardia',
+                  ),
                 ),
 
                 const SizedBox(height: 16),
@@ -1018,13 +1026,14 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
     await dbHelper.insertOperacionCarguio(
       data['fecha'],
       data['turno'],
-      data['seccion'],
+      data['seccion'] ?? '',
       data['operador'],
       data['jefe_guardia'],
       data['equipo'],
       data['n_equipo'],
       data['capacidad'],
       data['tipo_equipo'],
+      equipoId: data['equipo_id'] as int?,
       actorDni: data['actor_dni'] as String?,
       actorOperadorId: data['actor_operador_id'] as int?,
       operadorId: data['operador_id'] as int?,

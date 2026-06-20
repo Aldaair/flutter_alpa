@@ -11,7 +11,8 @@ import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/SCISSOR/widget
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/SCISSOR/widgets/show_registro_operacion.dart';
 import 'package:i_miner/screens/widgets/operator_selector_card.dart';
 
-import 'widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card_config.dart';
 import 'widgets/botones_estado.dart';
 import 'widgets/tabla_operaciones.dart';
 import 'widgets/botones_acciones_inferiores.dart'; // Asegúrate de importar el nuevo archivo
@@ -258,7 +259,7 @@ class _TaladroSCISSORScreenState extends State<TaladroSCISSORScreen> {
               const SizedBox(height: 16),
             ],
             // Card de nueva operación - tamaño fijo
-            OperacionScissorCard(
+            OperacionCard(
               fechaActual: fechaActual,
               selectedTurno: selectedTurno,
               dniUsuario: widget.dniUsuario,
@@ -277,6 +278,11 @@ class _TaladroSCISSORScreenState extends State<TaladroSCISSORScreen> {
               },
               onOperacionCreada: _handleNuevaOperacion,
               primaryColor: primaryColor,
+              config: const OperacionCardConfig(
+                proceso: 'SCISSOR',
+                claveCodigo: 'n_equipo',
+                claveJefeGuardia: 'jefe_guardia',
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -990,6 +996,7 @@ class _TaladroSCISSORScreenState extends State<TaladroSCISSORScreen> {
       data['jefe_guardia'],
       data['equipo'],
       data['n_equipo'],
+      equipoId: data['equipo_id'] as int?,
       actorDni: data['actor_dni'] as String?,
       actorOperadorId: data['actor_operador_id'] as int?,
       operadorId: data['operador_id'] as int?,

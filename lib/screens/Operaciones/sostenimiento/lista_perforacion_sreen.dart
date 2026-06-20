@@ -10,7 +10,8 @@ import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
 import 'package:i_miner/screens/Operaciones/sostenimiento/widgets/dialogo_no_operativo_formulario_perforacion.dart';
 import 'package:i_miner/screens/Operaciones/sostenimiento/widgets/show_registro_operacion.dart';
 import 'package:i_miner/screens/widgets/operator_selector_card.dart';
-import 'widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card_config.dart';
 import 'widgets/botones_estado.dart';
 import 'widgets/tabla_operaciones.dart';
 import 'widgets/botones_acciones_inferiores.dart'; // Asegúrate de importar el nuevo archivo
@@ -289,6 +290,12 @@ class _TaladroEmpernadorScreenState extends State<TaladroEmpernadorScreen> {
               },
               onOperacionCreada: _handleNuevaOperacion,
               primaryColor: primaryColor,
+              config: const OperacionCardConfig(
+                proceso: 'EMPERNADOR',
+                mostrarTipoEquipo: true,
+                claveCodigo: 'n_equipo',
+                claveJefeGuardia: 'jefe_guardia',
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -996,12 +1003,13 @@ class _TaladroEmpernadorScreenState extends State<TaladroEmpernadorScreen> {
     await dbHelper.insertOperacionEmpernador(
       data['fecha'],
       data['turno'],
-      data['seccion'],
+      data['seccion'] ?? '',
       data['operador'],
       data['jefe_guardia'],
       data['equipo'],
       data['n_equipo'],
       data['tipo_equipo'], // Esto ya es un String JSON
+      equipoId: data['equipo_id'] as int?,
       actorDni: data['actor_dni'] as String?,
       actorOperadorId: data['actor_operador_id'] as int?,
       operadorId: data['operador_id'] as int?,

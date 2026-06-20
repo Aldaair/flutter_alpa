@@ -11,7 +11,8 @@ import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/dialogo_no_operativo_formulario_perforacion.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/show_registro_operacion.dart';
 import 'package:i_miner/screens/widgets/operator_selector_card.dart';
-import 'widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card_config.dart';
 import 'widgets/botones_estado.dart';
 import 'widgets/tabla_operaciones.dart';
 import 'widgets/botones_acciones_inferiores.dart'; // Asegúrate de importar el nuevo archivo
@@ -290,6 +291,11 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
               },
               onOperacionCreada: _handleNuevaOperacion,
               primaryColor: primaryColor,
+              config: const OperacionCardConfig(
+                proceso: 'PERFORACIÓN HORIZONTAL',
+                mostrarModelo: true,
+                usarAutorizacion: true,
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -1011,7 +1017,7 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
     await dbHelper.insertOperacionTalHorizontal(
       data['fecha'],
       data['turno'],
-      data['seccion'],
+      data['seccion'] ?? '',
       data['operador'],
       data['jefeGuardia'],
       data['equipo'],

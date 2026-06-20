@@ -10,7 +10,8 @@ import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_no_operativo_formulario_perforacion.dart';
 import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/show_registro_operacion.dart';
 import 'package:i_miner/screens/widgets/operator_selector_card.dart';
-import 'widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card_config.dart';
 import 'widgets/botones_estado.dart';
 import 'widgets/tabla_operaciones.dart';
 import 'widgets/botones_acciones_inferiores.dart'; // Asegúrate de importar el nuevo archivo
@@ -290,6 +291,11 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
               },
               onOperacionCreada: _handleNuevaOperacion,
               primaryColor: primaryColor,
+              config: const OperacionCardConfig(
+                proceso: 'PERFORACIÓN TALADROS LARGOS',
+                mostrarModelo: true,
+                usarAutorizacion: true,
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -1015,12 +1021,13 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
     await dbHelper.insertOperacionTalLargo(
       data['fecha'],
       data['turno'],
-      data['seccion'],
+      data['seccion'] ?? '',
       data['operador'],
       data['jefeGuardia'],
       data['equipo'], // nombre equipo
       data['codigo'], // ← ahora es n_equipo
       data['modelo'], // modelo_equipo
+      equipoId: data['equipo_id'] as int?,
       actorDni: data['actor_dni'] as String?,
       actorOperadorId: data['actor_operador_id'] as int?,
       operadorId: data['operador_id'] as int?,

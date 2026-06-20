@@ -13,7 +13,8 @@ import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/dialogo_no_op
 import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/show_registro_operacion.dart';
 import 'package:i_miner/screens/widgets/operator_selector_card.dart';
 
-import 'widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card_config.dart';
 import 'widgets/botones_estado.dart';
 import 'widgets/tabla_operaciones.dart';
 import 'widgets/botones_acciones_inferiores.dart'; // Asegúrate de importar el nuevo archivo
@@ -291,6 +292,13 @@ class _TaladroDumperScreen2State extends State<TaladroDumperScreen2> {
               },
               onOperacionCreada: _handleNuevaOperacion,
               primaryColor: primaryColor,
+              config: const OperacionCardConfig(
+                proceso: 'DUMPER',
+                mostrarCapacidad: true,
+                mostrarTipoEquipo: true,
+                claveCodigo: 'n_equipo',
+                claveJefeGuardia: 'jefe_guardia',
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -1019,13 +1027,14 @@ class _TaladroDumperScreen2State extends State<TaladroDumperScreen2> {
     await dbHelper.insertOperacionDumper(
       data['fecha'],
       data['turno'],
-      data['seccion'],
+      data['seccion'] ?? '',
       data['operador'],
       data['jefe_guardia'],
       data['equipo'],
       data['n_equipo'],
       data['capacidad'],
       data['tipo_equipo'],
+      equipoId: data['equipo_id'] as int?,
       actorDni: data['actor_dni'] as String?,
       actorOperadorId: data['actor_operador_id'] as int?,
       operadorId: data['operador_id'] as int?,

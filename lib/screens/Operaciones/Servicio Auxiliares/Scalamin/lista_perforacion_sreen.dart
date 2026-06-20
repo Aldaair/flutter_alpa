@@ -12,7 +12,8 @@ import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widge
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/show_registro_operacion.dart';
 import 'package:i_miner/screens/widgets/operator_selector_card.dart';
 
-import 'widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card.dart';
+import 'package:i_miner/screens/widgets/operacion_card_config.dart';
 import 'widgets/botones_estado.dart';
 import 'widgets/tabla_operaciones.dart';
 import 'widgets/botones_acciones_inferiores.dart'; // Asegúrate de importar el nuevo archivo
@@ -276,6 +277,11 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
               },
               onOperacionCreada: _handleNuevaOperacion,
               primaryColor: primaryColor,
+              config: const OperacionCardConfig(
+                proceso: 'SCALAMIN',
+                claveCodigo: 'n_equipo',
+                claveJefeGuardia: 'jefe_guardia',
+              ),
             ),
 
             const SizedBox(height: 16),
@@ -989,6 +995,7 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
       data['jefe_guardia'],
       data['equipo'],
       data['n_equipo'],
+      equipoId: data['equipo_id'] as int?,
       checkListJson: checkListJson,
       horometrosBase: horometros,
     );
