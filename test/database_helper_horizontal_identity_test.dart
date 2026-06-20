@@ -7,6 +7,7 @@ import 'package:i_miner/config/data/offline_authorization_repository.dart';
 import 'package:i_miner/models/Equipo.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
 import 'package:i_miner/models/Seccion.dart';
+import 'package:i_miner/models/zona.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -408,7 +409,7 @@ void main() {
         'M1',
         operadorId: 44,
         equipoId: 10,
-        seccionId: 30,
+        zonaId: 30,
         jefeGuardiaId: 40,
       );
 
@@ -462,8 +463,8 @@ void main() {
           fechaIngreso: '2024-01-02',
         ),
       ]);
-      await repository.refreshSecciones([
-        Seccion(id: 30, proceso: 'PERFORACIÓN HORIZONTAL', nombre: 'Seccion A'),
+      await repository.refreshZonas([
+        Zona(id: 30, proceso: 'PERFORACIÓN HORIZONTAL', nombre: 'Seccion A'),
       ]);
       await repository.refreshJefesGuardia([
         JefeGuardia(id: 40, nombres: 'Luis', apellidos: 'Rojas'),
@@ -482,8 +483,8 @@ void main() {
           fechaIngreso: '2024-01-01',
         ),
       ]);
-      await repository.refreshSecciones([
-        Seccion(
+      await repository.refreshZonas([
+        Zona(
           id: 30,
           proceso: 'PERFORACIÓN HORIZONTAL',
           nombre: 'Seccion A2',

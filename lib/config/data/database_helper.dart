@@ -36,11 +36,11 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 10;
+  static const int _sharedCatalogDbVersion = 11;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
-  static const int _currentDbVersion = 22;
+  static const int _currentDbVersion = 23;
 
   DatabaseHelper._internal() {
     // Inicialización única para evitar múltiples llamadas
@@ -373,6 +373,15 @@ CREATE TABLE IF NOT EXISTS dim_turno (
   horario_fin TEXT
 )
 ''');
+
+    // v11 table
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS procesos (
+  id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  nombre_abreviado TEXT
+)
+''');
   }
 
   Future<void> _onUpgradeSharedCatalogDatabase(
@@ -598,6 +607,17 @@ CREATE TABLE IF NOT EXISTS dim_turno (
   horario_fin TEXT
 )
 ''');
+    }
+    if (oldVersion < 11) {
+      if (!await _tablaExiste(db, 'procesos')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS procesos (
+  id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  nombre_abreviado TEXT
+)
+''');
+      }
     }
   }
 
@@ -882,7 +902,12 @@ CREATE TABLE Operacion_tal_largo (
   envio INTEGER DEFAULT 0,
   actor_dni TEXT,
   actor_operador_id INTEGER,
-  operador_id INTEGER
+  operador_id INTEGER,
+  equipo_id INTEGER,
+  zona_id INTEGER,
+  jefe_guardia_id INTEGER,
+  identity_version INTEGER,
+  syncable INTEGER DEFAULT 0
 )
 ''');
 
@@ -906,7 +931,12 @@ CREATE TABLE Operacion_tal_horizontal (
   envio INTEGER DEFAULT 0,
   actor_dni TEXT,
   actor_operador_id INTEGER,
-  operador_id INTEGER
+  operador_id INTEGER,
+  equipo_id INTEGER,
+  zona_id INTEGER,
+  jefe_guardia_id INTEGER,
+  identity_version INTEGER,
+  syncable INTEGER DEFAULT 0
 )
 ''');
 
@@ -930,7 +960,12 @@ CREATE TABLE Operacion_empernador (
   envio INTEGER DEFAULT 0,
   actor_dni TEXT,
   actor_operador_id INTEGER,
-  operador_id INTEGER
+  operador_id INTEGER,
+  equipo_id INTEGER,
+  zona_id INTEGER,
+  jefe_guardia_id INTEGER,
+  identity_version INTEGER,
+  syncable INTEGER DEFAULT 0
 )
 ''');
 
@@ -957,7 +992,12 @@ CREATE TABLE Operacion_carguio (
   envio INTEGER DEFAULT 0,
   actor_dni TEXT,
   actor_operador_id INTEGER,
-  operador_id INTEGER
+  operador_id INTEGER,
+  equipo_id INTEGER,
+  zona_id INTEGER,
+  jefe_guardia_id INTEGER,
+  identity_version INTEGER,
+  syncable INTEGER DEFAULT 0
 )
 ''');
 
@@ -984,7 +1024,12 @@ CREATE TABLE Operacion_Dumper (
   envio INTEGER DEFAULT 0,
   actor_dni TEXT,
   actor_operador_id INTEGER,
-  operador_id INTEGER
+  operador_id INTEGER,
+  equipo_id INTEGER,
+  zona_id INTEGER,
+  jefe_guardia_id INTEGER,
+  identity_version INTEGER,
+  syncable INTEGER DEFAULT 0
 )
 ''');
 
@@ -1006,7 +1051,12 @@ CREATE TABLE Operacion_rompebanco(
   envio INTEGER DEFAULT 0,
   actor_dni TEXT,
   actor_operador_id INTEGER,
-  operador_id INTEGER
+  operador_id INTEGER,
+  equipo_id INTEGER,
+  zona_id INTEGER,
+  jefe_guardia_id INTEGER,
+  identity_version INTEGER,
+  syncable INTEGER DEFAULT 0
 )
 ''');
 
@@ -1028,7 +1078,12 @@ CREATE TABLE Operacion_Scalamin(
   envio INTEGER DEFAULT 0,
   actor_dni TEXT,
   actor_operador_id INTEGER,
-  operador_id INTEGER
+  operador_id INTEGER,
+  equipo_id INTEGER,
+  zona_id INTEGER,
+  jefe_guardia_id INTEGER,
+  identity_version INTEGER,
+  syncable INTEGER DEFAULT 0
 )
 ''');
 
@@ -1050,7 +1105,12 @@ CREATE TABLE Operacion_scissor(
   envio INTEGER DEFAULT 0,
   actor_dni TEXT,
   actor_operador_id INTEGER,
-  operador_id INTEGER
+  operador_id INTEGER,
+  equipo_id INTEGER,
+  zona_id INTEGER,
+  jefe_guardia_id INTEGER,
+  identity_version INTEGER,
+  syncable INTEGER DEFAULT 0
 )
 ''');
 
@@ -1072,7 +1132,28 @@ CREATE TABLE Operacion_anfochanger(
   envio INTEGER DEFAULT 0,
   actor_dni TEXT,
   actor_operador_id INTEGER,
-  operador_id INTEGER
+  operador_id INTEGER,
+  equipo_id INTEGER,
+  zona_id INTEGER,
+  jefe_guardia_id INTEGER,
+  identity_version INTEGER,
+  syncable INTEGER DEFAULT 0
+)
+''');
+
+    // v23 tables
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS UsuarioProceso (
+  codigo_dni TEXT NOT NULL,
+  proceso_id INTEGER NOT NULL
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS UsuarioEquipo (
+  codigo_dni TEXT NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  equipo_id INTEGER NOT NULL
 )
 ''');
 
@@ -1342,6 +1423,25 @@ CREATE TABLE numero_retardos (
   mes TEXT NOT NULL,
   anio INTEGER NOT NULL,
   cantidad INTEGER NOT NULL
+)
+''');
+
+    await db.execute('''
+CREATE TABLE plan_labores (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fecha TEXT NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  turno TEXT,
+  turno_codigo TEXT,
+  proceso_nombre TEXT,
+  labor_id INTEGER,
+  labor_nombre TEXT,
+  estructura_mineral TEXT,
+  nivel TEXT,
+  ala TEXT,
+  tipo_labor TEXT,
+  valor_planificado REAL
 )
 ''');
   }
@@ -2081,6 +2181,73 @@ CREATE TABLE numero_retardos (
         }
       }
     }
+    if (oldVersion < 23) {
+      final cols = [
+        'equipo_id',
+        'zona_id',
+        'jefe_guardia_id',
+        'identity_version',
+      ];
+      for (final tbl in [
+        'Operacion_tal_largo',
+        'Operacion_tal_horizontal',
+        'Operacion_empernador',
+        'Operacion_carguio',
+        'Operacion_Dumper',
+        'Operacion_rompebanco',
+        'Operacion_Scalamin',
+        'Operacion_scissor',
+        'Operacion_anfochanger',
+      ]) {
+        for (final col in cols) {
+          if (!await _columnaExiste(db, tbl, col)) {
+            await db.execute('ALTER TABLE $tbl ADD COLUMN $col INTEGER');
+          }
+        }
+        if (!await _columnaExiste(db, tbl, 'syncable')) {
+          await db.execute(
+            'ALTER TABLE $tbl ADD COLUMN syncable INTEGER DEFAULT 0',
+          );
+        }
+      }
+      if (!await _tablaExiste(db, 'UsuarioProceso')) {
+        await db.execute('''
+CREATE TABLE UsuarioProceso (
+  codigo_dni TEXT NOT NULL,
+  proceso_id INTEGER NOT NULL
+)
+''');
+      }
+      if (!await _tablaExiste(db, 'UsuarioEquipo')) {
+        await db.execute('''
+CREATE TABLE UsuarioEquipo (
+  codigo_dni TEXT NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  equipo_id INTEGER NOT NULL
+)
+''');
+      }
+      if (!await _tablaExiste(db, 'plan_labores')) {
+        await db.execute('''
+CREATE TABLE plan_labores (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fecha TEXT NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  turno TEXT,
+  turno_codigo TEXT,
+  proceso_nombre TEXT,
+  labor_id INTEGER,
+  labor_nombre TEXT,
+  estructura_mineral TEXT,
+  nivel TEXT,
+  ala TEXT,
+  tipo_labor TEXT,
+  valor_planificado REAL
+)
+''');
+      }
+    }
   }
 
   Future<bool> _tablaExiste(Database db, String tableName) async {
@@ -2188,6 +2355,123 @@ CREATE TABLE numero_retardos (
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  static void setDatabasePathOverride(String? path) {
+    _databasePathOverride = path;
+  }
+
+  Future<void> closeDatabase() async {
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+    if (_sharedCatalogDatabase != null) {
+      await _sharedCatalogDatabase!.close();
+      _sharedCatalogDatabase = null;
+    }
+  }
+
+  Future<void> saveUserProfileSnapshot(
+    Map<String, dynamic> userData, {
+    String? password,
+  }) async {
+    final db = await database;
+    final updates = <String, dynamic>{
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+    if (password != null && password.isNotEmpty) {
+      final hashedPassword = Crypt.sha256(password).toString();
+      updates['password'] = hashedPassword;
+    }
+    await db.update(
+      'Usuario',
+      updates,
+      where: 'codigo_dni = ?',
+      whereArgs: [userData['codigo_dni']],
+    );
+
+    final auth = userData['normalized_authorization'] as Map<String, dynamic>?;
+    if (auth == null) return;
+
+    final dni = userData['codigo_dni']?.toString();
+    if (dni == null || dni.isEmpty) return;
+
+    await db.transaction((txn) async {
+      await txn.delete(
+        'UsuarioProceso',
+        where: 'codigo_dni = ?',
+        whereArgs: [dni],
+      );
+      final usuarioProcesos = auth['usuario_procesos'] as List?;
+      if (usuarioProcesos != null) {
+        for (final row in usuarioProcesos) {
+          await txn.insert('UsuarioProceso', {
+            'codigo_dni': dni,
+            'proceso_id': (row as Map)['proceso_id'],
+          });
+        }
+      }
+
+      await txn.delete(
+        'UsuarioEquipo',
+        where: 'codigo_dni = ?',
+        whereArgs: [dni],
+      );
+      final usuarioEquipos = auth['usuario_equipos'] as List?;
+      if (usuarioEquipos != null) {
+        for (final row in usuarioEquipos) {
+          await txn.insert('UsuarioEquipo', {
+            'codigo_dni': dni,
+            'proceso_id': (row as Map)['proceso_id'],
+            'equipo_id': (row as Map)['equipo_id'],
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> replaceLocalPlanLabores({
+    required String fecha,
+    required int procesoId,
+    required int? userId,
+    String? turno,
+    String? turnoCodigo,
+    String? procesoNombre,
+    required List<Map<String, dynamic>> labores,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete(
+        'plan_labores',
+        where: 'fecha = ? AND proceso_id = ? AND user_id = ?',
+        whereArgs: [fecha, procesoId, userId],
+      );
+      for (final labor in labores) {
+        await txn.insert('plan_labores', {
+          'fecha': fecha,
+          'proceso_id': procesoId,
+          'user_id': userId,
+          'turno': turno ?? '',
+          'turno_codigo': turnoCodigo ?? '',
+          'proceso_nombre': procesoNombre ?? '',
+          ...labor,
+        });
+      }
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getLocalPlanLabores({
+    required String fecha,
+    required int procesoId,
+    int? userId,
+  }) async {
+    final db = await database;
+    return await db.query(
+      'plan_labores',
+      where: 'fecha = ? AND proceso_id = ? AND user_id = ?',
+      whereArgs: [fecha, procesoId, userId ?? 0],
+    );
+  }
+
   //Login cuando no hay conexion
   Future<bool> loginOffline(String dni, String password) async {
     final db = await DatabaseHelper().database;
@@ -2282,7 +2566,7 @@ CREATE TABLE numero_retardos (
   //PARA TODOS LAS OPERACIONES------------------------------------------------------------
 
   Future<List<String>> getJefesGuardiaNombres() async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
 
     try {
       final result = await db.query(
@@ -2305,13 +2589,13 @@ CREATE TABLE numero_retardos (
   }
 
   Future<List<Equipo>> getEquipos() async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
     final List<Map<String, dynamic>> maps = await db.query('Equipo');
     return List.generate(maps.length, (i) => Equipo.fromJson(maps[i]));
   }
 
   Future<List<Guardia>> getGuardias() async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
 
     final List<Map<String, dynamic>> maps = await db.query('Guardia');
 
@@ -2431,6 +2715,22 @@ CREATE TABLE numero_retardos (
     return List.generate(maps.length, (i) => DimTurno.fromJson(maps[i]));
   }
 
+  Future<List<Map<String, dynamic>>> getProcesos() async {
+    final db = await sharedCatalogDatabase;
+    return await db.query('procesos', orderBy: 'nombre ASC');
+  }
+
+  Future<Map<String, dynamic>?> getProcesoById(int id) async {
+    final db = await sharedCatalogDatabase;
+    final rows = await db.query(
+      'procesos',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return rows.isNotEmpty ? rows.first : null;
+  }
+
   Future<List<TipoPerforacion>> getTiposPerforacionByProceso(
     String proceso,
   ) async {
@@ -2519,6 +2819,11 @@ CREATE TABLE numero_retardos (
     String? actorDni,
     int? actorOperadorId,
     int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
   }) async {
     final db = await database;
 
@@ -2582,6 +2887,12 @@ CREATE TABLE numero_retardos (
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
+    if (equipoId != null) insertData['equipo_id'] = equipoId;
+    if (zonaId != null) insertData['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
+    if (identityVersion != null)
+      insertData['identity_version'] = identityVersion;
+    if (syncable != null) insertData['syncable'] = syncable;
     return await db.insert('Operacion_tal_largo', insertData);
   }
 
@@ -3455,6 +3766,11 @@ CREATE TABLE numero_retardos (
     String? actorDni,
     int? actorOperadorId,
     int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
   }) async {
     final db = await database;
 
@@ -3518,6 +3834,12 @@ CREATE TABLE numero_retardos (
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
+    if (equipoId != null) insertData['equipo_id'] = equipoId;
+    if (zonaId != null) insertData['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
+    if (identityVersion != null)
+      insertData['identity_version'] = identityVersion;
+    if (syncable != null) insertData['syncable'] = syncable;
     return await db.insert('Operacion_tal_horizontal', insertData);
   }
 
@@ -4344,6 +4666,11 @@ CREATE TABLE numero_retardos (
     String? actorDni,
     int? actorOperadorId,
     int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
   }) async {
     final db = await database;
 
@@ -4409,6 +4736,12 @@ CREATE TABLE numero_retardos (
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
+    if (equipoId != null) insertData['equipo_id'] = equipoId;
+    if (zonaId != null) insertData['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
+    if (identityVersion != null)
+      insertData['identity_version'] = identityVersion;
+    if (syncable != null) insertData['syncable'] = syncable;
     return await db.insert('Operacion_empernador', insertData);
   }
 
@@ -5234,6 +5567,11 @@ CREATE TABLE numero_retardos (
     String? actorDni,
     int? actorOperadorId,
     int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
   }) async {
     final db = await database;
 
@@ -5305,6 +5643,12 @@ CREATE TABLE numero_retardos (
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
+    if (equipoId != null) insertData['equipo_id'] = equipoId;
+    if (zonaId != null) insertData['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
+    if (identityVersion != null)
+      insertData['identity_version'] = identityVersion;
+    if (syncable != null) insertData['syncable'] = syncable;
     return await db.insert('Operacion_carguio', insertData);
   }
 
@@ -6203,6 +6547,11 @@ CREATE TABLE numero_retardos (
     String? actorDni,
     int? actorOperadorId,
     int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
   }) async {
     final db = await database;
 
@@ -6277,6 +6626,12 @@ CREATE TABLE numero_retardos (
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
+    if (equipoId != null) insertData['equipo_id'] = equipoId;
+    if (zonaId != null) insertData['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
+    if (identityVersion != null)
+      insertData['identity_version'] = identityVersion;
+    if (syncable != null) insertData['syncable'] = syncable;
     return await db.insert('Operacion_Dumper', insertData);
   }
 
@@ -7243,6 +7598,11 @@ CREATE TABLE numero_retardos (
     String? actorDni,
     int? actorOperadorId,
     int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
   }) async {
     final db = await database;
 
@@ -7307,6 +7667,12 @@ CREATE TABLE numero_retardos (
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
+    if (equipoId != null) insertData['equipo_id'] = equipoId;
+    if (zonaId != null) insertData['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
+    if (identityVersion != null)
+      insertData['identity_version'] = identityVersion;
+    if (syncable != null) insertData['syncable'] = syncable;
     return await db.insert('Operacion_rompebanco', insertData);
   }
 
@@ -8103,6 +8469,11 @@ CREATE TABLE numero_retardos (
     String? actorDni,
     int? actorOperadorId,
     int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
   }) async {
     final db = await database;
 
@@ -8163,6 +8534,12 @@ CREATE TABLE numero_retardos (
     }
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
+    if (equipoId != null) insertData['equipo_id'] = equipoId;
+    if (zonaId != null) insertData['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
+    if (identityVersion != null)
+      insertData['identity_version'] = identityVersion;
+    if (syncable != null) insertData['syncable'] = syncable;
     return await db.insert('Operacion_Scalamin', insertData);
   }
 
@@ -8958,6 +9335,11 @@ CREATE TABLE numero_retardos (
     String? actorDni,
     int? actorOperadorId,
     int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
   }) async {
     final db = await database;
 
@@ -9015,6 +9397,12 @@ CREATE TABLE numero_retardos (
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
+    if (equipoId != null) insertData['equipo_id'] = equipoId;
+    if (zonaId != null) insertData['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
+    if (identityVersion != null)
+      insertData['identity_version'] = identityVersion;
+    if (syncable != null) insertData['syncable'] = syncable;
     return await db.insert('Operacion_scissor', insertData);
   }
 
@@ -9831,6 +10219,14 @@ CREATE TABLE numero_retardos (
     String nEquipo, {
     List<Map<String, dynamic>>? checkListJson,
     List<Map<String, dynamic>>? horometrosBase, // 🔥 NUEVO
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
   }) async {
     final db = await database;
 
@@ -9882,7 +10278,7 @@ CREATE TABLE numero_retardos (
     /// Checklist
     String checkListStr = jsonEncode(checkListJson ?? []);
 
-    return await db.insert('Operacion_anfochanger', {
+    final insertData = <String, dynamic>{
       'fecha': fecha,
       'turno': turno,
       'operador': operador,
@@ -9895,7 +10291,19 @@ CREATE TABLE numero_retardos (
       'control_llantas': jsonEncode(controlLlantasJson),
       'estado': 'activo',
       'envio': 0,
-    });
+    };
+    if (actorDni != null) insertData['actor_dni'] = actorDni;
+    if (actorOperadorId != null)
+      insertData['actor_operador_id'] = actorOperadorId;
+    if (operadorId != null) insertData['operador_id'] = operadorId;
+    if (equipoId != null) insertData['equipo_id'] = equipoId;
+    if (zonaId != null) insertData['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
+    if (identityVersion != null)
+      insertData['identity_version'] = identityVersion;
+    if (syncable != null) insertData['syncable'] = syncable;
+
+    return await db.insert('Operacion_anfochanger', insertData);
   }
 
   Future<List<Map<String, dynamic>>>

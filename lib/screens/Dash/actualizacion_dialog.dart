@@ -63,6 +63,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Alas',
       'Labores',
       'Dim Turnos',
+      'Procesos',
     ],
   };
 

@@ -75,31 +75,32 @@ class OfflineAuthorizationRepository {
   }
 
   Future<List<AuthorizedProcess>> getAuthorizedProcesses(String dni) async {
-    final db = await _resolvedDatabase;
-    final rows = await db.rawQuery(
-      '''
-      SELECT up.proceso_id, pa.nombre
-      FROM UsuarioProceso up
-      LEFT JOIN ProcesoAutorizado pa ON pa.id = up.proceso_id
-      WHERE up.codigo_dni = ?
-      ORDER BY up.proceso_id ASC
-      ''',
-      [dni],
+    final userDb = await _databaseHelper.database;
+    final sharedDb = await _databaseHelper.sharedCatalogDatabase;
+
+    final rows = await userDb.query(
+      'UsuarioProceso',
+      columns: ['proceso_id'],
+      where: 'codigo_dni = ?',
+      whereArgs: [dni],
     );
 
-    return rows
-        .map((row) {
-          final processId = row['proceso_id'];
-          if (processId is! int) {
-            return null;
-          }
+    final processIds = rows.map((r) => r['proceso_id']).whereType<int>().toList();
+    if (processIds.isEmpty) return [];
 
-          return AuthorizedProcess(
-            id: processId,
-            name: row['nombre']?.toString() ?? '',
-          );
-        })
-        .whereType<AuthorizedProcess>()
+    final placeholders = processIds.map((_) => '?').join(',');
+    final sharedRows = await sharedDb.rawQuery(
+      'SELECT id, nombre FROM procesos WHERE id IN ($placeholders) ORDER BY id ASC',
+      processIds,
+    );
+
+    final idToName = {
+      for (final r in sharedRows)
+        r['id'] as int: r['nombre']?.toString() ?? '',
+    };
+
+    return processIds
+        .map((id) => AuthorizedProcess(id: id, name: idToName[id] ?? ''))
         .toList();
   }
 

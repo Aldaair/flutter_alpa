@@ -42,4 +42,5 @@ class ApiConfig {
   static const String alasEndpoint = '/planes/alas';
   static const String laboresEndpoint = '/planes/labores';
   static const String turnosEndpoint = '/planes/turnos';
+  static const String procesosEndpoint = '/procesos';
 }

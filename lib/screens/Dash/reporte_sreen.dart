@@ -659,6 +659,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "Alas": true,
       "Labores": true,
       "Dim Turnos": true,
+      "Procesos": true,
     };
 
     // Mostrar diálogo de selección mejorado

@@ -7,6 +7,7 @@ import 'package:i_miner/config/data/horizontal_create_flow.dart';
 import 'package:i_miner/models/Equipo.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
 import 'package:i_miner/models/Seccion.dart';
+import 'package:i_miner/models/zona.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -39,19 +40,19 @@ void main() {
     () {
       final missingEquipo = buildHorizontalCreatePlan(
         equipoId: null,
-        seccionId: 30,
+        zonaId: 30,
         jefeGuardiaId: 40,
         operadorId: 44,
       );
       final missingSeccion = buildHorizontalCreatePlan(
         equipoId: 10,
-        seccionId: null,
+        zonaId: null,
         jefeGuardiaId: 40,
         operadorId: 44,
       );
       final missingJefe = buildHorizontalCreatePlan(
         equipoId: 10,
-        seccionId: 30,
+        zonaId: 30,
         jefeGuardiaId: null,
         operadorId: 44,
       );
@@ -59,7 +60,7 @@ void main() {
       expect(missingEquipo.isBlocked, isTrue);
       expect(missingEquipo.blockingMessage, contains('equipment ID'));
       expect(missingSeccion.isBlocked, isTrue);
-      expect(missingSeccion.blockingMessage, contains('section ID'));
+      expect(missingSeccion.blockingMessage, contains('zone ID'));
       expect(missingJefe.isBlocked, isTrue);
       expect(missingJefe.blockingMessage, contains('guard leader ID'));
     },
@@ -70,7 +71,7 @@ void main() {
     () {
       final plan = buildHorizontalCreatePlan(
         equipoId: 10,
-        seccionId: 30,
+        zonaId: 30,
         jefeGuardiaId: 40,
         operadorId: null,
       );
@@ -86,7 +87,7 @@ void main() {
     () {
       final plan = buildHorizontalCreatePlan(
         equipoId: 10,
-        seccionId: 30,
+        zonaId: 30,
         jefeGuardiaId: 40,
         operadorId: 44,
       );
@@ -116,8 +117,8 @@ void main() {
         fechaIngreso: '2026-01-01',
       ),
     ]);
-    await repository.refreshSecciones([
-      Seccion(id: 30, proceso: 'PERFORACIÓN HORIZONTAL', nombre: 'Section 12'),
+    await repository.refreshZonas([
+      Zona(id: 30, proceso: 'PERFORACIÓN HORIZONTAL', nombre: 'Section 12'),
     ]);
     await repository.refreshJefesGuardia([
       JefeGuardia(id: 40, nombres: 'Luis', apellidos: 'Rojas'),
@@ -128,7 +129,7 @@ void main() {
       codigo: 'TH-01',
       modelo: 'S1D',
     );
-    final seccion = await repository.resolveSeccionByNombre(
+    final seccion = await repository.resolveZonaByNombre(
       'Section 12',
       proceso: 'PERFORACIÓN HORIZONTAL',
     );
@@ -164,10 +165,10 @@ void main() {
         'TH-01',
         'S1D',
         equipoId: 10,
-        seccionId: 30,
+        zonaId: 30,
         jefeGuardiaId: 40,
         identityVersion: 2,
-        syncable: false,
+        syncable: false ? 1 : 0,
       );
 
       final db = await dbHelper.database;
@@ -204,10 +205,10 @@ void main() {
         'S1D',
         operadorId: 44,
         equipoId: 10,
-        seccionId: 30,
+        zonaId: 30,
         jefeGuardiaId: 40,
         identityVersion: 2,
-        syncable: true,
+        syncable: true ? 1 : 0,
       );
 
       final db = await dbHelper.database;

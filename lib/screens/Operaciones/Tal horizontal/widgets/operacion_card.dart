@@ -709,7 +709,7 @@ class _OperacionCardState extends State<OperacionCard> {
     );
     final createPlan = buildHorizontalCreatePlan(
       equipoId: equipo?.equipoId,
-      seccionId: zona?.id,
+      zonaId: zona?.id,
       jefeGuardiaId: jefe?.id,
       operadorId: operadorId,
     );

@@ -191,6 +191,8 @@ class _DialogoFormularioPerforacionState
         return;
       }
 
+      print('🔍 _cargarMisLabores → ${labores.length} labores cargadas');
+
       setState(() {
         laboresAsignadas = labores;
       });
@@ -234,6 +236,7 @@ class _DialogoFormularioPerforacionState
   }
 
   void _sincronizarFrentePlanificado() {
+    print('🔍 _sincronizarFrentePlanificado → laboresAsignadas.isEmpty=${laboresAsignadas.isEmpty}, usarFrentePlanificado=$usarFrentePlanificado, ubicacionesPlanCompletas.length=${ubicacionesPlanCompletas.length}');
     if (laboresAsignadas.isEmpty) {
       if (mounted) {
         setState(() {
@@ -275,6 +278,7 @@ class _DialogoFormularioPerforacionState
 
   void _aplicarLaborAsignada(AssignedLabor labor) {
     final ubicacion = _resolverUbicacionPlanificada(labor);
+    print('🔍 _aplicarLaborAsignada → labor=${labor.laborNombre}, nivel=${labor.nivel}, tipoLabor=${labor.tipoLabor}, ubicacion encontrada=${ubicacion != null}');
     final ala = ubicacion?.ala ?? _resolverAlaPlanificada(labor);
 
     setState(() {
@@ -371,6 +375,8 @@ class _DialogoFormularioPerforacionState
       planesMetrajeCompletos = results[1] as List<PlanMetraje>;
 
       ubicacionesPlanCompletas = _buildPlanLocations();
+
+      print('🔍 _cargarPlanesProduccionYMetraje → ${planesProduccionCompletos.length} planes prod, ${planesMetrajeCompletos.length} planes metraje, ${ubicacionesPlanCompletas.length} ubicaciones');
 
       final minasSet = <String>{};
       final zonasSet = <String>{};

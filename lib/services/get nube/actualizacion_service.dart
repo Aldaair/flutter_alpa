@@ -33,6 +33,7 @@ import 'package:i_miner/services/get%20nube/llamadas/api_service_niveles.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_alas.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_labores.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_dim_turnos.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_procesos.dart';
 
 class ActualizacionService {
   final BuildContext context;
@@ -76,6 +77,7 @@ class ActualizacionService {
       "Alas": fetchAlas,
       "Labores": fetchLabores,
       "Dim Turnos": fetchDimTurnos,
+      "Procesos": fetchProcesos,
     };
   }
 
@@ -725,6 +727,23 @@ class ActualizacionService {
       }
     } catch (e) {
       print("❌ Error al actualizar turnos: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchProcesos() async {
+    final apiService = ApiServiceProcesos();
+
+    try {
+      final procesos = await apiService.fetchProcesos(token);
+
+      print("✅ Procesos guardados en SQLite:");
+
+      for (final proceso in procesos) {
+        print("Proceso: ${proceso.nombre} | ID: ${proceso.id}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar procesos: $e");
       throw e;
     }
   }

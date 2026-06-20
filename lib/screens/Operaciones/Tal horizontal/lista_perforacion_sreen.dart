@@ -973,7 +973,7 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
     DatabaseHelper dbHelper = DatabaseHelper();
     final createPlan = buildHorizontalCreatePlan(
       equipoId: data['equipo_id'] as int?,
-      seccionId: data['seccion_id'] as int?,
+      zonaId: data['seccion_id'] as int?,
       jefeGuardiaId: data['jefe_guardia_id'] as int?,
       operadorId: data['operador_id'] as int?,
     );
@@ -1021,10 +1021,10 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
       actorOperadorId: data['actor_operador_id'] as int?,
       operadorId: data['operador_id'] as int?,
       equipoId: data['equipo_id'] as int?,
-      seccionId: data['seccion_id'] as int?,
+      zonaId: data['seccion_id'] as int?,
       jefeGuardiaId: data['jefe_guardia_id'] as int?,
       identityVersion: createPlan.identityVersion,
-      syncable: createPlan.syncable,
+      syncable: createPlan.syncable ? 1 : 0,
       checkListJson: checkListJson, // <-- Pasamos la lista de check_list
       horometrosBase: horometros,
     );
