@@ -32,19 +32,12 @@ class HorizontalCreatePlan {
 
 HorizontalCreatePlan buildHorizontalCreatePlan({
   required int? equipoId,
-  required int? zonaId,
   required int? jefeGuardiaId,
   required int? operadorId,
 }) {
   if (equipoId == null) {
     return HorizontalCreatePlan.blocked(
       'Cannot save without a cached equipment ID.',
-    );
-  }
-
-  if (zonaId == null) {
-    return HorizontalCreatePlan.blocked(
-      'Cannot save without a cached zone ID.',
     );
   }
 

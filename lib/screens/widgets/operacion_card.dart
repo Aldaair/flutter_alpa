@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/config/data/offline_authorization_repository.dart';
+import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/models/Equipo.dart';
 import 'package:i_miner/models/tipo_horometro.dart';
 import 'package:i_miner/screens/widgets/custom_dropdown.dart';
@@ -51,6 +52,8 @@ class _OperacionCardState extends State<OperacionCard> {
   String? selectedCapacidad;
   String? operador;
   int? operadorId;
+  int? registradorUsuarioId;
+  String? registradorNombre;
   bool _loadingEquipos = true;
   bool _loadingJefesGuardia = true;
 
@@ -62,6 +65,7 @@ class _OperacionCardState extends State<OperacionCard> {
 
   List<String> equipos = [];
   List<String> jefesGuardia = [];
+  final Map<String, int> jefeGuardiaIdPorNombre = {};
   final Map<String, List<String>> codigosPorEquipo = {};
   final Map<String, List<String>> modelosPorCodigo = {};
   final Map<String, String> capacidadPorCodigo = {};
@@ -73,6 +77,7 @@ class _OperacionCardState extends State<OperacionCard> {
 
   List<TipoHorometro> tiposEquipo = [];
   Map<int, bool> tiposSeleccionados = {};
+  List<DimTurno> turnosCatalogo = [];
 
   @override
   void initState() {
@@ -80,6 +85,7 @@ class _OperacionCardState extends State<OperacionCard> {
     _cargarOperadorPorDni();
     _cargarEquipos();
     _cargarJefesGuardia();
+    _cargarTurnosCatalogo();
     if (widget.config.mostrarTipoEquipo) _cargarTiposEquipo();
 
     if (widget.operacionExistente != null) {
@@ -96,8 +102,10 @@ class _OperacionCardState extends State<OperacionCard> {
 
     codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
     if (selectedCodigo != null) {
-      if (widget.config.mostrarModelo) _actualizarModelosPorCodigo(selectedCodigo);
-      if (widget.config.mostrarCapacidad && capacidadPorCodigo.containsKey(selectedCodigo)) {
+      if (widget.config.mostrarModelo)
+        _actualizarModelosPorCodigo(selectedCodigo);
+      if (widget.config.mostrarCapacidad &&
+          capacidadPorCodigo.containsKey(selectedCodigo)) {
         selectedCapacidad = capacidadPorCodigo[selectedCodigo];
       }
     }
@@ -117,6 +125,9 @@ class _OperacionCardState extends State<OperacionCard> {
       if (usuario != null) {
         setState(() {
           operadorId = usuario['operador_id'] as int?;
+          registradorUsuarioId = usuario['id'] as int?;
+          registradorNombre = '${usuario['nombres']} ${usuario['apellidos']}'
+              .trim();
           _syncDisplayedOperator(
             fallbackName: '${usuario['nombres']} ${usuario['apellidos']}',
           );
@@ -125,13 +136,34 @@ class _OperacionCardState extends State<OperacionCard> {
         setState(() {
           _syncDisplayedOperator();
           operadorId = null;
+          registradorUsuarioId = null;
+          registradorNombre = null;
         });
       }
     } catch (e) {
       setState(() {
         _syncDisplayedOperator();
         operadorId = null;
+        registradorUsuarioId = null;
+        registradorNombre = null;
       });
+    }
+  }
+
+  Future<void> _cargarTurnosCatalogo() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final turnosDb = await dbHelper.getDimTurnos();
+      if (!mounted) return;
+
+      setState(() {
+        turnosCatalogo = turnosDb;
+        if (turnosDb.isNotEmpty) {
+          turnos = turnosDb.map((t) => t.nombre).toList()..sort();
+        }
+      });
+    } catch (_) {
+      // Mantener fallback DÍA/NOCHE si el catálogo no está disponible.
     }
   }
 
@@ -153,14 +185,17 @@ class _OperacionCardState extends State<OperacionCard> {
       }
 
       if (widget.config.usarAutorizacion) {
-        equiposCompletos = await _loadAuthorizedEquipos(dni: widget.dniUsuario!);
+        equiposCompletos = await _loadAuthorizedEquipos(
+          dni: widget.dniUsuario!,
+        );
       } else {
         final dbHelper = DatabaseHelper();
         equiposCompletos = await dbHelper.getEquipos();
-        equiposCompletos = equiposCompletos
-            .where((e) => e.matchesProceso(widget.config.proceso))
-            .toList()
-          ..sort((a, b) => a.nombre.compareTo(b.nombre));
+        equiposCompletos =
+            equiposCompletos
+                .where((e) => e.matchesProceso(widget.config.proceso))
+                .toList()
+              ..sort((a, b) => a.nombre.compareTo(b.nombre));
       }
 
       Set<String> nombresEquipos = {};
@@ -200,8 +235,10 @@ class _OperacionCardState extends State<OperacionCard> {
           codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
         }
         if (selectedCodigo != null) {
-          if (widget.config.mostrarModelo) modelosFiltrados = modelosPorCodigo[selectedCodigo] ?? [];
-          if (widget.config.mostrarCapacidad && capacidadPorCodigo.containsKey(selectedCodigo)) {
+          if (widget.config.mostrarModelo)
+            modelosFiltrados = modelosPorCodigo[selectedCodigo] ?? [];
+          if (widget.config.mostrarCapacidad &&
+              capacidadPorCodigo.containsKey(selectedCodigo)) {
             selectedCapacidad = capacidadPorCodigo[selectedCodigo];
           }
         }
@@ -253,21 +290,66 @@ class _OperacionCardState extends State<OperacionCard> {
     try {
       final dbHelper = DatabaseHelper();
       final jefes = await dbHelper.getJefesGuardia();
-      final nombres = jefes
-          .map((j) => '${j.nombres} ${j.apellidos}'.trim())
-          .toList();
+      final idsPorNombre = <String, int>{};
+      final nombres = jefes.map((j) {
+        final nombre = '${j.nombres} ${j.apellidos}'.trim();
+        idsPorNombre[nombre] = j.id;
+        return nombre;
+      }).toList();
 
       setState(() {
         _loadingJefesGuardia = true;
+        jefeGuardiaIdPorNombre
+          ..clear()
+          ..addAll(idsPorNombre);
         jefesGuardia = nombres..sort();
         _loadingJefesGuardia = false;
       });
     } catch (e) {
       setState(() {
         _loadingJefesGuardia = false;
+        jefeGuardiaIdPorNombre.clear();
         jefesGuardia = [];
       });
     }
+  }
+
+  int? _resolverTurnoId(String? turnoNombre) {
+    if (turnoNombre == null) return null;
+    final buscado = _normalizarClave(turnoNombre);
+
+    for (final turno in turnosCatalogo) {
+      if (_normalizarClave(turno.nombre) == buscado ||
+          _normalizarClave(turno.codigo) == buscado) {
+        return turno.turnoId;
+      }
+    }
+    return null;
+  }
+
+  String _normalizarClave(String? value) {
+    if (value == null) return '';
+    const replacements = {
+      'Á': 'A',
+      'É': 'E',
+      'Í': 'I',
+      'Ó': 'O',
+      'Ú': 'U',
+      'Ü': 'U',
+      'á': 'A',
+      'é': 'E',
+      'í': 'I',
+      'ó': 'O',
+      'ú': 'U',
+      'ü': 'U',
+    };
+    final buffer = StringBuffer();
+    for (final rune in value.trim().runes) {
+      buffer.write(
+        replacements[String.fromCharCode(rune)] ?? String.fromCharCode(rune),
+      );
+    }
+    return buffer.toString().toUpperCase();
   }
 
   Future<void> _cargarTiposEquipo() async {
@@ -286,7 +368,8 @@ class _OperacionCardState extends State<OperacionCard> {
       });
 
       if (widget.operacionExistente != null) {
-        final tipoEquipoStr = widget.operacionExistente!['tipo_equipo'] as String?;
+        final tipoEquipoStr =
+            widget.operacionExistente!['tipo_equipo'] as String?;
         if (tipoEquipoStr != null && tipoEquipoStr.isNotEmpty) {
           try {
             final Map<String, dynamic> decoded = jsonDecode(tipoEquipoStr);
@@ -373,21 +456,29 @@ class _OperacionCardState extends State<OperacionCard> {
         double scaleFactor = cardWidth > 900
             ? 1.0
             : cardWidth > 700
-                ? 0.9
-                : cardWidth > 500
-                    ? 0.8
-                    : 0.7;
+            ? 0.9
+            : cardWidth > 500
+            ? 0.8
+            : 0.7;
 
         return Wrap(
           spacing: 10,
           runSpacing: 12,
           children: [
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['fecha']! * scaleFactor, fieldWeights),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['fecha']! * scaleFactor,
+                fieldWeights,
+              ),
               child: _buildFechaField(),
             ),
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['turno']! * scaleFactor, fieldWeights),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['turno']! * scaleFactor,
+                fieldWeights,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Turno',
                 value: widget.selectedTurno,
@@ -399,7 +490,11 @@ class _OperacionCardState extends State<OperacionCard> {
               ),
             ),
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['equipo']! * scaleFactor, fieldWeights),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['equipo']! * scaleFactor,
+                fieldWeights,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Equipo',
                 value: selectedEquipo,
@@ -422,7 +517,11 @@ class _OperacionCardState extends State<OperacionCard> {
               ),
             ),
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['codigo']! * scaleFactor, fieldWeights),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['codigo']! * scaleFactor,
+                fieldWeights,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Código',
                 value: selectedCodigo,
@@ -434,7 +533,8 @@ class _OperacionCardState extends State<OperacionCard> {
                           selectedCodigo = value;
                           selectedModelo = null;
                           modelosFiltrados = modelosPorCodigo[value] ?? [];
-                          if (widget.config.mostrarCapacidad && capacidadPorCodigo.containsKey(value)) {
+                          if (widget.config.mostrarCapacidad &&
+                              capacidadPorCodigo.containsKey(value)) {
                             selectedCapacidad = capacidadPorCodigo[value];
                           }
                         });
@@ -445,7 +545,11 @@ class _OperacionCardState extends State<OperacionCard> {
             ),
             if (widget.config.mostrarModelo)
               _buildFlexibleField(
-                width: _calculateFieldWidth(cardWidth, fieldWeights['modelo']! * scaleFactor, fieldWeights),
+                width: _calculateFieldWidth(
+                  cardWidth,
+                  fieldWeights['modelo']! * scaleFactor,
+                  fieldWeights,
+                ),
                 child: CustomMaterialDropdown(
                   label: 'Modelo',
                   value: selectedModelo,
@@ -453,28 +557,40 @@ class _OperacionCardState extends State<OperacionCard> {
                   onChanged: operacionBloqueada
                       ? null
                       : selectedCodigo != null
-                          ? (value) => setState(() => selectedModelo = value)
-                          : null,
+                      ? (value) => setState(() => selectedModelo = value)
+                      : null,
                   icon: Icons.model_training,
                   hint: selectedCodigo == null
                       ? 'Sel. código'
                       : modelosFiltrados.isEmpty
-                          ? 'Sin modelos'
-                          : 'Modelo',
+                      ? 'Sin modelos'
+                      : 'Modelo',
                   primaryColor: widget.primaryColor,
                 ),
               ),
             if (widget.config.mostrarCapacidad)
               _buildFlexibleField(
-                width: _calculateFieldWidth(cardWidth, fieldWeights['capacidad']! * scaleFactor, fieldWeights),
+                width: _calculateFieldWidth(
+                  cardWidth,
+                  fieldWeights['capacidad']! * scaleFactor,
+                  fieldWeights,
+                ),
                 child: _buildCapacidadField(),
               ),
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['operador']! * scaleFactor, fieldWeights),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['operador']! * scaleFactor,
+                fieldWeights,
+              ),
               child: _buildOperadorField(),
             ),
             _buildFlexibleField(
-              width: _calculateFieldWidth(cardWidth, fieldWeights['jefe']! * scaleFactor, fieldWeights),
+              width: _calculateFieldWidth(
+                cardWidth,
+                fieldWeights['jefe']! * scaleFactor,
+                fieldWeights,
+              ),
               child: CustomMaterialDropdown(
                 label: 'Jefe Guardia',
                 value: selectedJefeGuardia,
@@ -517,7 +633,8 @@ class _OperacionCardState extends State<OperacionCard> {
             spacing: 12,
             runSpacing: 8,
             children: tiposEquipo.map((tipo) {
-              final isSelected = tipo.id != null && (tiposSeleccionados[tipo.id!] ?? false);
+              final isSelected =
+                  tipo.id != null && (tiposSeleccionados[tipo.id!] ?? false);
               return InkWell(
                 onTap: operacionBloqueada
                     ? null
@@ -530,29 +647,44 @@ class _OperacionCardState extends State<OperacionCard> {
                       },
                 borderRadius: BorderRadius.circular(6),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelected ? widget.primaryColor.withOpacity(0.1) : Colors.grey.shade50,
+                    color: isSelected
+                        ? widget.primaryColor.withOpacity(0.1)
+                        : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: isSelected ? widget.primaryColor : Colors.grey.shade300,
+                      color: isSelected
+                          ? widget.primaryColor
+                          : Colors.grey.shade300,
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+                        isSelected
+                            ? Icons.check_box
+                            : Icons.check_box_outline_blank,
                         size: 16,
-                        color: isSelected ? widget.primaryColor : Colors.grey.shade600,
+                        color: isSelected
+                            ? widget.primaryColor
+                            : Colors.grey.shade600,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         tipo.nombre,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
-                          color: isSelected ? widget.primaryColor : Colors.grey.shade700,
+                          fontWeight: isSelected
+                              ? FontWeight.w500
+                              : FontWeight.normal,
+                          color: isSelected
+                              ? widget.primaryColor
+                              : Colors.grey.shade700,
                         ),
                       ),
                     ],
@@ -590,7 +722,9 @@ class _OperacionCardState extends State<OperacionCard> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: selectedCapacidad != null ? Colors.black87 : Colors.grey,
+                    color: selectedCapacidad != null
+                        ? Colors.black87
+                        : Colors.grey,
                   ),
                 ),
               ],
@@ -722,7 +856,11 @@ class _OperacionCardState extends State<OperacionCard> {
     );
   }
 
-  double _calculateFieldWidth(double totalWidth, double weight, Map<String, double> weights) {
+  double _calculateFieldWidth(
+    double totalWidth,
+    double weight,
+    Map<String, double> weights,
+  ) {
     double totalWeights = weights.values.fold(0, (sum, w) => sum + w);
     double spacing = 10 * (weights.length - 1);
     double padding = 16 * 2;
@@ -791,6 +929,8 @@ class _OperacionCardState extends State<OperacionCard> {
     equipoId = match.id;
 
     String? tiposJsonString;
+    final turnoId = _resolverTurnoId(widget.selectedTurno);
+    final jefeGuardiaId = jefeGuardiaIdPorNombre[selectedJefeGuardia];
     if (widget.config.mostrarTipoEquipo) {
       Map<String, bool> tiposMap = {};
       for (var tipo in tiposEquipo) {
@@ -805,12 +945,16 @@ class _OperacionCardState extends State<OperacionCard> {
       'turno': widget.selectedTurno,
       'equipo': selectedEquipo,
       'equipo_id': equipoId,
+      'turno_id': turnoId,
       widget.config.claveCodigo: selectedCodigo,
       'operador': operador ?? operadorEjemplo,
       'actor_dni': widget.dniUsuario,
       'actor_operador_id': operadorId,
       'operador_id': widget.selectedOperatorId ?? operadorId,
+      'registrador_usuario_id': registradorUsuarioId,
+      'registrador_nombre': registradorNombre,
       widget.config.claveJefeGuardia: selectedJefeGuardia,
+      'jefe_guardia_id': jefeGuardiaId,
       'fecha': widget.fechaActual,
     };
 

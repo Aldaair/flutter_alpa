@@ -41,7 +41,7 @@ class DatabaseHelper {
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
-  static const int _currentDbVersion = 25;
+  static const int _currentDbVersion = 26;
 
   DatabaseHelper._internal() {
     // Inicialización única para evitar múltiples llamadas
@@ -116,6 +116,10 @@ class DatabaseHelper {
         onUpgrade: _onUpgrade,
         onConfigure: (db) async {
           await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onOpen: (db) async {
+          await _ensureOperationHeaderColumns(db);
+          await _backfillOperationHeaderMetadata(db);
         },
       );
     } catch (e) {
@@ -1009,12 +1013,18 @@ CREATE TABLE Operacion_tal_largo (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   fecha TEXT,
   turno TEXT,
+  turno_id INTEGER,
+  frente_origen TEXT,
   seccion TEXT,
   operador TEXT,
+  registrador_usuario_id INTEGER,
+  registrador_nombre TEXT,
   jefe_guardia TEXT,
   equipo TEXT,
   n_equipo TEXT,
   modelo_equipo TEXT,
+  labor_id INTEGER,
+  labor TEXT,
   registros TEXT,
   horometros TEXT,
   condiciones_equipo TEXT,
@@ -1038,12 +1048,18 @@ CREATE TABLE Operacion_tal_horizontal (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   fecha TEXT,
   turno TEXT,
+  turno_id INTEGER,
+  frente_origen TEXT,
   seccion TEXT,
   operador TEXT,
+  registrador_usuario_id INTEGER,
+  registrador_nombre TEXT,
   jefe_guardia TEXT,
   equipo TEXT,
   n_equipo TEXT,
   modelo_equipo TEXT,
+  labor_id INTEGER,
+  labor TEXT,
   registros TEXT,
   horometros TEXT,
   condiciones_equipo TEXT,
@@ -1067,12 +1083,18 @@ CREATE TABLE Operacion_empernador (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   fecha TEXT,
   turno TEXT,
+  turno_id INTEGER,
+  frente_origen TEXT,
   seccion TEXT,
   operador TEXT,
+  registrador_usuario_id INTEGER,
+  registrador_nombre TEXT,
   jefe_guardia TEXT,
   equipo TEXT,
   n_equipo TEXT,
   tipo_equipo TEXT,
+  labor_id INTEGER,
+  labor TEXT,
   registros TEXT,
   horometros TEXT,
   condiciones_equipo TEXT,
@@ -1096,13 +1118,19 @@ CREATE TABLE Operacion_carguio (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   fecha TEXT,
   turno TEXT,
+  turno_id INTEGER,
+  frente_origen TEXT,
   seccion TEXT,
   operador TEXT,
+  registrador_usuario_id INTEGER,
+  registrador_nombre TEXT,
   jefe_guardia TEXT,
   equipo TEXT,
   n_equipo TEXT,
   capacidad TEXT,
   tipo_equipo TEXT,
+  labor_id INTEGER,
+  labor TEXT,
   registros TEXT,
   horometros TEXT,
   condiciones_equipo TEXT,
@@ -1128,13 +1156,19 @@ CREATE TABLE Operacion_Dumper (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   fecha TEXT,
   turno TEXT,
+  turno_id INTEGER,
+  frente_origen TEXT,
   seccion TEXT,
   operador TEXT,
+  registrador_usuario_id INTEGER,
+  registrador_nombre TEXT,
   jefe_guardia TEXT,
   equipo TEXT,
   n_equipo TEXT,
   capacidad TEXT,
   tipo_equipo TEXT,
+  labor_id INTEGER,
+  labor TEXT,
   registros TEXT,
   horometros TEXT,
   condiciones_equipo TEXT,
@@ -1160,10 +1194,16 @@ CREATE TABLE Operacion_rompebanco(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   fecha TEXT,
   turno TEXT,
+  turno_id INTEGER,
+  frente_origen TEXT,
   operador TEXT,
+  registrador_usuario_id INTEGER,
+  registrador_nombre TEXT,
   jefe_guardia TEXT,
   equipo TEXT,
   n_equipo TEXT,
+  labor_id INTEGER,
+  labor TEXT,
   registros TEXT,
   horometros TEXT,
   condiciones_equipo TEXT,
@@ -1187,10 +1227,16 @@ CREATE TABLE Operacion_Scalamin(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   fecha TEXT,
   turno TEXT,
+  turno_id INTEGER,
+  frente_origen TEXT,
   operador TEXT,
+  registrador_usuario_id INTEGER,
+  registrador_nombre TEXT,
   jefe_guardia TEXT,
   equipo TEXT,
   n_equipo TEXT,
+  labor_id INTEGER,
+  labor TEXT,
   registros TEXT,
   horometros TEXT,
   condiciones_equipo TEXT,
@@ -1214,10 +1260,16 @@ CREATE TABLE Operacion_scissor(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   fecha TEXT,
   turno TEXT,
+  turno_id INTEGER,
+  frente_origen TEXT,
   operador TEXT,
+  registrador_usuario_id INTEGER,
+  registrador_nombre TEXT,
   jefe_guardia TEXT,
   equipo TEXT,
   n_equipo TEXT,
+  labor_id INTEGER,
+  labor TEXT,
   registros TEXT,
   horometros TEXT,
   condiciones_equipo TEXT,
@@ -1241,10 +1293,16 @@ CREATE TABLE Operacion_anfochanger(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   fecha TEXT,
   turno TEXT,
+  turno_id INTEGER,
+  frente_origen TEXT,
   operador TEXT,
+  registrador_usuario_id INTEGER,
+  registrador_nombre TEXT,
   jefe_guardia TEXT,
   equipo TEXT,
   n_equipo TEXT,
+  labor_id INTEGER,
+  labor TEXT,
   registros TEXT,
   horometros TEXT,
   condiciones_equipo TEXT,
@@ -2324,6 +2382,133 @@ CREATE TABLE UsuarioEquipo (
     if (oldVersion < 25) {
       await db.execute('DROP TABLE IF EXISTS TipoPerforacion');
     }
+
+    if (oldVersion < 26) {
+      await _ensureOperationHeaderColumns(db);
+    }
+  }
+
+  static const List<String> _operationTables = [
+    'Operacion_tal_largo',
+    'Operacion_tal_horizontal',
+    'Operacion_empernador',
+    'Operacion_carguio',
+    'Operacion_Dumper',
+    'Operacion_rompebanco',
+    'Operacion_Scalamin',
+    'Operacion_scissor',
+    'Operacion_anfochanger',
+  ];
+
+  static const Map<String, String> _operationHeaderColumns = {
+    'actor_dni': 'TEXT',
+    'actor_operador_id': 'INTEGER',
+    'operador_id': 'INTEGER',
+    'equipo_id': 'INTEGER',
+    'zona_id': 'INTEGER',
+    'jefe_guardia_id': 'INTEGER',
+    'identity_version': 'INTEGER',
+    'syncable': 'INTEGER DEFAULT 0',
+    'turno_id': 'INTEGER',
+    'frente_origen': 'TEXT',
+    'registrador_usuario_id': 'INTEGER',
+    'registrador_nombre': 'TEXT',
+    'labor_id': 'INTEGER',
+    'labor': 'TEXT',
+  };
+
+  Future<void> _ensureOperationHeaderColumns(Database db) async {
+    for (final tbl in _operationTables) {
+      if (!await _tablaExiste(db, tbl)) {
+        continue;
+      }
+
+      for (final entry in _operationHeaderColumns.entries) {
+        if (!await _columnaExiste(db, tbl, entry.key)) {
+          await db.execute(
+            'ALTER TABLE $tbl ADD COLUMN ${entry.key} ${entry.value}',
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _backfillOperationHeaderMetadata(Database db) async {
+    for (final tbl in _operationTables) {
+      if (!await _tablaExiste(db, tbl)) {
+        continue;
+      }
+
+      final rows = await db.query(
+        tbl,
+        columns: ['id', 'registros', 'frente_origen', 'labor_id', 'labor'],
+        where: 'frente_origen IS NULL OR labor_id IS NULL OR labor IS NULL',
+      );
+
+      for (final row in rows) {
+        final registrosJson = row['registros'] as String?;
+        if (registrosJson == null || registrosJson.isEmpty) {
+          continue;
+        }
+
+        try {
+          final decoded = jsonDecode(registrosJson);
+          if (decoded is! List) {
+            continue;
+          }
+
+          String? frenteOrigen;
+          int? laborId;
+          String? labor;
+
+          for (final item in decoded) {
+            if (item is! Map) continue;
+            final operacion = item['operacion'];
+            if (operacion is! Map) continue;
+
+            frenteOrigen ??= operacion['frente_origen']?.toString();
+            labor ??= operacion['labor']?.toString();
+
+            final rawLaborId = operacion['labor_id'];
+            if (laborId == null) {
+              if (rawLaborId is int) {
+                laborId = rawLaborId;
+              } else if (rawLaborId != null) {
+                laborId = int.tryParse(rawLaborId.toString());
+              }
+            }
+
+            if (frenteOrigen != null && laborId != null && labor != null) {
+              break;
+            }
+          }
+
+          final updateData = <String, dynamic>{};
+          if ((row['frente_origen'] == null) &&
+              frenteOrigen != null &&
+              frenteOrigen.isNotEmpty) {
+            updateData['frente_origen'] = frenteOrigen;
+          }
+          if (row['labor_id'] == null && laborId != null) {
+            updateData['labor_id'] = laborId;
+          }
+          if ((row['labor'] == null) && labor != null && labor.isNotEmpty) {
+            updateData['labor'] = labor;
+          }
+
+          if (updateData.isNotEmpty) {
+            await db.update(
+              tbl,
+              updateData,
+              where: 'id = ?',
+              whereArgs: [row['id']],
+            );
+          }
+        } catch (_) {
+          // Si un registro legacy tiene JSON inválido, lo dejamos intacto.
+        }
+      }
+    }
   }
 
   Future<bool> _tablaExiste(Database db, String tableName) async {
@@ -2337,6 +2522,31 @@ CREATE TABLE UsuarioEquipo (
   Future<bool> _columnaExiste(Database db, String tabla, String columna) async {
     final result = await db.rawQuery("PRAGMA table_info($tabla)");
     return result.any((col) => col['name'] == columna);
+  }
+
+  void _appendHybridOperationMetadata(
+    Map<String, dynamic> insertData, {
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+  }) {
+    if (turnoId != null) insertData['turno_id'] = turnoId;
+    if (frenteOrigen != null && frenteOrigen.trim().isNotEmpty) {
+      insertData['frente_origen'] = frenteOrigen.trim();
+    }
+    if (registradorUsuarioId != null) {
+      insertData['registrador_usuario_id'] = registradorUsuarioId;
+    }
+    if (registradorNombre != null && registradorNombre.trim().isNotEmpty) {
+      insertData['registrador_nombre'] = registradorNombre.trim();
+    }
+    if (laborId != null) insertData['labor_id'] = laborId;
+    if (labor != null && labor.trim().isNotEmpty) {
+      insertData['labor'] = labor.trim();
+    }
   }
 
   static const _sharedTables = {
@@ -2613,7 +2823,8 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<Map<String, dynamic>>> getEquipoHorometroTiposByEquipoId(
-      int equipoId) async {
+    int equipoId,
+  ) async {
     final db = await sharedCatalogDatabase;
     return await db.query(
       'equipo_horometro_tipos',
@@ -2889,6 +3100,12 @@ CREATE TABLE UsuarioEquipo (
     int? jefeGuardiaId,
     int? identityVersion,
     int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
   }) async {
     final db = await database;
 
@@ -2958,6 +3175,15 @@ CREATE TABLE UsuarioEquipo (
     if (identityVersion != null)
       insertData['identity_version'] = identityVersion;
     if (syncable != null) insertData['syncable'] = syncable;
+    _appendHybridOperationMetadata(
+      insertData,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
     return await db.insert('Operacion_tal_largo', insertData);
   }
 
@@ -3701,10 +3927,23 @@ CREATE TABLE UsuarioEquipo (
         return false;
       }
 
+      final updateData = <String, dynamic>{'registros': jsonEncode(registros)};
+      if (operacionData['labor_id'] != null) {
+        updateData['labor_id'] = operacionData['labor_id'];
+      }
+      final frenteOrigen = operacionData['frente_origen']?.toString();
+      if (frenteOrigen != null && frenteOrigen.isNotEmpty) {
+        updateData['frente_origen'] = frenteOrigen;
+      }
+      final labor = operacionData['labor']?.toString();
+      if (labor != null && labor.isNotEmpty) {
+        updateData['labor'] = labor;
+      }
+
       // Guardar en la base de datos
       int updated = await db.update(
         'Operacion_tal_largo',
-        {'registros': jsonEncode(registros)},
+        updateData,
         where: 'id = ?',
         whereArgs: [operacionId],
       );
@@ -3841,6 +4080,12 @@ CREATE TABLE UsuarioEquipo (
     int? jefeGuardiaId,
     int? identityVersion,
     int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
   }) async {
     final db = await database;
 
@@ -3910,6 +4155,15 @@ CREATE TABLE UsuarioEquipo (
     if (identityVersion != null)
       insertData['identity_version'] = identityVersion;
     if (syncable != null) insertData['syncable'] = syncable;
+    _appendHybridOperationMetadata(
+      insertData,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
     return await db.insert('Operacion_tal_horizontal', insertData);
   }
 
@@ -4300,10 +4554,23 @@ CREATE TABLE UsuarioEquipo (
         return false;
       }
 
+      final updateData = <String, dynamic>{'registros': jsonEncode(registros)};
+      if (operacionData['labor_id'] != null) {
+        updateData['labor_id'] = operacionData['labor_id'];
+      }
+      final frenteOrigen = operacionData['frente_origen']?.toString();
+      if (frenteOrigen != null && frenteOrigen.isNotEmpty) {
+        updateData['frente_origen'] = frenteOrigen;
+      }
+      final labor = operacionData['labor']?.toString();
+      if (labor != null && labor.isNotEmpty) {
+        updateData['labor'] = labor;
+      }
+
       // Guardar en la base de datos
       int updated = await db.update(
         'Operacion_tal_horizontal',
-        {'registros': jsonEncode(registros)},
+        updateData,
         where: 'id = ?',
         whereArgs: [operacionId],
       );
@@ -4741,6 +5008,12 @@ CREATE TABLE UsuarioEquipo (
     int? jefeGuardiaId,
     int? identityVersion,
     int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
   }) async {
     final db = await database;
 
@@ -4812,6 +5085,15 @@ CREATE TABLE UsuarioEquipo (
     if (identityVersion != null)
       insertData['identity_version'] = identityVersion;
     if (syncable != null) insertData['syncable'] = syncable;
+    _appendHybridOperationMetadata(
+      insertData,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
     return await db.insert('Operacion_empernador', insertData);
   }
 
@@ -5642,6 +5924,12 @@ CREATE TABLE UsuarioEquipo (
     int? jefeGuardiaId,
     int? identityVersion,
     int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
   }) async {
     final db = await database;
 
@@ -5719,6 +6007,15 @@ CREATE TABLE UsuarioEquipo (
     if (identityVersion != null)
       insertData['identity_version'] = identityVersion;
     if (syncable != null) insertData['syncable'] = syncable;
+    _appendHybridOperationMetadata(
+      insertData,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
     return await db.insert('Operacion_carguio', insertData);
   }
 
@@ -6622,6 +6919,12 @@ CREATE TABLE UsuarioEquipo (
     int? jefeGuardiaId,
     int? identityVersion,
     int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
   }) async {
     final db = await database;
 
@@ -6702,6 +7005,15 @@ CREATE TABLE UsuarioEquipo (
     if (identityVersion != null)
       insertData['identity_version'] = identityVersion;
     if (syncable != null) insertData['syncable'] = syncable;
+    _appendHybridOperationMetadata(
+      insertData,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
     return await db.insert('Operacion_Dumper', insertData);
   }
 
@@ -7673,6 +7985,12 @@ CREATE TABLE UsuarioEquipo (
     int? jefeGuardiaId,
     int? identityVersion,
     int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
   }) async {
     final db = await database;
 
@@ -7743,6 +8061,15 @@ CREATE TABLE UsuarioEquipo (
     if (identityVersion != null)
       insertData['identity_version'] = identityVersion;
     if (syncable != null) insertData['syncable'] = syncable;
+    _appendHybridOperationMetadata(
+      insertData,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
     return await db.insert('Operacion_rompebanco', insertData);
   }
 
@@ -8544,6 +8871,12 @@ CREATE TABLE UsuarioEquipo (
     int? jefeGuardiaId,
     int? identityVersion,
     int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
   }) async {
     final db = await database;
 
@@ -8610,6 +8943,15 @@ CREATE TABLE UsuarioEquipo (
     if (identityVersion != null)
       insertData['identity_version'] = identityVersion;
     if (syncable != null) insertData['syncable'] = syncable;
+    _appendHybridOperationMetadata(
+      insertData,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
     return await db.insert('Operacion_Scalamin', insertData);
   }
 
@@ -9410,6 +9752,12 @@ CREATE TABLE UsuarioEquipo (
     int? jefeGuardiaId,
     int? identityVersion,
     int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
   }) async {
     final db = await database;
 
@@ -9473,6 +9821,15 @@ CREATE TABLE UsuarioEquipo (
     if (identityVersion != null)
       insertData['identity_version'] = identityVersion;
     if (syncable != null) insertData['syncable'] = syncable;
+    _appendHybridOperationMetadata(
+      insertData,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
     return await db.insert('Operacion_scissor', insertData);
   }
 
@@ -10297,6 +10654,12 @@ CREATE TABLE UsuarioEquipo (
     int? jefeGuardiaId,
     int? identityVersion,
     int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
   }) async {
     final db = await database;
 
@@ -10372,6 +10735,16 @@ CREATE TABLE UsuarioEquipo (
     if (identityVersion != null)
       insertData['identity_version'] = identityVersion;
     if (syncable != null) insertData['syncable'] = syncable;
+
+    _appendHybridOperationMetadata(
+      insertData,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
 
     return await db.insert('Operacion_anfochanger', insertData);
   }

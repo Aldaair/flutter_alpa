@@ -1031,6 +1031,10 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
       actorDni: data['actor_dni'] as String?,
       actorOperadorId: data['actor_operador_id'] as int?,
       operadorId: data['operador_id'] as int?,
+      turnoId: data['turno_id'] as int?,
+      registradorUsuarioId: data['registrador_usuario_id'] as int?,
+      registradorNombre: data['registrador_nombre'] as String?,
+      jefeGuardiaId: data['jefe_guardia_id'] as int?,
       checkListJson: checkListJson,
       horometrosBase: horometros,
     );

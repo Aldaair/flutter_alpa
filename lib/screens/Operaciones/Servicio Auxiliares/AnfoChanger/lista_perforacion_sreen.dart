@@ -996,6 +996,10 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       actorDni: data['actor_dni'] as String?,
       actorOperadorId: data['actor_operador_id'] as int?,
       operadorId: data['operador_id'] as int?,
+      turnoId: data['turno_id'] as int?,
+      registradorUsuarioId: data['registrador_usuario_id'] as int?,
+      registradorNombre: data['registrador_nombre'] as String?,
+      jefeGuardiaId: data['jefe_guardia_id'] as int?,
       checkListJson: checkListJson,
       horometrosBase: horometros,
     );
@@ -1201,8 +1205,7 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     if (equipoId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              const Text('La operación no tiene un equipo asociado'),
+          content: const Text('La operación no tiene un equipo asociado'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.orange,
         ),
@@ -1214,13 +1217,17 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     Map<String, dynamic> horometrosData = await DatabaseHelper()
         .getHorometrosByOperacionIdAnfochanger(operacionId);
 
-    final tipos = await DatabaseHelper()
-        .getEquipoHorometroTiposByEquipoId(equipoId);
+    final tipos = await DatabaseHelper().getEquipoHorometroTiposByEquipoId(
+      equipoId,
+    );
     final horometroDefs = tipos.isNotEmpty
         ? tipos
-            .map((t) => HorometroDef.fromRawNombre(
-                t['tipo_horometro_nombre'] as String))
-            .toList()
+              .map(
+                (t) => HorometroDef.fromRawNombre(
+                  t['tipo_horometro_nombre'] as String,
+                ),
+              )
+              .toList()
         : <HorometroDef>[];
 
     showDialog(

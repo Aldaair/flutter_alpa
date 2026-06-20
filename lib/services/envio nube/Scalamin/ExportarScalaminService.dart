@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/services/envio%20nube/export_payload_helper.dart';
 
 class ExportarScalaminService {
   final DatabaseHelper dbHelper;
@@ -42,7 +43,9 @@ class ExportarScalaminService {
       if (operacion.isEmpty) continue;
 
       /// 🔹 Decodificación
-      final registros = parseList(operacion['registros']);
+      final registros = sanitizeRegistrosForExport(
+        parseList(operacion['registros']),
+      );
       final horometros = parseMap(operacion['horometros']);
       final checklist = parseList(operacion['check_list']);
       final condiciones = parseMap(operacion['condiciones_equipo']);
@@ -54,6 +57,7 @@ class ExportarScalaminService {
 
         "fecha": operacion['fecha'] ?? "",
         "turno": operacion['turno'] ?? "",
+        ...buildCommonOperationHeader(operacion),
         "operador": operacion['operador'] ?? "",
         "operador_id": operacion['operador_id'],
         "jefe_guardia": operacion['jefe_guardia'] ?? "",

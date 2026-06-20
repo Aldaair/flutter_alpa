@@ -453,6 +453,9 @@ class _DialogoFormularioPerforacionState
     }
 
     Map<String, dynamic> datosFormulario = {
+      'labor_id': usarFrentePlanificado
+          ? laborAsignadaSeleccionada?.laborId
+          : null,
       'frente_origen': usarFrentePlanificado ? 'planificado' : 'otro_frente',
       'tipo_labor': tipoLaborSeleccionado ?? '',
       'labor': laborSeleccionado ?? '',

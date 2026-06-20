@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/services/envio%20nube/export_payload_helper.dart';
 
 class ExportarHorizontalService {
   final DatabaseHelper dbHelper;
@@ -42,7 +43,9 @@ class ExportarHorizontalService {
         continue;
       }
 
-      final estados = parseList(operacion['registros']);
+      final estados = sanitizeRegistrosForExport(
+        parseList(operacion['registros']),
+      );
       final horometros = parseMap(operacion['horometros']);
       final checklist = parseList(operacion['check_list']);
       final condiciones = parseMap(operacion['condiciones_equipo']);
@@ -52,6 +55,7 @@ class ExportarHorizontalService {
         "local_id": id,
         "fecha": operacion['fecha'] ?? "",
         "turno": operacion['turno'] ?? "",
+        ...buildCommonOperationHeader(operacion),
         "seccion": operacion['seccion'] ?? "",
         "seccion_id": operacion['seccion_id'],
         "operador": operacion['operador'] ?? "",
@@ -84,7 +88,6 @@ class ExportarHorizontalService {
         operacion['syncable'] == 1 &&
         operacion['operador_id'] != null &&
         operacion['equipo_id'] != null &&
-        operacion['seccion_id'] != null &&
         operacion['jefe_guardia_id'] != null;
   }
 
