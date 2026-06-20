@@ -9,7 +9,7 @@ class ApiConfig {
   static const String checklistEndpoint = '/check-list';
   static const String jefe_guardias = '/usuarios/jefes-guardia';
   static const String equipoEndpoint = '/equipo/';
-  static const String tipoPerforacionEndpoint = '/TipoPerfpo/';
+  static const String tipoPerforacionEndpoint = '/tipo-perforaciones/';
 
   static const String PlanProduccionEndpoint = '/PlanProduccion/';
   static const String planMetrajeTLEndpoint = '/planes/metraje-tl/';

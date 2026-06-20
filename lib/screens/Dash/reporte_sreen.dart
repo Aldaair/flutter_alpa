@@ -694,7 +694,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // Verificar si los datos se almacenaron correctamente
       final dbHelper = DatabaseHelper();
-      final tiposBD = await dbHelper.getAll('TipoPerforacion');
+      final tiposBD = await dbHelper.getAll('tipo_perforaciones');
       print("Tipos de Perforación en la base de datos local: $tiposBD");
     } catch (e) {
       print("Error al cargar los tipos de perforación: $e");

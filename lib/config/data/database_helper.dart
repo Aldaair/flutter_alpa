@@ -36,11 +36,11 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 13;
+  static const int _sharedCatalogDbVersion = 14;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
-  static const int _currentDbVersion = 24;
+  static const int _currentDbVersion = 25;
 
   DatabaseHelper._internal() {
     // Inicialización única para evitar múltiples llamadas
@@ -407,6 +407,16 @@ CREATE TABLE IF NOT EXISTS planes_produccion (
   valor REAL NOT NULL
 )
 ''');
+
+    // v14 table
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS tipo_perforaciones (
+  id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  proceso TEXT NULL,
+  permitido_medicion INTEGER NOT NULL DEFAULT 0
+)
+''');
   }
 
   Future<void> _onUpgradeSharedCatalogDatabase(
@@ -678,6 +688,19 @@ CREATE TABLE IF NOT EXISTS planes_produccion (
     if (oldVersion < 13) {
       await db.execute('DROP TABLE IF EXISTS planes_metraje_tl');
     }
+
+    if (oldVersion < 14) {
+      if (!await _tablaExiste(db, 'tipo_perforaciones')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS tipo_perforaciones (
+  id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  proceso TEXT NULL,
+  permitido_medicion INTEGER NOT NULL DEFAULT 0
+)
+''');
+      }
+    }
   }
 
   // Método de creación de tablas
@@ -842,15 +865,6 @@ CREATE TABLE Guardia (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   guardia TEXT NOT NULL
 )
-''');
-
-    await db.execute('''
-  CREATE TABLE TipoPerforacion (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL,
-    proceso TEXT NULL,
-    permitido_medicion INTEGER NOT NULL DEFAULT 0
-  )
 ''');
 
     await db.execute('''
@@ -1489,18 +1503,6 @@ CREATE TABLE numero_retardos (
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      /// Tabla TipoPerforacion
-      if (!await _tablaExiste(db, 'TipoPerforacion')) {
-        await db.execute('''
-        CREATE TABLE TipoPerforacion (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          nombre TEXT NOT NULL,
-          proceso TEXT NULL,
-          permitido_medicion INTEGER NOT NULL DEFAULT 0
-        )
-      ''');
-      }
-
       /// Tabla Secciones
       if (!await _tablaExiste(db, 'Secciones')) {
         await db.execute('''
@@ -2273,6 +2275,10 @@ CREATE TABLE UsuarioEquipo (
     if (oldVersion < 24) {
       await db.execute('DROP TABLE IF EXISTS plan_labores');
     }
+
+    if (oldVersion < 25) {
+      await db.execute('DROP TABLE IF EXISTS TipoPerforacion');
+    }
   }
 
   Future<bool> _tablaExiste(Database db, String tableName) async {
@@ -2309,6 +2315,7 @@ CREATE TABLE UsuarioEquipo (
     'dim_turno',
     'planes_metrajes_avances',
     'planes_produccion',
+    'tipo_perforaciones',
   };
 
   Future<Database> _getDbForTable(String table) async {
@@ -2718,10 +2725,10 @@ CREATE TABLE UsuarioEquipo (
   Future<List<TipoPerforacion>> getTiposPerforacionByProceso(
     String proceso,
   ) async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
 
     final List<Map<String, dynamic>> maps = await db.query(
-      'TipoPerforacion',
+      'tipo_perforaciones',
       where: 'proceso = ?',
       whereArgs: [proceso],
     );
@@ -11505,8 +11512,8 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<TipoPerforacion>> getTiposPerforacion() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('TipoPerforacion');
+    final db = await sharedCatalogDatabase;
+    final List<Map<String, dynamic>> maps = await db.query('tipo_perforaciones');
     return List.generate(maps.length, (i) => TipoPerforacion.fromJson(maps[i]));
   }
 
@@ -12190,11 +12197,11 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<TipoPerforacion>> getTiposPerforacionhorizontalfil() async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
     final List<Map<String, dynamic>> maps = await db.query(
-      'TipoPerforacion',
-      where: 'proceso = ? AND permitido_medicion = ?', // Cambio aquí
-      whereArgs: ['PERFORACIÓN HORIZONTAL', 1], // Cambio aquí
+      'tipo_perforaciones',
+      where: 'proceso = ? AND permitido_medicion = ?',
+      whereArgs: ['PERFORACIÓN HORIZONTAL', 1],
     );
     return List.generate(maps.length, (i) => TipoPerforacion.fromJson(maps[i]));
   }
@@ -12314,9 +12321,9 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<TipoPerforacion>> getTiposPerforacionLargofil() async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
     final List<Map<String, dynamic>> maps = await db.query(
-      'TipoPerforacion',
+      'tipo_perforaciones',
       where: 'proceso = ? AND permitido_medicion = ?',
       whereArgs: ['PERFORACIÓN TALADROS LARGOS', 1],
     );
