@@ -3099,7 +3099,7 @@ CREATE TABLE UsuarioEquipo (
     String? codigo,
     String? horaInicio,
     String? horaFinal,
-    Map<String, String>? operacion,
+    Map<String, dynamic>? operacion,
   }) async {
     final db = await database;
 

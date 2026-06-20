@@ -154,6 +154,7 @@ class _DialogoFormularioPerforacionState
   List<TipoPerforacion> tiposPerforacionCompletos = [];
   List<AssignedLabor> laboresAsignadas = [];
   AssignedLabor? laborAsignadaSeleccionada;
+  DimLabor? selectedLaborFromCatalogo;
 
   @override
   void initState() {
@@ -404,6 +405,23 @@ class _DialogoFormularioPerforacionState
     );
   }
 
+  void _onLaborFromCatalogSelected(DimLabor labor) {
+    final ubicacion = _resolverUbicacionPorLaborId(labor.laborId);
+    setState(() {
+      minaSeleccionada = ubicacion?.mina;
+      zonaSeleccionada = ubicacion?.zona;
+      areaSeleccionada = ubicacion?.area;
+      faseSeleccionada = ubicacion?.fase;
+      estructuraMineralSeleccionada = ubicacion?.estructuraMineral;
+      nivelSeleccionado = ubicacion?.nivel;
+      tipoLaborSeleccionado = ubicacion?.tipoLabor;
+      laborSeleccionado = labor.nombreLabor;
+      alaSeleccionado = null;
+      selectedLaborFromCatalogo = labor;
+      _actualizarFiltros();
+    });
+  }
+
   String? _resolverAlaPlanificada(AssignedLabor labor) {
     final alas = <String>{};
 
@@ -563,98 +581,6 @@ class _DialogoFormularioPerforacionState
         ];
       });
     }
-  }
-
-  void _onMinaChanged(String? nuevaMina) {
-    setState(() {
-      minaSeleccionada = nuevaMina;
-      zonaSeleccionada = null;
-      areaSeleccionada = null;
-      faseSeleccionada = null;
-      estructuraMineralSeleccionada = null;
-      nivelSeleccionado = null;
-      tipoLaborSeleccionado = null;
-      laborSeleccionado = null;
-      alaSeleccionado = null;
-      _actualizarFiltros();
-    });
-  }
-
-  void _onZonaChanged(String? nuevaZona) {
-    setState(() {
-      zonaSeleccionada = nuevaZona;
-      areaSeleccionada = null;
-      faseSeleccionada = null;
-      estructuraMineralSeleccionada = null;
-      nivelSeleccionado = null;
-      tipoLaborSeleccionado = null;
-      laborSeleccionado = null;
-      alaSeleccionado = null;
-      _actualizarFiltros();
-    });
-  }
-
-  void _onAreaChanged(String? nuevaArea) {
-    setState(() {
-      areaSeleccionada = nuevaArea;
-      faseSeleccionada = null;
-      estructuraMineralSeleccionada = null;
-      nivelSeleccionado = null;
-      tipoLaborSeleccionado = null;
-      laborSeleccionado = null;
-      alaSeleccionado = null;
-      _actualizarFiltros();
-    });
-  }
-
-  void _onFaseChanged(String? nuevaFase) {
-    setState(() {
-      faseSeleccionada = nuevaFase;
-      estructuraMineralSeleccionada = null;
-      nivelSeleccionado = null;
-      tipoLaborSeleccionado = null;
-      laborSeleccionado = null;
-      alaSeleccionado = null;
-      _actualizarFiltros();
-    });
-  }
-
-  void _onEstructuraMineralChanged(String? nuevaEstructura) {
-    setState(() {
-      estructuraMineralSeleccionada = nuevaEstructura;
-      nivelSeleccionado = null;
-      tipoLaborSeleccionado = null;
-      laborSeleccionado = null;
-      alaSeleccionado = null;
-      _actualizarFiltros();
-    });
-  }
-
-  void _onNivelChanged(String? nuevoNivel) {
-    setState(() {
-      nivelSeleccionado = nuevoNivel;
-      tipoLaborSeleccionado = null;
-      laborSeleccionado = null;
-      alaSeleccionado = null;
-      _actualizarFiltros();
-    });
-  }
-
-  void _onTipoLaborChanged(String? nuevoTipoLabor) {
-    setState(() {
-      tipoLaborSeleccionado = nuevoTipoLabor;
-      laborSeleccionado = null;
-      alaSeleccionado = null;
-      _actualizarFiltros();
-    });
-  }
-
-  void _onLaborChanged(String? nuevoLabor) {
-    setState(() {
-      laborSeleccionado = nuevoLabor;
-      alaSeleccionado = null;
-      _actualizarFiltros();
-    });
   }
 
   void _onAlaChanged(String? nuevoAla) {
@@ -1008,44 +934,49 @@ class _DialogoFormularioPerforacionState
       return;
     }
 
-    if (minaSeleccionada == null ||
-        zonaSeleccionada == null ||
-        areaSeleccionada == null ||
-        faseSeleccionada == null ||
-        estructuraMineralSeleccionada == null ||
-        nivelSeleccionado == null ||
-        tipoLaborSeleccionado == null ||
-        laborSeleccionado == null) {
+    if (laborSeleccionado == null || laborSeleccionado!.isEmpty) {
       _mostrarSnackbar(
-        'Complete toda la ubicacion del frente antes de guardar',
+        'Debe seleccionar un frente de trabajo',
         Colors.orange,
       );
       return;
     }
 
+    final resolvedLaborId = usarFrentePlanificado
+        ? laborAsignadaSeleccionada?.laborId
+        : selectedLaborFromCatalogo?.laborId;
+
     Map<String, dynamic> datosFormulario = {
       'frente_origen': usarFrentePlanificado ? 'planificado' : 'otro_frente',
+      'labor_id': resolvedLaborId,
       'mina': minaSeleccionada ?? '',
       'zona': zonaSeleccionada ?? '',
       'area': areaSeleccionada ?? '',
       'fase': faseSeleccionada ?? '',
       'estructura_mineral': estructuraMineralSeleccionada ?? '',
-      'tipo_labor': tipoLaborSeleccionado ?? '', // Ahora primero
+      'tipo_labor': tipoLaborSeleccionado ?? '',
       'labor': laborSeleccionado ?? '',
       'ala': alaSeleccionado ?? '',
-      'nivel': nivelSeleccionado ?? '', // Ahora último
-      // Nuevos campos para cada taladro
-      'n_taladros_produccion': nTaladrosProduccionController.text,
-      'metros_perforados_produccion': metrosPerforadosProduccionController.text,
-      'n_taladros_rimados': nTaladrosRimadosController.text,
-      'metros_perforados_rimados': metrosPerforadosRimadosController.text,
-      'n_taladros_alivio': nTaladrosAlivioController.text,
-      'metros_perforados_alivio': metrosPerforadosAlivioController.text,
-      'n_taladros_repaso': nTaladrosRepasoController.text,
-      'metros_perforados_repaso': metrosPerforadosRepasoController.text,
-
-      'long_barras': longitudBarraSeleccionada ?? '',
-      'num_barras': numBarrasController.text,
+      'nivel': nivelSeleccionado ?? '',
+      'n_taladros_produccion':
+          int.tryParse(nTaladrosProduccionController.text) ?? 0,
+      'metros_perforados_produccion':
+          double.tryParse(metrosPerforadosProduccionController.text) ?? 0.0,
+      'n_taladros_rimados':
+          int.tryParse(nTaladrosRimadosController.text) ?? 0,
+      'metros_perforados_rimados':
+          double.tryParse(metrosPerforadosRimadosController.text) ?? 0.0,
+      'n_taladros_alivio':
+          int.tryParse(nTaladrosAlivioController.text) ?? 0,
+      'metros_perforados_alivio':
+          double.tryParse(metrosPerforadosAlivioController.text) ?? 0.0,
+      'n_taladros_repaso':
+          int.tryParse(nTaladrosRepasoController.text) ?? 0,
+      'metros_perforados_repaso':
+          double.tryParse(metrosPerforadosRepasoController.text) ?? 0.0,
+      'long_barras':
+          double.tryParse(longitudBarraSeleccionada ?? '') ?? 0.0,
+      'num_barras': int.tryParse(numBarrasController.text) ?? 0,
       'tipo_perforacion': tipoPerforacionSeleccionado ?? '',
       'tipo_perforacion_id': _obtenerIdTipoPerforacion(
         tipoPerforacionSeleccionado,
@@ -1747,131 +1678,63 @@ class _DialogoFormularioPerforacionState
   }
 
   Widget _buildManualFrontSelectors() {
+    final planLaborIds = planMetrajeTLCompletos.map((p) => p.laborId).toSet();
+    final laboresFiltradas = laboresCatalogo
+        .where((l) => planLaborIds.contains(l.laborId))
+        .toList()
+      ..sort((a, b) => a.nombreLabor.compareTo(b.nombreLabor));
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Mina',
-                value: minaSeleccionada,
-                items: filteredMinas,
-                onChanged: isEditable ? _onMinaChanged : null,
-                icon: Icons.terrain,
+        DropdownButtonFormField<int>(
+          value: selectedLaborFromCatalogo?.laborId,
+          decoration: const InputDecoration(
+            labelText: 'Seleccionar labor',
+            border: OutlineInputBorder(),
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+          items: laboresFiltradas.map((labor) {
+            return DropdownMenuItem<int>(
+              value: labor.laborId,
+              child: Text(
+                labor.nombreLabor,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Zona',
-                value: zonaSeleccionada,
-                items: filteredZonas,
-                onChanged: (minaSeleccionada != null && isEditable)
-                    ? _onZonaChanged
-                    : null,
-                icon: Icons.map,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Area',
-                value: areaSeleccionada,
-                items: filteredAreas,
-                onChanged: (zonaSeleccionada != null && isEditable)
-                    ? _onAreaChanged
-                    : null,
-                icon: Icons.grid_view,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Fase',
-                value: faseSeleccionada,
-                items: filteredFases,
-                onChanged: (areaSeleccionada != null && isEditable)
-                    ? _onFaseChanged
-                    : null,
-                icon: Icons.layers,
-              ),
-            ),
-          ],
+            );
+          }).toList(),
+          onChanged: isEditable
+              ? (laborId) {
+                  final match = laboresCatalogo.cast<DimLabor?>().firstWhere(
+                    (l) => l?.laborId == laborId,
+                    orElse: () => null,
+                  );
+                  if (match != null) {
+                    _onLaborFromCatalogSelected(match);
+                  }
+                }
+              : null,
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Estructura Mineral',
-                value: estructuraMineralSeleccionada,
-                items: filteredEstructurasMinerales,
-                onChanged: (faseSeleccionada != null && isEditable)
-                    ? _onEstructuraMineralChanged
-                    : null,
-                icon: Icons.account_tree,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Nivel',
-                value: nivelSeleccionado,
-                items: filteredNiveles,
-                onChanged: (estructuraMineralSeleccionada != null && isEditable)
-                    ? _onNivelChanged
-                    : null,
-                icon: Icons.height,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Tipo Labor',
-                value: tipoLaborSeleccionado,
-                items: filteredTiposLabor,
-                onChanged: (nivelSeleccionado != null && isEditable)
-                    ? _onTipoLaborChanged
-                    : null,
-                icon: Icons.construction,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Labor',
-                value: laborSeleccionado,
-                items: filteredLabores,
-                onChanged: (tipoLaborSeleccionado != null && isEditable)
-                    ? _onLaborChanged
-                    : null,
-                icon: Icons.factory,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Ala',
-                value: alaSeleccionado,
-                items: filteredAlas,
-                onChanged: (laborSeleccionado != null && isEditable)
-                    ? _onAlaChanged
-                    : null,
-                icon: Icons.compare_arrows,
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Expanded(child: SizedBox.shrink()),
-            const SizedBox(width: 8),
-            const Expanded(child: SizedBox.shrink()),
-            const SizedBox(width: 8),
-            const Expanded(child: SizedBox.shrink()),
-          ],
-        ),
+        if (selectedLaborFromCatalogo != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Ubicación: ${minaSeleccionada ?? '-'} / ${zonaSeleccionada ?? '-'} / ${areaSeleccionada ?? '-'} / ${faseSeleccionada ?? '-'}',
+            style: const TextStyle(fontSize: 12),
+          ),
+          Text(
+            '${estructuraMineralSeleccionada ?? '-'} / Nivel ${nivelSeleccionado ?? '-'} / ${tipoLaborSeleccionado ?? '-'}',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          _buildCompactDropdownField(
+            label: 'Ala',
+            value: alaSeleccionado,
+            items: _uniqueSorted(alasCatalogo.map((a) => a.nombre)),
+            onChanged: isEditable ? _onAlaChanged : null,
+            icon: Icons.compare_arrows,
+          ),
+        ],
       ],
     );
   }

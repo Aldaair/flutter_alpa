@@ -744,6 +744,7 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
 
       // IMPORTANTE: Crear el objeto operacion con TODOS los campos de perforación
       Map<String, dynamic> operacionData = {
+        'labor_id': data['labor_id'],
         'nivel': data['nivel'] ?? '',
         'tipo_labor': data['tipo_labor'] ?? '',
         'labor': data['labor'] ?? '',
