@@ -10,10 +10,10 @@ import 'package:i_miner/services/get%20nube/llamadas/ApiServiceChecklistTelemand
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceHorometros%20.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceJefeGuardia.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceTipoEquipo.dart';
+import 'package:i_miner/services/get%20nube/llamadas/ApiServiceEquipoHorometroTipos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceTipoPerforacion.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_checklist.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_estado.dart';
-import 'package:i_miner/services/get%20nube/llamadas/api_service_guardia.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_longitud_barras.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_mallas.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_origen_destino.dart';
@@ -52,7 +52,6 @@ class ActualizacionService {
       "Tipos Perforación": fetchTiposPerforacion,
       //"Secciones": fetchSecciones,
       "Equipos": fetchEquipo,
-      "Tipos Equipo": () => fetchTiposEquipo(token),
       "Longitud Barras": fetchLongitudBarras,
       "Pernos": fetchPernos,
       "Mallas": fetchMallas,
@@ -61,12 +60,12 @@ class ActualizacionService {
       "Plan Metraje": () => fetchPlanMetrajeTL(),
       //"Plan Producción": () => fetchPlanProduccionConFecha(),
       "Origen y Destino": () => fetchOrigenDestino(),
-      "Accesorios": () => fetchAccesorios(),
+      //"Accesorios": () => fetchAccesorios(),
       //"Explosivos":() => fetchExplosivos(),
       //"Explosivos Uni":() => fetchExplosivosUni(),
       //"Numero de retardos":() => fetchNumeroRetardos(),
       "Jefes Guardia": fetchJefesGuardia,
-      "Guardias": fetchGuardias,
+      //"Guardias": fetchGuardias,
       "Minas": fetchMinas,
       "Dim Zonas": fetchDimZonas,
       "Areas": fetchAreas,
@@ -277,23 +276,6 @@ class ActualizacionService {
     }
   }
 
-  Future<void> fetchTiposEquipo(String token) async {
-    final apiService = ApiServiceTipoEquipo();
-
-    try {
-      final tipos = await apiService.fetchTiposEquipo(token);
-
-      print("✅ Tipos de equipo guardados en SQLite:");
-
-      for (var tipo in tipos) {
-        print("Tipo de Equipo: ${tipo.nombre}");
-      }
-    } catch (e) {
-      print("❌ Error al actualizar tipos de equipo: $e");
-      throw e;
-    }
-  }
-
   Future<void> fetchLongitudBarras() async {
     final apiService = ApiServiceLongitudBarras();
 
@@ -346,12 +328,19 @@ class ActualizacionService {
   }
 
   Future<void> fetchHorometros() async {
-    final apiService = ApiServiceHorometros();
+    //final apiServiceHorometros = ApiServiceHorometros();
+    final apiServiceTipos = ApiServiceTipoHorometro();
+    final apiServiceEqTipos = ApiServiceEquipoHorometroTipos();
 
     try {
-      await apiService.fetchHorometros(token);
+      //await apiServiceHorometros.fetchHorometros(token);
+      //print("✅ Horómetros guardados en SQLite correctamente");
 
-      print("✅ Horómetros guardados en SQLite correctamente");
+      await apiServiceTipos.fetchTiposHorometro(token);
+      print("✅ Tipos de horómetro guardados en SQLite correctamente");
+
+      await apiServiceEqTipos.fetchEquipoHorometroTipos(token);
+      print("✅ Equipo-Horómetro tipos guardados en SQLite correctamente");
     } catch (e) {
       print("❌ Error al actualizar horómetros: $e");
       throw e;
@@ -445,23 +434,6 @@ class ActualizacionService {
       }
     } catch (e) {
       print("❌ Error al actualizar jefes de guardia: $e");
-      throw e;
-    }
-  }
-
-  Future<void> fetchGuardias() async {
-    final apiService = ApiServiceGuardia();
-
-    try {
-      final guardias = await apiService.fetchGuardias(token);
-
-      print("✅ Guardias guardadas en SQLite:");
-
-      for (var guardia in guardias) {
-        print("Guardia: ${guardia.guardia}");
-      }
-    } catch (e) {
-      print("❌ Error al actualizar guardias: $e");
       throw e;
     }
   }

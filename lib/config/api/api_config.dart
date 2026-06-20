@@ -17,7 +17,8 @@ class ApiConfig {
 
   static const String PlanMensualEndpoint = '/PlanMensual/';
   static const String misLaboresEndpoint = '/mis-labores';
-  static const String TipoEquipoEndpoint = '/tipo-equipos/';
+  static const String tipoHorometroEndpoint = '/tipo-horometro';
+  static const String equipoHorometroTiposEndpoint = '/Equipo/horometro-tipos';
   static const String checklistTelemandoEndpoint = '/checklists-telemando';
   static const String ZonasEndpoint = '/planes/zonas';
   static const String longitudBarrasEndpoint = '/longitud-barras/';

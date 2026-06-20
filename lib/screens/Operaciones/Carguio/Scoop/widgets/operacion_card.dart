@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/Equipo.dart';
-import 'package:i_miner/models/TipoEquipo.dart';
+import 'package:i_miner/models/tipo_horometro.dart'; // TipoHorometro
 import 'package:i_miner/screens/widgets/custom_dropdown.dart';
 import 'package:i_miner/screens/widgets/custom_field.dart';
 
@@ -52,7 +52,7 @@ class _OperacionCardState extends State<OperacionCard> {
   List<String> capacidadesFiltradas = [];
   Map<String, String> capacidadPorCodigo = {};
 
-  List<TipoEquipo> tiposEquipo = [];
+  List<TipoHorometro> tiposEquipo = [];
   Map<int, bool> tiposSeleccionados = {};
 
   bool get operacionBloqueada => widget.operacionExistente != null;
@@ -288,7 +288,7 @@ class _OperacionCardState extends State<OperacionCard> {
   Future<void> _cargarTiposEquipo() async {
     try {
       final dbHelper = DatabaseHelper();
-      final List<TipoEquipo> tipos = await dbHelper.getTiposEquipo();
+      final List<TipoHorometro> tipos = await dbHelper.getTiposHorometro();
 
       setState(() {
         tiposEquipo = tipos;

@@ -25,7 +25,8 @@ import 'package:i_miner/models/Explosivo.dart';
 import 'package:i_miner/models/PlanMensual.dart';
 import 'package:i_miner/models/PlanMetraje.dart';
 import 'package:i_miner/models/PlanProduccion.dart';
-import 'package:i_miner/models/TipoEquipo.dart';
+import 'package:i_miner/models/tipo_horometro.dart';
+import 'package:i_miner/models/EquipoHorometroTipo.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -36,7 +37,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 14;
+  static const int _sharedCatalogDbVersion = 15;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -191,9 +192,19 @@ CREATE TABLE Equipo (
 ''');
 
     await db.execute('''
-CREATE TABLE TipoEquipo (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE tipo_horometro (
+  id INTEGER PRIMARY KEY,
   nombre TEXT NOT NULL
+)
+''');
+
+    await db.execute('''
+CREATE TABLE equipo_horometro_tipos (
+  equipo_id INTEGER NOT NULL,
+  equipo_nombre TEXT,
+  tipo_horometro_id INTEGER NOT NULL,
+  tipo_horometro_nombre TEXT,
+  PRIMARY KEY (equipo_id, tipo_horometro_id)
 )
 ''');
 
@@ -697,6 +708,44 @@ CREATE TABLE IF NOT EXISTS tipo_perforaciones (
   nombre TEXT NOT NULL,
   proceso TEXT NULL,
   permitido_medicion INTEGER NOT NULL DEFAULT 0
+)
+''');
+      }
+    }
+    if (oldVersion < 15) {
+      // Rename TipoEquipo → tipo_horometro
+      if (!await _tablaExiste(db, 'tipo_horometro')) {
+        if (await _tablaExiste(db, 'TipoEquipo')) {
+          final oldData = await db.query('TipoEquipo');
+          await db.execute('''
+CREATE TABLE tipo_horometro (
+  id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL
+)
+''');
+          for (var row in oldData) {
+            await db.insert('tipo_horometro', {'nombre': row['nombre']});
+          }
+          await db.execute('DROP TABLE IF EXISTS TipoEquipo');
+        } else {
+          await db.execute('''
+CREATE TABLE tipo_horometro (
+  id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL
+)
+''');
+        }
+      }
+
+      // Create equipo_horometro_tipos
+      if (!await _tablaExiste(db, 'equipo_horometro_tipos')) {
+        await db.execute('''
+CREATE TABLE equipo_horometro_tipos (
+  equipo_id INTEGER NOT NULL,
+  equipo_nombre TEXT,
+  tipo_horometro_id INTEGER NOT NULL,
+  tipo_horometro_nombre TEXT,
+  PRIMARY KEY (equipo_id, tipo_horometro_id)
 )
 ''');
       }
@@ -1498,7 +1547,6 @@ CREATE TABLE numero_retardos (
   cantidad INTEGER NOT NULL
 )
 ''');
-
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -1592,16 +1640,13 @@ CREATE TABLE numero_retardos (
       }
     }
     if (oldVersion < 6) {
-      /// Tabla TipoEquipo
       if (!await _tablaExiste(db, 'TipoEquipo')) {
         await db.execute('''
-      CREATE TABLE TipoEquipo (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT NOT NULL
-      )
-    ''');
-
-        print("✅ Tabla TipoEquipo creada en versión 6");
+CREATE TABLE TipoEquipo (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL
+)
+''');
       }
     }
     if (oldVersion < 7) {
@@ -2296,7 +2341,8 @@ CREATE TABLE UsuarioEquipo (
 
   static const _sharedTables = {
     'Equipo',
-    'TipoEquipo',
+    'tipo_horometro',
+    'equipo_horometro_tipos',
     'Seccion',
     'Guardia',
     'jefe_guardias',
@@ -2547,11 +2593,23 @@ CREATE TABLE UsuarioEquipo (
     return result;
   }
 
-  Future<List<TipoEquipo>> getTiposEquipo() async {
-    final db = await database; // Obtenemos la instancia de la DB
-    final List<Map<String, dynamic>> maps = await db.query('TipoEquipo');
+  Future<List<TipoHorometro>> getTiposHorometro() async {
+    final db = await sharedCatalogDatabase;
+    final List<Map<String, dynamic>> maps = await db.query('tipo_horometro');
 
-    return List.generate(maps.length, (i) => TipoEquipo.fromJson(maps[i]));
+    return List.generate(maps.length, (i) => TipoHorometro.fromJson(maps[i]));
+  }
+
+  Future<List<EquipoHorometroTipo>> getEquipoHorometroTipos() async {
+    final db = await sharedCatalogDatabase;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'equipo_horometro_tipos',
+    );
+
+    return List.generate(
+      maps.length,
+      (i) => EquipoHorometroTipo.fromJson(maps[i]),
+    );
   }
 
   //PARA TODOS LAS OPERACIONES------------------------------------------------------------
@@ -11518,7 +11576,9 @@ CREATE TABLE UsuarioEquipo (
 
   Future<List<TipoPerforacion>> getTiposPerforacion() async {
     final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query('tipo_perforaciones');
+    final List<Map<String, dynamic>> maps = await db.query(
+      'tipo_perforaciones',
+    );
     return List.generate(maps.length, (i) => TipoPerforacion.fromJson(maps[i]));
   }
 
