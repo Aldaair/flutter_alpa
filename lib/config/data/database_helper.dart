@@ -28,7 +28,6 @@ import 'package:i_miner/models/PlanProduccion.dart';
 import 'package:i_miner/models/tipo_horometro.dart';
 import 'package:i_miner/models/EquipoHorometroTipo.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseHelper {
@@ -2750,7 +2749,7 @@ CREATE TABLE UsuarioEquipo (
           await txn.insert('UsuarioEquipo', {
             'codigo_dni': dni,
             'proceso_id': (row as Map)['proceso_id'],
-            'equipo_id': (row as Map)['equipo_id'],
+            'equipo_id': row['equipo_id'],
           });
         }
       }

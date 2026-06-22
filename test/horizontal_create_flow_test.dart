@@ -40,19 +40,16 @@ void main() {
     () {
       final missingEquipo = buildHorizontalCreatePlan(
         equipoId: null,
-        zonaId: 30,
         jefeGuardiaId: 40,
         operadorId: 44,
       );
       final missingSeccion = buildHorizontalCreatePlan(
         equipoId: 10,
-        zonaId: null,
         jefeGuardiaId: 40,
         operadorId: 44,
       );
       final missingJefe = buildHorizontalCreatePlan(
         equipoId: 10,
-        zonaId: 30,
         jefeGuardiaId: null,
         operadorId: 44,
       );
@@ -71,7 +68,6 @@ void main() {
     () {
       final plan = buildHorizontalCreatePlan(
         equipoId: 10,
-        zonaId: 30,
         jefeGuardiaId: 40,
         operadorId: null,
       );
@@ -87,7 +83,6 @@ void main() {
     () {
       final plan = buildHorizontalCreatePlan(
         equipoId: 10,
-        zonaId: 30,
         jefeGuardiaId: 40,
         operadorId: 44,
       );
