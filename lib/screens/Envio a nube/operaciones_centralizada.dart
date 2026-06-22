@@ -3,15 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/Mediciones/horizontal/detalle_mediciones_screen.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/detalle_envio_screen.dart';
-import 'package:i_miner/services/envio%20nube/AnfoChanger/exportar_service.dart';
-import 'package:i_miner/services/envio%20nube/Carguio/exportar_service.dart';
-import 'package:i_miner/services/envio%20nube/Dumper/ExportarDumperService.dart';
-import 'package:i_miner/services/envio%20nube/Rompebancos/exportar_service.dart';
-import 'package:i_miner/services/envio%20nube/Scalamin/ExportarScalaminService.dart';
-import 'package:i_miner/services/envio%20nube/SCISSOR/exportar_service.dart';
-import 'package:i_miner/services/envio%20nube/Sostenimiento/exportar_service.dart';
-import 'package:i_miner/services/envio%20nube/horizontal/exportar_service.dart';
-import 'package:i_miner/services/envio%20nube/largo/exportar_service.dart';
+import 'package:i_miner/services/envio%20nube/exportar_service.dart';
 
 class SeccionesScreen extends StatefulWidget {
   @override
@@ -43,7 +35,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
             _db.eliminarOperacionTalLargoFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvio(id),
         prepararDatosExportar: (ids, data) =>
-            ExportarService(_db).prepararDatosParaExportar(ids, data),
+            ExportarService(_db).prepararDatosParaExportar('tal_largo', ids, data),
         formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
@@ -55,9 +47,9 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
             _db.eliminarOperacionTalHorizontalFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioHorizontal(id),
         prepararDatosExportar: (ids, data) =>
-            ExportarHorizontalService(_db).prepararDatosParaExportar(ids, data),
+            ExportarService(_db).prepararDatosParaExportar('tal_horizontal', ids, data),
         formatearJson: (data) =>
-            ExportarHorizontalService(_db).formatearJson(data),
+            ExportarService(_db).formatearJson(data),
         isItemExportable: (item) =>
             item['identity_version'] == 2 && item['syncable'] == 1,
       ),
@@ -70,9 +62,9 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
             _db.eliminarOperacionTalEmpernadorFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioEmpernador(id),
         prepararDatosExportar: (ids, data) =>
-            ExportarEmpernadorService(_db).prepararDatosParaExportar(ids, data),
+            ExportarService(_db).prepararDatosParaExportar('empernador', ids, data),
         formatearJson: (data) =>
-            ExportarEmpernadorService(_db).formatearJson(data),
+            ExportarService(_db).formatearJson(data),
       ),
 
       "ROMPEBANCO": (context) => DetalleEnvioScreen(
@@ -83,9 +75,9 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
             _db.eliminarOperacionTalRompeBacoFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioRompeBancos(id),
         prepararDatosExportar: (ids, data) =>
-            ExportarRompebancoService(_db).prepararDatosParaExportar(ids, data),
+            ExportarService(_db).prepararDatosParaExportar('rompebanco', ids, data),
         formatearJson: (data) =>
-            ExportarRompebancoService(_db).formatearJson(data),
+            ExportarService(_db).formatearJson(data),
       ),
 
       "CARGUÍO": (context) => DetalleEnvioScreen(
@@ -96,9 +88,9 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
             _db.eliminarOperacionTalCarguioFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioCarguio(id),
         prepararDatosExportar: (ids, data) =>
-            ExportarCarguioService(_db).prepararDatosParaExportar(ids, data),
+            ExportarService(_db).prepararDatosParaExportar('carguio', ids, data),
         formatearJson: (data) =>
-            ExportarCarguioService(_db).formatearJson(data),
+            ExportarService(_db).formatearJson(data),
       ),
 
       "DUMPER": (context) => DetalleEnvioScreen(
@@ -109,9 +101,9 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
             _db.eliminarOperacionTalDumperFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioDumper(id),
         prepararDatosExportar: (ids, data) =>
-            ExportarDumperService(_db).prepararDatosParaExportar(ids, data),
+            ExportarService(_db).prepararDatosParaExportar('dumper', ids, data),
         formatearJson: (data) =>
-            ExportarDumperService(_db).formatearJson(data),
+            ExportarService(_db).formatearJson(data),
       ),
 
       "ANFOCHANGER": (context) => DetalleEnvioScreen(
@@ -122,10 +114,9 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
             _db.eliminarOperacionTalAnfochangerFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioRAnfoChanger(id),
         prepararDatosExportar: (ids, data) =>
-            ExportarAnfoChangerService(_db)
-                .prepararDatosParaExportar(ids, data),
+            ExportarService(_db).prepararDatosParaExportar('anfochanger', ids, data),
         formatearJson: (data) =>
-            ExportarAnfoChangerService(_db).formatearJson(data),
+            ExportarService(_db).formatearJson(data),
       ),
 
       "SCISSOR": (context) => DetalleEnvioScreen(
@@ -136,9 +127,9 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
             _db.eliminarOperacionTalScissorFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioscissor(id),
         prepararDatosExportar: (ids, data) =>
-            ExportarScissorService(_db).prepararDatosParaExportar(ids, data),
+            ExportarService(_db).prepararDatosParaExportar('scissor', ids, data),
         formatearJson: (data) =>
-            ExportarScissorService(_db).formatearJson(data),
+            ExportarService(_db).formatearJson(data),
       ),
 
       "SCALAMIN": (context) => DetalleEnvioScreen(
@@ -149,9 +140,9 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
             _db.eliminarOperacionTalScalaminFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioScalamin(id),
         prepararDatosExportar: (ids, data) =>
-            ExportarScalaminService(_db).prepararDatosParaExportar(ids, data),
+            ExportarService(_db).prepararDatosParaExportar('scalamin', ids, data),
         formatearJson: (data) =>
-            ExportarScalaminService(_db).formatearJson(data),
+            ExportarService(_db).formatearJson(data),
       ),
 
       "MEDICIONES TAL. HORIZONTAL": (context) =>

@@ -2,21 +2,22 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/services/envio%20nube/horizontal/exportar_service.dart';
+import 'package:i_miner/services/envio%20nube/exportar_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late ExportarHorizontalService service;
+  late ExportarService service;
 
   setUp(() {
-    service = ExportarHorizontalService(DatabaseHelper());
+    service = ExportarService(DatabaseHelper());
   });
 
   test(
     'exports persisted remote IDs for syncable api v2 horizontal rows',
     () async {
       final jsonData = await service.prepararDatosParaExportar(
+        'tal_horizontal',
         {10},
         [
           {
@@ -56,7 +57,7 @@ void main() {
       expect(payload['jefe_guardia_id'], 40);
       expect(payload['operador'], 'Operator label snapshot');
       expect(payload['equipo'], 'Equipment label snapshot');
-      expect(jsonDecode(payload['registros'] as String), [
+      expect(payload['registros'], [
         {'estado': 'ok'},
       ]);
     },
@@ -66,6 +67,7 @@ void main() {
     'exports ids without depending on legacy label-based identity',
     () async {
       final jsonData = await service.prepararDatosParaExportar(
+        'tal_horizontal',
         {11},
         [
           {
@@ -107,6 +109,7 @@ void main() {
     'skips drafts and legacy rows when exporting horizontal api v2 payloads',
     () async {
       final jsonData = await service.prepararDatosParaExportar(
+        'tal_horizontal',
         {12, 13, 14},
         [
           {
