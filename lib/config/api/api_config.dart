@@ -44,4 +44,16 @@ class ApiConfig {
   static const String laboresEndpoint = '/planes/labores';
   static const String turnosEndpoint = '/planes/turnos';
   static const String procesosEndpoint = '/procesos';
+
+  // API v2 — operaciones
+  static const String operacionesV2Base = '/operaciones-v2';
+  static const String operacionTalLargoEndpoint = '$operacionesV2Base/tal-largo';
+  static const String operacionTalHorizontalEndpoint =
+      '$operacionesV2Base/tal-horizontal';
+  static const String operacionCarguioEndpoint = '$operacionesV2Base/carguio';
+  static const String operacionEmpernadorEndpoint =
+      '$operacionesV2Base/empernador';
+  static const String operacionScalaminEndpoint =
+      '$operacionesV2Base/scalamin';
+  static const String operacionScissorEndpoint = '$operacionesV2Base/scissor';
 }
