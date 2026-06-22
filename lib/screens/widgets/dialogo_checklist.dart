@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:i_miner/core/checklist_helper.dart';
 
 class DialogoChecklist extends StatefulWidget {
   final int operacionId;
@@ -50,7 +51,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
 
       final checklistItem = ChecklistItem(
         i + 1,
-        item['descripcion'] ?? 'Sin descripcion',
+        item['nombre'] ?? 'Sin nombre',
         value: item['decision'] == 1
             ? true
             : item['decision'] == 0
@@ -82,9 +83,10 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
       }
     }
 
+    final datosALimpiar = ChecklistHelper.stripForSave(datosAGuardar);
     final guardado = await widget.onSaveChecklist(
       widget.operacionId,
-      datosAGuardar,
+      datosALimpiar,
     );
 
     if (!mounted) return;

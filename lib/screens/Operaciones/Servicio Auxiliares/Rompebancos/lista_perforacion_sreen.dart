@@ -14,6 +14,7 @@ import 'package:i_miner/screens/widgets/operator_selector_card.dart';
 
 import 'package:i_miner/screens/widgets/operacion_card.dart';
 import 'package:i_miner/screens/widgets/operacion_card_config.dart';
+import 'package:i_miner/core/checklist_helper.dart';
 import 'widgets/botones_estado.dart';
 import 'widgets/tabla_operaciones.dart';
 import 'widgets/botones_acciones_inferiores.dart'; // Asegúrate de importar el nuevo archivo
@@ -981,10 +982,9 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
 
     List<Map<String, dynamic>> checkListJson = checklistItems.map((item) {
       return {
-        'descripcion': item['nombre'],
+        'id': item['id'],
         'decision': 0,
         'observacion': '',
-        'categoria': item['categoria'],
       };
     }).toList();
 
@@ -1173,8 +1173,13 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
     String estado = operacionActual['estado'] ?? 'OPERATIVO';
 
     // Cargar el checklist existente
-    List<Map<String, dynamic>> checklistData = await DatabaseHelper()
+    List<Map<String, dynamic>> savedDecisions = await DatabaseHelper()
         .getCheckListByOperacionIdRompeBaco(operacionId);
+    List<Map<String, dynamic>> checklistData =
+        await ChecklistHelper.enrichForDisplay(
+      proceso: 'ROMPEBANCOS',
+      savedDecisions: savedDecisions,
+    );
 
     showDialog(
       context: context,
@@ -1182,7 +1187,7 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
         return DialogoChecklist(
           operacionId: operacionId,
           estado: estado,
-          checklistData: checklistData, // ✅ pasamos los datos cargados
+          checklistData: checklistData,
           onSaveChecklist: (id, data) =>
               DatabaseHelper().updateCheckListRompeBaco(id, data),
           primaryColor: primaryColor,
