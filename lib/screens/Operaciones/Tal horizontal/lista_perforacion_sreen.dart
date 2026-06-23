@@ -53,8 +53,6 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
     'FUERA DE PLAN': const Color(0xFFF44336),
   };
 
-  List<Map<String, dynamic>> estadosBD = [];
-
   final Map<String, List<Map<String, String>>> datadialog = {
     'OPERATIVO': [],
     'DEMORA': [],
@@ -68,7 +66,6 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
     super.initState();
     selectedTurno = _getTurnoBasedOnTime();
     _initializeScreen();
-    obtenerEstadosBD();
   }
 
   bool get _isMaster => widget.rolUsuario == 'Master';
@@ -118,26 +115,6 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
 
     final operator = selected.first;
     return '${operator['nombres'] ?? ''} ${operator['apellidos'] ?? ''}'.trim();
-  }
-
-  void obtenerEstadosBD() async {
-    estadosBD = await DatabaseHelper().getEstadosBD('PERFORACIÓN HORIZONTAL');
-
-    // Limpiamos la lista antes de actualizar
-    datadialog.forEach((key, value) => value.clear());
-
-    // Agregar los estados filtrados a la lista correcta
-    for (var estado in estadosBD) {
-      String estadoPrincipal = estado['estado_principal'];
-      if (datadialog.containsKey(estadoPrincipal)) {
-        datadialog[estadoPrincipal]?.add({
-          "Nombre": estado['tipo_estado'],
-          "Código": estado['codigo'].toString(),
-        });
-      }
-    }
-
-    setState(() {});
   }
 
   String _getTurnoBasedOnTime() {
@@ -989,27 +966,13 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
       return;
     }
 
-    // 🔥 1. OBTENER HORÓMETROS DE TALADRO HORIZONTAL
-    List<Map<String, dynamic>> horometros = await dbHelper
-        .getHorometrosPorOperacion('tal_horizontal');
-
-    print("✅ Horómetros tal_horizontal:");
-
-    for (var h in horometros) {
-      print("Tipo: ${h['tipo_horometro']} - Final: ${h['final']}");
-    }
-
     // 🔹 Obtener la lista de checklist para este tipo de operación
     List<Map<String, dynamic>> checklistItems = await DatabaseHelper()
         .getCheckListByProceso('PERFORACIÓN HORIZONTAL');
 
     // 🔹 Convertir la lista de items a la estructura JSON que quieres guardar
     List<Map<String, dynamic>> checkListJson = checklistItems.map((item) {
-      return {
-        'id': item['id'],
-        'decision': 0,
-        'observacion': '',
-      };
+      return {'id': item['id'], 'decision': 0, 'observacion': ''};
     }).toList();
 
     // 🔹 Insertar la operación
@@ -1034,7 +997,7 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
       identityVersion: createPlan.identityVersion,
       syncable: createPlan.syncable ? 1 : 0,
       checkListJson: checkListJson, // <-- Pasamos la lista de check_list
-      horometrosBase: horometros,
+      //horometrosBase: horometros,
     );
 
     // 🔹 Refrescar la UI
@@ -1207,9 +1170,9 @@ class _TaladroHorizontalScreenState extends State<TaladroHorizontalScreen> {
         .getCheckListByOperacionIdHorizontal(operacionId);
     List<Map<String, dynamic>> checklistData =
         await ChecklistHelper.enrichForDisplay(
-      proceso: 'PERFORACIÓN HORIZONTAL',
-      savedDecisions: savedDecisions,
-    );
+          proceso: 'PERFORACIÓN HORIZONTAL',
+          savedDecisions: savedDecisions,
+        );
 
     showDialog(
       context: context,

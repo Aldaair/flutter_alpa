@@ -85,7 +85,6 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
     
     try {
       await Future.wait([
-        _cargarPlanesCombinados(),
         _cargarDestinosSCOOPTRAM(),
       ]);
     } catch (e) {
@@ -115,16 +114,10 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
       final dbHelper = DatabaseHelper();
       
       final results = await Future.wait([
-        dbHelper.getPlanesMensual(),
-        dbHelper.getPlanesProduccion(),
-        dbHelper.getPlanesMetraje(),
         dbHelper.getOrigenDestino('SCOOPTRAM', 'ORIGEN'),
       ]);
       
-      planesMensualCompletos = results[0] as List<PlanMensual>;
-      planesProduccionCompletos = results[1] as List<PlanProduccion>;
-      planesMetrajeCompletos = results[2] as List<PlanMetraje>;
-      origenesScooptram = results[3] as List<Map<String, dynamic>>;
+      origenesScooptram = results[0] as List<Map<String, dynamic>>;
 
       Set<String> tiposLaborSet = {};
       Set<String> laboresSet = {};

@@ -21,12 +21,14 @@ class DialogoFormularioNoOpePerforacion extends StatefulWidget {
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
   }) : super(key: key);
-  
+
   @override
-  State<DialogoFormularioNoOpePerforacion> createState() => _DialogoFormularioNoPerforacionState();
+  State<DialogoFormularioNoOpePerforacion> createState() =>
+      _DialogoFormularioNoPerforacionState();
 }
 
-class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpePerforacion> {
+class _DialogoFormularioNoPerforacionState
+    extends State<DialogoFormularioNoOpePerforacion> {
   bool isEditable = false;
   bool isLoading = true;
 
@@ -34,10 +36,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
   final TextEditingController observacionesController = TextEditingController();
 
   // Variables para los campos seleccionables (NUEVO ORDEN)
-  String? tipoLaborSeleccionado;    // 1º
-  String? laborSeleccionado;         // 2º  
-  String? alaSeleccionado;           // 3º
-  String? nivelSeleccionado;         // 4º (manejado internamente, no visible)
+  String? tipoLaborSeleccionado; // 1º
+  String? laborSeleccionado; // 2º
+  String? alaSeleccionado; // 3º
+  String? nivelSeleccionado; // 4º (manejado internamente, no visible)
 
   // Opciones para los dropdowns
   List<String> opcionesNivel = [];
@@ -49,7 +51,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
   List<String> filteredTiposLabor = [];
   List<String> filteredLabores = [];
   List<String> filteredAlas = [];
-  List<String> filteredNiveles = [];  // Para filtrar niveles internamente
+  List<String> filteredNiveles = []; // Para filtrar niveles internamente
 
   // Almacenar objetos completos para referencia
   List<PlanMensual> planesMensualCompletos = [];
@@ -61,90 +63,6 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
     super.initState();
     isEditable = widget.estado.toLowerCase() != "cerrado";
     _cargarDatosIniciales();
-    _cargarDatosDesdeBD();
-  }
-
-  Future<void> _cargarDatosDesdeBD() async {
-    setState(() => isLoading = true);
-    
-    try {
-      await _cargarPlanesCombinados();
-    } catch (e) {
-      print("Error cargando datos: $e");
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> _cargarPlanesCombinados() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      
-      final results = await Future.wait([
-        dbHelper.getPlanesMensual(),
-        dbHelper.getPlanesProduccion(),
-        dbHelper.getPlanesMetraje(),
-      ]);
-      
-      planesMensualCompletos = results[0] as List<PlanMensual>;
-      planesProduccionCompletos = results[1] as List<PlanProduccion>;
-      planesMetrajeCompletos = results[2] as List<PlanMetraje>;
-
-      Set<String> nivelesSet = {};
-      Set<String> tiposLaborSet = {};
-      Set<String> laboresSet = {};
-      Set<String> alasSet = {};
-
-      // Procesar PlanMensual
-      for (var plan in planesMensualCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      // Procesar PlanProduccion
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      // Procesar PlanMetraje
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      setState(() {
-        opcionesNivel = nivelesSet.toList()..sort();
-        opcionesTipoLabor = tiposLaborSet.toList()..sort();
-        opcionesLabor = laboresSet.toList()..sort();
-        opcionesAla = alasSet.toList()..sort();
-
-        filteredTiposLabor = List.from(opcionesTipoLabor);
-        filteredLabores = List.from(opcionesLabor);
-        filteredAlas = List.from(opcionesAla);
-        filteredNiveles = List.from(opcionesNivel);
-      });
-
-    } catch (e) {
-      print("Error cargando planes combinados: $e");
-      setState(() {
-        opcionesNivel = ['Nv 300', 'Nv 320', 'Nv 340', 'Nv 360'];
-        opcionesTipoLabor = ['Galería', 'Crucero', 'Rampa', 'Chimenea'];
-        opcionesLabor = ['Labor 01', 'Labor 02', 'Labor 03', 'Labor 04'];
-        opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
-        
-        filteredTiposLabor = List.from(opcionesTipoLabor);
-        filteredLabores = List.from(opcionesLabor);
-        filteredAlas = List.from(opcionesAla);
-        filteredNiveles = List.from(opcionesNivel);
-      });
-    }
   }
 
   // NUEVAS FUNCIONES DE FILTRADO (orden: Tipo Labor → Labor → Ala)
@@ -179,28 +97,28 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
     // Filtrar Labores basado en Tipo Labor
     if (tipoLaborSeleccionado != null) {
       Set<String> laboresFiltrados = {};
-      
+
       for (var plan in planesMensualCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
             (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
+
       for (var plan in planesProduccionCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
             (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
+
       for (var plan in planesMetrajeCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
             (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
+
       filteredLabores = laboresFiltrados.toList()..sort();
     } else {
       filteredLabores = List.from(opcionesLabor);
@@ -209,7 +127,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
     // Filtrar Alas basado en Tipo Labor y Labor
     if (tipoLaborSeleccionado != null && laborSeleccionado != null) {
       Set<String> alasFiltrados = {};
-      
+
       for (var plan in planesMensualCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado &&
@@ -217,7 +135,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
           alasFiltrados.add(plan.ala!);
         }
       }
-      
+
       for (var plan in planesProduccionCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado &&
@@ -225,7 +143,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
           alasFiltrados.add(plan.ala!);
         }
       }
-      
+
       for (var plan in planesMetrajeCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado &&
@@ -233,7 +151,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
           alasFiltrados.add(plan.ala!);
         }
       }
-      
+
       filteredAlas = alasFiltrados.toList()..sort();
     } else {
       filteredAlas = List.from(opcionesAla);
@@ -243,12 +161,14 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
     // Filtra por tipo labor + labor + ala
     if (tipoLaborSeleccionado != null && laborSeleccionado != null) {
       Set<String> nivelesFiltrados = {};
-      
+
       for (var plan in planesMensualCompletos) {
-        bool coincideBase = plan.tipoLabor == tipoLaborSeleccionado &&
+        bool coincideBase =
+            plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado;
-        
-        bool coincideAla = alaSeleccionado == null ||
+
+        bool coincideAla =
+            alaSeleccionado == null ||
             alaSeleccionado!.isEmpty ||
             plan.ala == alaSeleccionado;
 
@@ -256,12 +176,14 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
           nivelesFiltrados.add(plan.nivel!);
         }
       }
-      
+
       for (var plan in planesProduccionCompletos) {
-        bool coincideBase = plan.tipoLabor == tipoLaborSeleccionado &&
+        bool coincideBase =
+            plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado;
-        
-        bool coincideAla = alaSeleccionado == null ||
+
+        bool coincideAla =
+            alaSeleccionado == null ||
             alaSeleccionado!.isEmpty ||
             plan.ala == alaSeleccionado;
 
@@ -269,12 +191,14 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
           nivelesFiltrados.add(plan.nivel!);
         }
       }
-      
+
       for (var plan in planesMetrajeCompletos) {
-        bool coincideBase = plan.tipoLabor == tipoLaborSeleccionado &&
+        bool coincideBase =
+            plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado;
-        
-        bool coincideAla = alaSeleccionado == null ||
+
+        bool coincideAla =
+            alaSeleccionado == null ||
             alaSeleccionado!.isEmpty ||
             plan.ala == alaSeleccionado;
 
@@ -282,12 +206,13 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
           nivelesFiltrados.add(plan.nivel!);
         }
       }
-      
+
       filteredNiveles = nivelesFiltrados.toList()..sort();
 
       // Auto seleccionar nivel internamente
       if (filteredNiveles.isNotEmpty) {
-        if (nivelSeleccionado == null || !filteredNiveles.contains(nivelSeleccionado)) {
+        if (nivelSeleccionado == null ||
+            !filteredNiveles.contains(nivelSeleccionado)) {
           nivelSeleccionado = filteredNiveles.first;
         }
       } else {
@@ -306,22 +231,24 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
     if (widget.datosIniciales != null) {
       setState(() {
         // Cargar en el nuevo orden (Tipo Labor → Labor → Ala → Nivel interno)
-        tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor']?.isNotEmpty == true 
-            ? widget.datosIniciales!['tipo_labor'] 
+        tipoLaborSeleccionado =
+            widget.datosIniciales!['tipo_labor']?.isNotEmpty == true
+            ? widget.datosIniciales!['tipo_labor']
             : null;
-        laborSeleccionado = widget.datosIniciales!['labor']?.isNotEmpty == true 
-            ? widget.datosIniciales!['labor'] 
+        laborSeleccionado = widget.datosIniciales!['labor']?.isNotEmpty == true
+            ? widget.datosIniciales!['labor']
             : null;
-        alaSeleccionado = widget.datosIniciales!['ala']?.isNotEmpty == true 
-            ? widget.datosIniciales!['ala'] 
+        alaSeleccionado = widget.datosIniciales!['ala']?.isNotEmpty == true
+            ? widget.datosIniciales!['ala']
             : null;
-        nivelSeleccionado = widget.datosIniciales!['nivel']?.isNotEmpty == true 
-            ? widget.datosIniciales!['nivel'] 
+        nivelSeleccionado = widget.datosIniciales!['nivel']?.isNotEmpty == true
+            ? widget.datosIniciales!['nivel']
             : null;
-        
-        observacionesController.text = widget.datosIniciales!['observaciones'] ?? '';
+
+        observacionesController.text =
+            widget.datosIniciales!['observaciones'] ?? '';
       });
-      
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _actualizarFiltros();
       });
@@ -363,9 +290,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 900, // Aumentado de 800 a 900 para 3 campos visibles
         constraints: BoxConstraints(
@@ -394,38 +319,43 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
                             titulo: 'Ubicación',
                             children: [
                               _buildCompactDropdownField(
-                                label: 'Tipo Labor',        // 1º
+                                label: 'Tipo Labor', // 1º
                                 value: tipoLaborSeleccionado,
                                 items: filteredTiposLabor,
-                                onChanged: isEditable ? _onTipoLaborChanged : null,
+                                onChanged: isEditable
+                                    ? _onTipoLaborChanged
+                                    : null,
                                 icon: Icons.construction,
                               ),
                               const SizedBox(width: 8),
                               _buildCompactDropdownField(
-                                label: 'Labor',              // 2º
+                                label: 'Labor', // 2º
                                 value: laborSeleccionado,
                                 items: filteredLabores,
-                                onChanged: (tipoLaborSeleccionado != null && isEditable) 
-                                    ? _onLaborChanged 
+                                onChanged:
+                                    (tipoLaborSeleccionado != null &&
+                                        isEditable)
+                                    ? _onLaborChanged
                                     : null,
                                 icon: Icons.factory,
                               ),
                               const SizedBox(width: 8),
                               _buildCompactDropdownField(
-                                label: 'Ala',                // 3º
+                                label: 'Ala', // 3º
                                 value: alaSeleccionado,
                                 items: filteredAlas,
-                                onChanged: (laborSeleccionado != null && isEditable) 
-                                    ? _onAlaChanged 
+                                onChanged:
+                                    (laborSeleccionado != null && isEditable)
+                                    ? _onAlaChanged
                                     : null,
                                 icon: Icons.compare_arrows,
                               ),
                               // ❌ NOTA: El campo Nivel ya no se muestra, se maneja internamente
                             ],
                           ),
-                          
+
                           const SizedBox(height: 20),
-                          
+
                           _buildSeccionObservaciones(),
                         ],
                       ),
@@ -492,7 +422,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
                 ),
               ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
               alignLabelWithHint: true,
             ),
             style: const TextStyle(fontSize: 14),
@@ -587,9 +520,14 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isEditable ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+        color: isEditable
+            ? Colors.green.withOpacity(0.2)
+            : Colors.grey.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isEditable ? Colors.green : Colors.grey, width: 0.5),
+        border: Border.all(
+          color: isEditable ? Colors.green : Colors.grey,
+          width: 0.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -625,7 +563,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
   }) {
     bool valueExists = value != null && items.contains(value);
     bool isEnabled = onChanged != null && isEditable;
-    
+
     return Container(
       height: 42,
       decoration: BoxDecoration(
@@ -647,7 +585,9 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
                   items.isEmpty ? 'Cargando...' : label,
                   style: TextStyle(
                     fontSize: 11,
-                    color: isEnabled ? Colors.grey.shade600 : Colors.grey.shade400,
+                    color: isEnabled
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade400,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -655,7 +595,11 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
             ],
           ),
           isExpanded: true,
-          icon: Icon(Icons.arrow_drop_down, size: 18, color: widget.primaryColor),
+          icon: Icon(
+            Icons.arrow_drop_down,
+            size: 18,
+            color: widget.primaryColor,
+          ),
           style: const TextStyle(fontSize: 12, color: Colors.black87),
           dropdownColor: Colors.white,
           borderRadius: BorderRadius.circular(6),
@@ -665,7 +609,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
                     value: null,
                     child: Text(
                       'No hay opciones',
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
                   ),
                 ]
@@ -713,7 +660,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 minimumSize: Size.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
@@ -724,7 +674,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeP
                 children: [
                   Icon(Icons.save, size: 14),
                   SizedBox(width: 6),
-                  Text('Guardar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  Text(
+                    'Guardar',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
             ),

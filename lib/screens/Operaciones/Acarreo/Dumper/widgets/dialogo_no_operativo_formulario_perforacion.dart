@@ -21,12 +21,14 @@ class DialogoFormularioNoOpeDumper extends StatefulWidget {
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
   }) : super(key: key);
-  
+
   @override
-  State<DialogoFormularioNoOpeDumper> createState() => _DialogoFormularioNoPerforacionState();
+  State<DialogoFormularioNoOpeDumper> createState() =>
+      _DialogoFormularioNoPerforacionState();
 }
 
-class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeDumper> {
+class _DialogoFormularioNoPerforacionState
+    extends State<DialogoFormularioNoOpeDumper> {
   bool isEditable = false;
   bool isLoading = true;
   bool isSmallScreen = false;
@@ -66,7 +68,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
 
   Future<void> _cargarDatosDesdeBD() async {
     setState(() => isLoading = true);
-    
+
     try {
       await _cargarPlanesCombinados();
     } catch (e) {
@@ -80,48 +82,16 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
   Future<void> _cargarPlanesCombinados() async {
     try {
       final dbHelper = DatabaseHelper();
-      
+
       // Cargar las tres tablas en paralelo
       final results = await Future.wait([
-        dbHelper.getPlanesMensual(),
-        dbHelper.getPlanesProduccion(),
-        dbHelper.getPlanesMetraje(),
         dbHelper.getOrigenDestino('DUMPER', 'ORIGEN'),
       ]);
-      
-      planesMensualCompletos = results[0] as List<PlanMensual>;
-      planesProduccionCompletos = results[1] as List<PlanProduccion>;
-      planesMetrajeCompletos = results[2] as List<PlanMetraje>;
 
       Set<String> nivelesSet = {};
       Set<String> tiposLaborSet = {};
       Set<String> laboresSet = {};
       Set<String> alasSet = {};
-
-      // Procesar PlanMensual
-      for (var plan in planesMensualCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      // Procesar PlanProduccion
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      // Procesar PlanMetraje
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
 
       setState(() {
         opcionesNivel = nivelesSet.toList()..sort();
@@ -136,7 +106,13 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
       print("Error cargando planes combinados: $e");
       setState(() {
         opcionesNivel = ['Nivel 1', 'Nivel 2', 'Nivel 3', 'Nivel 4'];
-        opcionesTipoLabor = ['Galería', 'Crucero', 'Rampa', 'Chimenea', 'Subterráneo'];
+        opcionesTipoLabor = [
+          'Galería',
+          'Crucero',
+          'Rampa',
+          'Chimenea',
+          'Subterráneo',
+        ];
         opcionesLabor = ['Labor A', 'Labor B', 'Labor C', 'Labor D'];
         opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
         filteredTiposLabor = List.from(opcionesTipoLabor);
@@ -152,7 +128,6 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
       tipoLaborSeleccionado = null;
       laborSeleccionado = null;
       alaSeleccionado = null;
-      _actualizarFiltros();
     });
   }
 
@@ -161,7 +136,6 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
       tipoLaborSeleccionado = nuevoTipoLabor;
       laborSeleccionado = null;
       alaSeleccionado = null;
-      _actualizarFiltros();
     });
   }
 
@@ -169,115 +143,33 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
     setState(() {
       laborSeleccionado = nuevoLabor;
       alaSeleccionado = null;
-      _actualizarFiltros();
     });
-  }
-
-  void _actualizarFiltros() {
-    // Filtrar tipos de labor basados en nivel seleccionado
-    if (nivelSeleccionado != null) {
-      Set<String> tiposLaborFiltrados = {};
-      for (var plan in planesMensualCompletos) {
-        if (plan.nivel == nivelSeleccionado && (plan.tipoLabor?.isNotEmpty ?? false)) {
-          tiposLaborFiltrados.add(plan.tipoLabor!);
-        }
-      }
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel == nivelSeleccionado && (plan.tipoLabor?.isNotEmpty ?? false)) {
-          tiposLaborFiltrados.add(plan.tipoLabor!);
-        }
-      }
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel == nivelSeleccionado && (plan.tipoLabor?.isNotEmpty ?? false)) {
-          tiposLaborFiltrados.add(plan.tipoLabor!);
-        }
-      }
-      filteredTiposLabor = tiposLaborFiltrados.toList()..sort();
-    } else {
-      filteredTiposLabor = List.from(opcionesTipoLabor);
-    }
-
-    // Filtrar labores basados en nivel y tipo labor
-    if (nivelSeleccionado != null && tipoLaborSeleccionado != null) {
-      Set<String> laboresFiltrados = {};
-      for (var plan in planesMensualCompletos) {
-        if (plan.nivel == nivelSeleccionado && 
-            plan.tipoLabor == tipoLaborSeleccionado && 
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
-        }
-      }
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel == nivelSeleccionado && 
-            plan.tipoLabor == tipoLaborSeleccionado && 
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
-        }
-      }
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel == nivelSeleccionado && 
-            plan.tipoLabor == tipoLaborSeleccionado && 
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
-        }
-      }
-      filteredLabores = laboresFiltrados.toList()..sort();
-    } else {
-      filteredLabores = List.from(opcionesLabor);
-    }
-
-    // Filtrar alas basados en nivel, tipo labor y labor
-    if (nivelSeleccionado != null && 
-        tipoLaborSeleccionado != null && 
-        laborSeleccionado != null) {
-      Set<String> alasFiltrados = {};
-      for (var plan in planesMensualCompletos) {
-        if (plan.nivel == nivelSeleccionado && 
-            plan.tipoLabor == tipoLaborSeleccionado && 
-            plan.labor == laborSeleccionado && 
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
-        }
-      }
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel == nivelSeleccionado && 
-            plan.tipoLabor == tipoLaborSeleccionado && 
-            plan.labor == laborSeleccionado && 
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
-        }
-      }
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel == nivelSeleccionado && 
-            plan.tipoLabor == tipoLaborSeleccionado && 
-            plan.labor == laborSeleccionado && 
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
-        }
-      }
-      filteredAlas = alasFiltrados.toList()..sort();
-    } else {
-      filteredAlas = List.from(opcionesAla);
-    }
   }
 
   void _cargarDatosIniciales() {
     if (widget.datosIniciales != null) {
       setState(() {
-        nivelSeleccionado = widget.datosIniciales!['nivel_inicio']?.isNotEmpty == true 
-            ? widget.datosIniciales!['nivel_inicio'] : null;
-        tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor_inicio']?.isNotEmpty == true 
-            ? widget.datosIniciales!['tipo_labor_inicio'] : null;
-        laborSeleccionado = widget.datosIniciales!['labor_inicio']?.isNotEmpty == true 
-            ? widget.datosIniciales!['labor_inicio'] : null;
-        alaSeleccionado = widget.datosIniciales!['ala_inicio']?.isNotEmpty == true 
-            ? widget.datosIniciales!['ala_inicio'] : null;
-        observacionesController.text = widget.datosIniciales!['observaciones'] ?? '';
+        nivelSeleccionado =
+            widget.datosIniciales!['nivel_inicio']?.isNotEmpty == true
+            ? widget.datosIniciales!['nivel_inicio']
+            : null;
+        tipoLaborSeleccionado =
+            widget.datosIniciales!['tipo_labor_inicio']?.isNotEmpty == true
+            ? widget.datosIniciales!['tipo_labor_inicio']
+            : null;
+        laborSeleccionado =
+            widget.datosIniciales!['labor_inicio']?.isNotEmpty == true
+            ? widget.datosIniciales!['labor_inicio']
+            : null;
+        alaSeleccionado =
+            widget.datosIniciales!['ala_inicio']?.isNotEmpty == true
+            ? widget.datosIniciales!['ala_inicio']
+            : null;
+        observacionesController.text =
+            widget.datosIniciales!['observaciones'] ?? '';
       });
-      
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _actualizarFiltros();
-      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {});
     }
   }
 
@@ -316,25 +208,18 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     isSmallScreen = screenWidth < 600;
-    
-    final dialogWidth = isSmallScreen 
-        ? screenWidth * 0.95
-        : 800.0;
-    
+
+    final dialogWidth = isSmallScreen ? screenWidth * 0.95 : 800.0;
+
     final dialogHeight = isSmallScreen
         ? MediaQuery.of(context).size.height * 0.85
         : MediaQuery.of(context).size.height * 0.7;
-    
+
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: dialogWidth,
-        constraints: BoxConstraints(
-          maxHeight: dialogHeight,
-          maxWidth: 800,
-        ),
+        constraints: BoxConstraints(maxHeight: dialogHeight, maxWidth: 800),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: Colors.white,
@@ -345,7 +230,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildHeader(),
-                  
+
                   Expanded(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
@@ -359,7 +244,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
                       ),
                     ),
                   ),
-                  
+
                   _buildFooter(),
                 ],
               ),
@@ -399,10 +284,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Divider(
-                  color: Colors.grey.shade300,
-                  thickness: 1,
-                ),
+                child: Divider(color: Colors.grey.shade300, thickness: 1),
               ),
             ],
           ),
@@ -419,8 +301,9 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
             label: 'Tipo Labor',
             value: tipoLaborSeleccionado,
             items: filteredTiposLabor,
-            onChanged: (nivelSeleccionado != null && isEditable) 
-                ? _onTipoLaborChanged : null,
+            onChanged: (nivelSeleccionado != null && isEditable)
+                ? _onTipoLaborChanged
+                : null,
             icon: Icons.construction,
           ),
           const SizedBox(height: 12),
@@ -428,8 +311,9 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
             label: 'Labor',
             value: laborSeleccionado,
             items: filteredLabores,
-            onChanged: (tipoLaborSeleccionado != null && isEditable) 
-                ? _onLaborChanged : null,
+            onChanged: (tipoLaborSeleccionado != null && isEditable)
+                ? _onLaborChanged
+                : null,
             icon: Icons.factory,
           ),
           const SizedBox(height: 12),
@@ -437,8 +321,9 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
             label: 'Ala',
             value: alaSeleccionado,
             items: filteredAlas,
-            onChanged: (laborSeleccionado != null && isEditable) 
-                ? (value) => setState(() => alaSeleccionado = value) : null,
+            onChanged: (laborSeleccionado != null && isEditable)
+                ? (value) => setState(() => alaSeleccionado = value)
+                : null,
             icon: Icons.compare_arrows,
           ),
         ],
@@ -474,10 +359,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Divider(
-                  color: Colors.grey.shade300,
-                  thickness: 1,
-                ),
+                child: Divider(color: Colors.grey.shade300, thickness: 1),
               ),
             ],
           ),
@@ -499,8 +381,9 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
                   label: 'Tipo Labor',
                   value: tipoLaborSeleccionado,
                   items: filteredTiposLabor,
-                  onChanged: (nivelSeleccionado != null && isEditable) 
-                      ? _onTipoLaborChanged : null,
+                  onChanged: (nivelSeleccionado != null && isEditable)
+                      ? _onTipoLaborChanged
+                      : null,
                   icon: Icons.construction,
                 ),
               ),
@@ -510,8 +393,9 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
                   label: 'Labor',
                   value: laborSeleccionado,
                   items: filteredLabores,
-                  onChanged: (tipoLaborSeleccionado != null && isEditable) 
-                      ? _onLaborChanged : null,
+                  onChanged: (tipoLaborSeleccionado != null && isEditable)
+                      ? _onLaborChanged
+                      : null,
                   icon: Icons.factory,
                 ),
               ),
@@ -521,8 +405,9 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
                   label: 'Ala',
                   value: alaSeleccionado,
                   items: filteredAlas,
-                  onChanged: (laborSeleccionado != null && isEditable) 
-                      ? (value) => setState(() => alaSeleccionado = value) : null,
+                  onChanged: (laborSeleccionado != null && isEditable)
+                      ? (value) => setState(() => alaSeleccionado = value)
+                      : null,
                   icon: Icons.compare_arrows,
                 ),
               ),
@@ -546,11 +431,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
                 color: widget.primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Icon(
-                Icons.note_alt,
-                size: 14,
-                color: widget.primaryColor,
-              ),
+              child: Icon(Icons.note_alt, size: 14, color: widget.primaryColor),
             ),
             const SizedBox(width: 6),
             Text(
@@ -562,12 +443,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
               ),
             ),
             const SizedBox(width: 8),
-            Expanded(
-              child: Divider(
-                color: Colors.grey.shade300,
-                thickness: 1,
-              ),
-            ),
+            Expanded(child: Divider(color: Colors.grey.shade300, thickness: 1)),
           ],
         ),
         const SizedBox(height: 12),
@@ -614,7 +490,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 16 : 20,
+        vertical: 12,
+      ),
       decoration: BoxDecoration(
         color: widget.primaryColor,
         borderRadius: const BorderRadius.only(
@@ -639,7 +518,9 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              isSmallScreen ? 'Formulario No Operativo' : 'Formulario de Perforación no operativa',
+              isSmallScreen
+                  ? 'Formulario No Operativo'
+                  : 'Formulario de Perforación no operativa',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: isSmallScreen ? 13 : 16,
@@ -657,9 +538,14 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isEditable ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+        color: isEditable
+            ? Colors.green.withOpacity(0.2)
+            : Colors.grey.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isEditable ? Colors.green : Colors.grey, width: 0.5),
+        border: Border.all(
+          color: isEditable ? Colors.green : Colors.grey,
+          width: 0.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -695,7 +581,7 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
   }) {
     bool valueExists = value != null && items.contains(value);
     bool isEnabled = onChanged != null && isEditable;
-    
+
     return Container(
       height: 42,
       decoration: BoxDecoration(
@@ -710,14 +596,20 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
           hint: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: isSmallScreen ? 12 : 14, color: widget.primaryColor),
+              Icon(
+                icon,
+                size: isSmallScreen ? 12 : 14,
+                color: widget.primaryColor,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   items.isEmpty ? 'Cargando...' : label,
                   style: TextStyle(
                     fontSize: isSmallScreen ? 10 : 11,
-                    color: isEnabled ? Colors.grey.shade600 : Colors.grey.shade400,
+                    color: isEnabled
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade400,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -725,8 +617,15 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
             ],
           ),
           isExpanded: true,
-          icon: Icon(Icons.arrow_drop_down, size: isSmallScreen ? 16 : 18, color: widget.primaryColor),
-          style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.black87),
+          icon: Icon(
+            Icons.arrow_drop_down,
+            size: isSmallScreen ? 16 : 18,
+            color: widget.primaryColor,
+          ),
+          style: TextStyle(
+            fontSize: isSmallScreen ? 11 : 12,
+            color: Colors.black87,
+          ),
           dropdownColor: Colors.white,
           borderRadius: BorderRadius.circular(6),
           items: items.isEmpty
@@ -735,7 +634,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
                     value: null,
                     child: Text(
                       'No hay opciones',
-                      style: TextStyle(fontSize: isSmallScreen ? 10 : 11, color: Colors.grey.shade500),
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 10 : 11,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
                   ),
                 ]
@@ -757,7 +659,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
 
   Widget _buildFooter() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 16 : 20,
+        vertical: 10,
+      ),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: const BorderRadius.only(
@@ -790,7 +695,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 minimumSize: Size.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
@@ -803,7 +711,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeD
                   const SizedBox(width: 6),
                   Text(
                     'Guardar',
-                    style: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),

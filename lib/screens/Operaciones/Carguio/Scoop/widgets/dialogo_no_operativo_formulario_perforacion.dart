@@ -95,16 +95,10 @@ class _DialogoFormularioNoPerforacionState extends State<DialogoFormularioNoOpeC
       
       // Cargar las tablas en paralelo
       final results = await Future.wait([
-        dbHelper.getPlanesMensual(),
-        dbHelper.getPlanesProduccion(),
-        dbHelper.getPlanesMetraje(),
         dbHelper.getOrigenDestino('SCOOPTRAM', 'ORIGEN'),
       ]);
       
-      planesMensualCompletos = results[0] as List<PlanMensual>;
-      planesProduccionCompletos = results[1] as List<PlanProduccion>;
-      planesMetrajeCompletos = results[2] as List<PlanMetraje>;
-      origenesScooptram = results[3] as List<Map<String, dynamic>>;
+      origenesScooptram = results[0] as List<Map<String, dynamic>>;
 
       Set<String> tiposLaborSet = {};
       Set<String> laboresSet = {};

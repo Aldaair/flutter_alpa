@@ -162,8 +162,7 @@ class DashboardScreen extends StatefulWidget {
   final String dni;
   final String token;
 
-  const DashboardScreen({Key? key, required this.dni, required this.token})
-    : super(key: key);
+  const DashboardScreen({super.key, required this.dni, required this.token});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();

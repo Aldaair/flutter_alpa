@@ -23,10 +23,12 @@ class DialogoFormularioAnfochanger extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<DialogoFormularioAnfochanger> createState() => _DialogoFormularioAnfochangerState();
+  State<DialogoFormularioAnfochanger> createState() =>
+      _DialogoFormularioAnfochangerState();
 }
 
-class _DialogoFormularioAnfochangerState extends State<DialogoFormularioAnfochanger> {
+class _DialogoFormularioAnfochangerState
+    extends State<DialogoFormularioAnfochanger> {
   bool isEditable = false;
   bool isLoading = true;
 
@@ -34,13 +36,13 @@ class _DialogoFormularioAnfochangerState extends State<DialogoFormularioAnfochan
   final TextEditingController observacionesController = TextEditingController();
   final TextEditingController taladrosController = TextEditingController();
   final TextEditingController anfoController = TextEditingController();
-final TextEditingController cajasController = TextEditingController();
+  final TextEditingController cajasController = TextEditingController();
 
   // Variables para ORIGEN
-String? origenTipoLaborSeleccionado;    // 1º
-String? origenLaborSeleccionado;         // 2º  
-String? origenAlaSeleccionado;           // 3º
-String? origenNivelSeleccionado;   
+  String? origenTipoLaborSeleccionado; // 1º
+  String? origenLaborSeleccionado; // 2º
+  String? origenAlaSeleccionado; // 3º
+  String? origenNivelSeleccionado;
 
   // Opciones para los dropdowns (de PlanMensual)
   List<String> opcionesNivel = [];
@@ -49,284 +51,211 @@ String? origenNivelSeleccionado;
   List<String> opcionesAla = [];
 
   // Listas filtradas para ORIGEN
-List<String> filteredOrigenTiposLabor = [];
-List<String> filteredOrigenLabores = [];
-List<String> filteredOrigenAlas = [];
-List<String> filteredOrigenNiveles = [];  // ← NUEVA
+  List<String> filteredOrigenTiposLabor = [];
+  List<String> filteredOrigenLabores = [];
+  List<String> filteredOrigenAlas = [];
+  List<String> filteredOrigenNiveles = []; // ← NUEVA
 
   // Almacenar objetos completos para referencia
   List<PlanMensual> planesMensualCompletos = [];
-List<PlanProduccion> planesProduccionCompletos = [];
-List<PlanMetraje> planesMetrajeCompletos = [];
+  List<PlanProduccion> planesProduccionCompletos = [];
+  List<PlanMetraje> planesMetrajeCompletos = [];
 
   @override
   void initState() {
     super.initState();
     isEditable = widget.estado.toLowerCase() != "cerrado";
     _cargarDatosIniciales();
-    _cargarDatosDesdeBD();
   }
-
-  Future<void> _cargarDatosDesdeBD() async {
-    setState(() => isLoading = true);
-
-    try {
-      await _cargarPlanesCombinados();
-    } catch (e) {
-      print("Error cargando datos: $e");
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
-  // Cargar planes mensuales y construir opciones únicas
-  Future<void> _cargarPlanesCombinados() async {
-  try {
-    final dbHelper = DatabaseHelper();
-    
-    // Cargar las tres tablas en paralelo
-    final results = await Future.wait([
-      dbHelper.getPlanesMensual(),
-      dbHelper.getPlanesProduccion(),
-      dbHelper.getPlanesMetraje(),
-    ]);
-    
-    planesMensualCompletos = results[0] as List<PlanMensual>;
-planesProduccionCompletos = results[1] as List<PlanProduccion>;
-planesMetrajeCompletos = results[2] as List<PlanMetraje>;
-
-    print("Planes Mensual obtenidos: ${planesMensualCompletos.length}");
-    print("Planes Producción obtenidos: ${planesProduccionCompletos.length}");
-    print("Planes Metraje obtenidos: ${planesMetrajeCompletos.length}");
-
-    Set<String> nivelesSet = {};
-    Set<String> tiposLaborSet = {};
-    Set<String> laboresSet = {};
-    Set<String> alasSet = {};
-
-    // Procesar PlanMensual
-    for (var plan in planesMensualCompletos) {
-      if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-      if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-      if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-      if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-    }
-
-    // Procesar PlanProduccion
-    for (var plan in planesProduccionCompletos) {
-      if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-      if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-      if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-      if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-    }
-
-    // Procesar PlanMetraje
-    for (var plan in planesMetrajeCompletos) {
-      if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-      if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-      if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-      if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-    }
-
-    setState(() {
-      opcionesNivel = nivelesSet.toList()..sort();
-      opcionesTipoLabor = tiposLaborSet.toList()..sort();
-      opcionesLabor = laboresSet.toList()..sort();
-      opcionesAla = alasSet.toList()..sort();
-
-      // Inicializar listas filtradas
-      filteredOrigenTiposLabor = List.from(opcionesTipoLabor);
-      filteredOrigenLabores = List.from(opcionesLabor);
-      filteredOrigenAlas = List.from(opcionesAla);
-      filteredOrigenNiveles = List.from(opcionesNivel); 
-    });
-
-  } catch (e) {
-    print("Error cargando planes combinados: $e");
-    // Fallback con datos de ejemplo
-    setState(() {
-      opcionesNivel = ['Nv 300', 'Nv 320', 'Nv 340', 'Nv 360'];
-      opcionesTipoLabor = ['Galería', 'Crucero', 'Rampa', 'Chimenea'];
-      opcionesLabor = ['Labor 01', 'Labor 02', 'Labor 03', 'Labor 04'];
-      opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
-      
-      filteredOrigenTiposLabor = List.from(opcionesTipoLabor);
-      filteredOrigenLabores = List.from(opcionesLabor);
-      filteredOrigenAlas = List.from(opcionesAla);
-    });
-  }
-}
 
   // Actualizar filtros para ORIGEN
-void _onOrigenTipoLaborChanged(String? nuevoTipoLabor) {
-  setState(() {
-    origenTipoLaborSeleccionado = nuevoTipoLabor;
-    origenLaborSeleccionado = null;
-    origenAlaSeleccionado = null;
-    origenNivelSeleccionado = null;
-    _actualizarFiltrosOrigen();
-  });
-}
-
-void _onOrigenLaborChanged(String? nuevoLabor) {
-  setState(() {
-    origenLaborSeleccionado = nuevoLabor;
-    origenAlaSeleccionado = null;
-    origenNivelSeleccionado = null;
-    _actualizarFiltrosOrigen();
-  });
-}
-
-void _onOrigenAlaChanged(String? nuevoAla) {
-  setState(() {
-    origenAlaSeleccionado = nuevoAla;
-    origenNivelSeleccionado = null;
-    _actualizarFiltrosOrigen();
-  });
-}
-
-void _actualizarFiltrosOrigen() {
-  // Filtrar Labores basado en Tipo Labor
-  if (origenTipoLaborSeleccionado != null) {
-    Set<String> laboresFiltrados = {};
-    
-    for (var plan in planesMensualCompletos) {
-      if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-          (plan.labor?.isNotEmpty ?? false)) {
-        laboresFiltrados.add(plan.labor!);
-      }
-    }
-    for (var plan in planesProduccionCompletos) {
-      if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-          (plan.labor?.isNotEmpty ?? false)) {
-        laboresFiltrados.add(plan.labor!);
-      }
-    }
-    for (var plan in planesMetrajeCompletos) {
-      if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-          (plan.labor?.isNotEmpty ?? false)) {
-        laboresFiltrados.add(plan.labor!);
-      }
-    }
-    
-    filteredOrigenLabores = laboresFiltrados.toList()..sort();
-  } else {
-    filteredOrigenLabores = List.from(opcionesLabor);
+  void _onOrigenTipoLaborChanged(String? nuevoTipoLabor) {
+    setState(() {
+      origenTipoLaborSeleccionado = nuevoTipoLabor;
+      origenLaborSeleccionado = null;
+      origenAlaSeleccionado = null;
+      origenNivelSeleccionado = null;
+      _actualizarFiltrosOrigen();
+    });
   }
 
-  // Filtrar Alas basado en Tipo Labor y Labor
-  if (origenTipoLaborSeleccionado != null && origenLaborSeleccionado != null) {
-    Set<String> alasFiltrados = {};
-    
-    for (var plan in planesMensualCompletos) {
-      if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-          plan.labor == origenLaborSeleccionado &&
-          (plan.ala?.isNotEmpty ?? false)) {
-        alasFiltrados.add(plan.ala!);
-      }
-    }
-    for (var plan in planesProduccionCompletos) {
-      if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-          plan.labor == origenLaborSeleccionado &&
-          (plan.ala?.isNotEmpty ?? false)) {
-        alasFiltrados.add(plan.ala!);
-      }
-    }
-    for (var plan in planesMetrajeCompletos) {
-      if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-          plan.labor == origenLaborSeleccionado &&
-          (plan.ala?.isNotEmpty ?? false)) {
-        alasFiltrados.add(plan.ala!);
-      }
-    }
-    
-    filteredOrigenAlas = alasFiltrados.toList()..sort();
-  } else {
-    filteredOrigenAlas = List.from(opcionesAla);
+  void _onOrigenLaborChanged(String? nuevoLabor) {
+    setState(() {
+      origenLaborSeleccionado = nuevoLabor;
+      origenAlaSeleccionado = null;
+      origenNivelSeleccionado = null;
+      _actualizarFiltrosOrigen();
+    });
   }
 
-  // Filtrar Niveles (INTERNO, NO VISIBLE)
-  if (origenTipoLaborSeleccionado != null && origenLaborSeleccionado != null) {
-    Set<String> nivelesFiltrados = {};
-    
-    for (var plan in planesMensualCompletos) {
-      bool coincideBase = plan.tipoLabor == origenTipoLaborSeleccionado &&
-          plan.labor == origenLaborSeleccionado;
-      
-      bool coincideAla = origenAlaSeleccionado == null ||
-          origenAlaSeleccionado!.isEmpty ||
-          plan.ala == origenAlaSeleccionado;
+  void _onOrigenAlaChanged(String? nuevoAla) {
+    setState(() {
+      origenAlaSeleccionado = nuevoAla;
+      origenNivelSeleccionado = null;
+      _actualizarFiltrosOrigen();
+    });
+  }
 
-      if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-        nivelesFiltrados.add(plan.nivel!);
+  void _actualizarFiltrosOrigen() {
+    // Filtrar Labores basado en Tipo Labor
+    if (origenTipoLaborSeleccionado != null) {
+      Set<String> laboresFiltrados = {};
+
+      for (var plan in planesMensualCompletos) {
+        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor!);
+        }
       }
-    }
-    for (var plan in planesProduccionCompletos) {
-      bool coincideBase = plan.tipoLabor == origenTipoLaborSeleccionado &&
-          plan.labor == origenLaborSeleccionado;
-      
-      bool coincideAla = origenAlaSeleccionado == null ||
-          origenAlaSeleccionado!.isEmpty ||
-          plan.ala == origenAlaSeleccionado;
-
-      if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-        nivelesFiltrados.add(plan.nivel!);
+      for (var plan in planesProduccionCompletos) {
+        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor!);
+        }
       }
-    }
-    for (var plan in planesMetrajeCompletos) {
-      bool coincideBase = plan.tipoLabor == origenTipoLaborSeleccionado &&
-          plan.labor == origenLaborSeleccionado;
-      
-      bool coincideAla = origenAlaSeleccionado == null ||
-          origenAlaSeleccionado!.isEmpty ||
-          plan.ala == origenAlaSeleccionado;
-
-      if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-        nivelesFiltrados.add(plan.nivel!);
+      for (var plan in planesMetrajeCompletos) {
+        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor!);
+        }
       }
-    }
-    
-    filteredOrigenNiveles = nivelesFiltrados.toList()..sort();
 
-    // Auto seleccionar nivel internamente
-    if (filteredOrigenNiveles.isNotEmpty) {
-      if (origenNivelSeleccionado == null || !filteredOrigenNiveles.contains(origenNivelSeleccionado)) {
-        origenNivelSeleccionado = filteredOrigenNiveles.first;
+      filteredOrigenLabores = laboresFiltrados.toList()..sort();
+    } else {
+      filteredOrigenLabores = List.from(opcionesLabor);
+    }
+
+    // Filtrar Alas basado en Tipo Labor y Labor
+    if (origenTipoLaborSeleccionado != null &&
+        origenLaborSeleccionado != null) {
+      Set<String> alasFiltrados = {};
+
+      for (var plan in planesMensualCompletos) {
+        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
+            plan.labor == origenLaborSeleccionado &&
+            (plan.ala?.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala!);
+        }
+      }
+      for (var plan in planesProduccionCompletos) {
+        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
+            plan.labor == origenLaborSeleccionado &&
+            (plan.ala?.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala!);
+        }
+      }
+      for (var plan in planesMetrajeCompletos) {
+        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
+            plan.labor == origenLaborSeleccionado &&
+            (plan.ala?.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala!);
+        }
+      }
+
+      filteredOrigenAlas = alasFiltrados.toList()..sort();
+    } else {
+      filteredOrigenAlas = List.from(opcionesAla);
+    }
+
+    // Filtrar Niveles (INTERNO, NO VISIBLE)
+    if (origenTipoLaborSeleccionado != null &&
+        origenLaborSeleccionado != null) {
+      Set<String> nivelesFiltrados = {};
+
+      for (var plan in planesMensualCompletos) {
+        bool coincideBase =
+            plan.tipoLabor == origenTipoLaborSeleccionado &&
+            plan.labor == origenLaborSeleccionado;
+
+        bool coincideAla =
+            origenAlaSeleccionado == null ||
+            origenAlaSeleccionado!.isEmpty ||
+            plan.ala == origenAlaSeleccionado;
+
+        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
+          nivelesFiltrados.add(plan.nivel!);
+        }
+      }
+      for (var plan in planesProduccionCompletos) {
+        bool coincideBase =
+            plan.tipoLabor == origenTipoLaborSeleccionado &&
+            plan.labor == origenLaborSeleccionado;
+
+        bool coincideAla =
+            origenAlaSeleccionado == null ||
+            origenAlaSeleccionado!.isEmpty ||
+            plan.ala == origenAlaSeleccionado;
+
+        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
+          nivelesFiltrados.add(plan.nivel!);
+        }
+      }
+      for (var plan in planesMetrajeCompletos) {
+        bool coincideBase =
+            plan.tipoLabor == origenTipoLaborSeleccionado &&
+            plan.labor == origenLaborSeleccionado;
+
+        bool coincideAla =
+            origenAlaSeleccionado == null ||
+            origenAlaSeleccionado!.isEmpty ||
+            plan.ala == origenAlaSeleccionado;
+
+        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
+          nivelesFiltrados.add(plan.nivel!);
+        }
+      }
+
+      filteredOrigenNiveles = nivelesFiltrados.toList()..sort();
+
+      // Auto seleccionar nivel internamente
+      if (filteredOrigenNiveles.isNotEmpty) {
+        if (origenNivelSeleccionado == null ||
+            !filteredOrigenNiveles.contains(origenNivelSeleccionado)) {
+          origenNivelSeleccionado = filteredOrigenNiveles.first;
+        }
+      } else {
+        origenNivelSeleccionado = null;
       }
     } else {
-      origenNivelSeleccionado = null;
-    }
-  } else {
-    filteredOrigenNiveles = List.from(opcionesNivel);
-    if (origenTipoLaborSeleccionado == null || origenLaborSeleccionado == null) {
-      origenNivelSeleccionado = null;
+      filteredOrigenNiveles = List.from(opcionesNivel);
+      if (origenTipoLaborSeleccionado == null ||
+          origenLaborSeleccionado == null) {
+        origenNivelSeleccionado = null;
+      }
     }
   }
-}
 
   void _cargarDatosIniciales() {
     if (widget.datosIniciales != null) {
       setState(() {
         // Cargar ORIGEN
-        origenTipoLaborSeleccionado = widget.datosIniciales!['origen_tipo_labor']?.isNotEmpty == true
-          ? widget.datosIniciales!['origen_tipo_labor']
-          : null;
-      origenLaborSeleccionado = widget.datosIniciales!['origen_labor']?.isNotEmpty == true
-          ? widget.datosIniciales!['origen_labor']
-          : null;
-      origenAlaSeleccionado = widget.datosIniciales!['origen_ala']?.isNotEmpty == true
-          ? widget.datosIniciales!['origen_ala']
-          : null;
-      origenNivelSeleccionado = widget.datosIniciales!['origen_nivel']?.isNotEmpty == true
-          ? widget.datosIniciales!['origen_nivel']
-          : null;
+        origenTipoLaborSeleccionado =
+            widget.datosIniciales!['origen_tipo_labor']?.isNotEmpty == true
+            ? widget.datosIniciales!['origen_tipo_labor']
+            : null;
+        origenLaborSeleccionado =
+            widget.datosIniciales!['origen_labor']?.isNotEmpty == true
+            ? widget.datosIniciales!['origen_labor']
+            : null;
+        origenAlaSeleccionado =
+            widget.datosIniciales!['origen_ala']?.isNotEmpty == true
+            ? widget.datosIniciales!['origen_ala']
+            : null;
+        origenNivelSeleccionado =
+            widget.datosIniciales!['origen_nivel']?.isNotEmpty == true
+            ? widget.datosIniciales!['origen_nivel']
+            : null;
 
         // Cargar campos de producción
-        taladrosController.text = widget.datosIniciales!['n_taladros_cargados']?.toString() ?? '';
-        anfoController.text = widget.datosIniciales!['cantidad_anfo']?.toString() ?? '';
-cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
+        taladrosController.text =
+            widget.datosIniciales!['n_taladros_cargados']?.toString() ?? '';
+        anfoController.text =
+            widget.datosIniciales!['cantidad_anfo']?.toString() ?? '';
+        cajasController.text =
+            widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
         // Observaciones
-        observacionesController.text = widget.datosIniciales!['observaciones'] ?? '';
+        observacionesController.text =
+            widget.datosIniciales!['observaciones'] ?? '';
       });
 
       // Después de cargar, actualizar filtros
@@ -381,14 +310,10 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 900, // Reducido porque eliminamos DESTINO
-        constraints: const BoxConstraints(
-          maxHeight: 650,
-        ),
+        constraints: const BoxConstraints(maxHeight: 650),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: Colors.white,
@@ -449,7 +374,11 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
                   color: Colors.blue,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Icon(Icons.location_on, size: 14, color: Colors.white),
+                child: const Icon(
+                  Icons.location_on,
+                  size: 14,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(width: 6),
               Text(
@@ -464,43 +393,43 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
           ),
           const SizedBox(height: 12),
           Row(
-          children: [
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Tipo Labor',        // 1º
-                value: origenTipoLaborSeleccionado,
-                items: filteredOrigenTiposLabor,
-                onChanged: isEditable ? _onOrigenTipoLaborChanged : null,
-                icon: Icons.construction,
-                color: Colors.blue,
+            children: [
+              Expanded(
+                child: _buildCompactDropdownField(
+                  label: 'Tipo Labor', // 1º
+                  value: origenTipoLaborSeleccionado,
+                  items: filteredOrigenTiposLabor,
+                  onChanged: isEditable ? _onOrigenTipoLaborChanged : null,
+                  icon: Icons.construction,
+                  color: Colors.blue,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Labor',              // 2º
-                value: origenLaborSeleccionado,
-                items: filteredOrigenLabores,
-                onChanged: (origenTipoLaborSeleccionado != null && isEditable)
-                    ? _onOrigenLaborChanged
-                    : null,
-                icon: Icons.factory,
-                color: Colors.blue,
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCompactDropdownField(
+                  label: 'Labor', // 2º
+                  value: origenLaborSeleccionado,
+                  items: filteredOrigenLabores,
+                  onChanged: (origenTipoLaborSeleccionado != null && isEditable)
+                      ? _onOrigenLaborChanged
+                      : null,
+                  icon: Icons.factory,
+                  color: Colors.blue,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildCompactDropdownField(
-                label: 'Ala',                // 3º
-                value: origenAlaSeleccionado,
-                items: filteredOrigenAlas,
-                onChanged: (origenLaborSeleccionado != null && isEditable)
-                    ? _onOrigenAlaChanged
-                    : null,
-                icon: Icons.compare_arrows,
-                color: Colors.blue,
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCompactDropdownField(
+                  label: 'Ala', // 3º
+                  value: origenAlaSeleccionado,
+                  items: filteredOrigenAlas,
+                  onChanged: (origenLaborSeleccionado != null && isEditable)
+                      ? _onOrigenAlaChanged
+                      : null,
+                  icon: Icons.compare_arrows,
+                  color: Colors.blue,
+                ),
               ),
-            ),
             ],
           ),
         ],
@@ -509,86 +438,89 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
   }
 
   Widget _buildSeccionProduccion() {
-  return Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.amber.shade50,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Colors.amber.shade200),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Título de la sección
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade700,
-                borderRadius: BorderRadius.circular(4),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.amber.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Título de la sección
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade700,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Icon(
+                  Icons.production_quantity_limits,
+                  size: 14,
+                  color: Colors.white,
+                ),
               ),
-              child: const Icon(Icons.production_quantity_limits, size: 14, color: Colors.white),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'DATOS DE PRODUCCIÓN',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Colors.amber.shade800,
+              const SizedBox(width: 6),
+              Text(
+                'DATOS DE PRODUCCIÓN',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber.shade800,
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    Expanded(
-      child: _buildCompactTextField(
-        label: 'Taladros Cargados',
-        controller: taladrosController,
-        icon: Icons.grid_3x3,
-        color: Colors.amber.shade700,
-        keyboardType: TextInputType.number,
-        isEditable: isEditable,
-        unit: 'und',
-      ),
-    ),
-    const SizedBox(width: 12),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildCompactTextField(
+                  label: 'Taladros Cargados',
+                  controller: taladrosController,
+                  icon: Icons.grid_3x3,
+                  color: Colors.amber.shade700,
+                  keyboardType: TextInputType.number,
+                  isEditable: isEditable,
+                  unit: 'und',
+                ),
+              ),
+              const SizedBox(width: 12),
 
-    Expanded(
-      child: _buildCompactTextField(
-        label: 'Cantidad ANFO',
-        controller: anfoController,
-        icon: Icons.scale,
-        color: Colors.amber.shade700,
-        keyboardType: TextInputType.number,
-        isEditable: isEditable,
-        unit: 'sacos',
-      ),
-    ),
-    const SizedBox(width: 12),
+              Expanded(
+                child: _buildCompactTextField(
+                  label: 'Cantidad ANFO',
+                  controller: anfoController,
+                  icon: Icons.scale,
+                  color: Colors.amber.shade700,
+                  keyboardType: TextInputType.number,
+                  isEditable: isEditable,
+                  unit: 'sacos',
+                ),
+              ),
+              const SizedBox(width: 12),
 
-    Expanded(
-      child: _buildCompactTextField(
-        label: 'N° Cartuchos',
-        controller: cajasController,
-        icon: Icons.inventory_2,
-        color: Colors.amber.shade700,
-        keyboardType: TextInputType.number,
-        isEditable: isEditable,
-        unit: 'und',
+              Expanded(
+                child: _buildCompactTextField(
+                  label: 'N° Cartuchos',
+                  controller: cajasController,
+                  icon: Icons.inventory_2,
+                  color: Colors.amber.shade700,
+                  keyboardType: TextInputType.number,
+                  isEditable: isEditable,
+                  unit: 'und',
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
-    ),
-  ],
-)
-        
-      ],
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildSeccionObservaciones() {
     return Container(
@@ -643,80 +575,81 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
   }
 
   Widget _buildCompactTextField({
-  required String label,
-  required TextEditingController controller,
-  required IconData icon,
-  required Color color,
-  required bool isEditable,
-  TextInputType keyboardType = TextInputType.text,
-  String? unit, // Nuevo parámetro para unidad de medida
-}) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // Título del campo
-      Padding(
-        padding: const EdgeInsets.only(left: 4, bottom: 4),
-        child: Row(
-          children: [
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-            if (unit != null) ...[
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    required Color color,
+    required bool isEditable,
+    TextInputType keyboardType = TextInputType.text,
+    String? unit, // Nuevo parámetro para unidad de medida
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Título del campo
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 4),
+          child: Row(
+            children: [
+              Icon(icon, size: 12, color: color),
               const SizedBox(width: 4),
               Text(
-                unit,
+                label,
                 style: TextStyle(
-                  fontSize: 9,
-                  color: Colors.grey.shade500,
-                  fontWeight: FontWeight.w400,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color,
                 ),
               ),
+              if (unit != null) ...[
+                const SizedBox(width: 4),
+                Text(
+                  unit,
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-      Container(
-        height: 42,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                enabled: isEditable,
-                keyboardType: keyboardType,
-                style: const TextStyle(fontSize: 13),
-                decoration: InputDecoration(
-                  isDense: true,
-                  border: InputBorder.none,
-                  hintText: isEditable ? 'Ingrese $label' : 'Sin datos',
-                  hintStyle: TextStyle(
-                    fontSize: 12,
-                    color: isEditable ? Colors.grey.shade400 : Colors.grey.shade300,
+        Container(
+          height: 42,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  enabled: isEditable,
+                  keyboardType: keyboardType,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    hintText: isEditable ? 'Ingrese $label' : 'Sin datos',
+                    hintStyle: TextStyle(
+                      fontSize: 12,
+                      color: isEditable
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade300,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    ],
-  );
-}
-
+      ],
+    );
+  }
 
   Widget _buildHeader() {
     return Container(
@@ -736,7 +669,11 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
               color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.local_gas_station, color: Colors.white, size: 18),
+            child: const Icon(
+              Icons.local_gas_station,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 10),
           const Text(
@@ -758,9 +695,14 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isEditable ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+        color: isEditable
+            ? Colors.green.withOpacity(0.2)
+            : Colors.grey.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isEditable ? Colors.green : Colors.grey, width: 0.5),
+        border: Border.all(
+          color: isEditable ? Colors.green : Colors.grey,
+          width: 0.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -819,7 +761,9 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
                   items.isEmpty ? 'Cargando...' : label,
                   style: TextStyle(
                     fontSize: 11,
-                    color: isEnabled ? Colors.grey.shade600 : Colors.grey.shade400,
+                    color: isEnabled
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade400,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -837,17 +781,17 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
                     value: null,
                     child: Text(
                       'No hay opciones',
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
                   ),
                 ]
               : items.map((String item) {
                   return DropdownMenuItem<String>(
                     value: item,
-                    child: Text(
-                      item,
-                      style: const TextStyle(fontSize: 12),
-                    ),
+                    child: Text(item, style: const TextStyle(fontSize: 12)),
                   );
                 }).toList(),
           onChanged: isEnabled ? onChanged : null,
@@ -878,10 +822,7 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
             ),
             child: Text(
               'Cancelar',
-              style: TextStyle(
-                color: Colors.grey.shade700,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
             ),
           ),
           const SizedBox(width: 8),
@@ -891,7 +832,10 @@ cajasController.text = widget.datosIniciales!['n_cartuchos']?.toString() ?? '';
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 minimumSize: Size.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),

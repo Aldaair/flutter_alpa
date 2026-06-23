@@ -53,8 +53,6 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
     'FUERA DE PLAN': const Color(0xFFF44336),
   };
 
-  List<Map<String, dynamic>> estadosBD = [];
-
   final Map<String, List<Map<String, String>>> datadialog = {
     'OPERATIVO': [],
     'DEMORA': [],
@@ -68,7 +66,6 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
     super.initState();
     selectedTurno = _getTurnoBasedOnTime();
     _initializeScreen();
-    obtenerEstadosBD();
   }
 
   bool get _isMaster => widget.rolUsuario == 'Master';
@@ -106,26 +103,6 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
     if (selected.isEmpty) return null;
     final operator = selected.first;
     return '${operator['nombres'] ?? ''} ${operator['apellidos'] ?? ''}'.trim();
-  }
-
-  void obtenerEstadosBD() async {
-    estadosBD = await DatabaseHelper().getEstadosBD('SCALAMIN');
-
-    // Limpiamos la lista antes de actualizar
-    datadialog.forEach((key, value) => value.clear());
-
-    // Agregar los estados filtrados a la lista correcta
-    for (var estado in estadosBD) {
-      String estadoPrincipal = estado['estado_principal'];
-      if (datadialog.containsKey(estadoPrincipal)) {
-        datadialog[estadoPrincipal]?.add({
-          "Nombre": estado['tipo_estado'],
-          "Código": estado['codigo'].toString(),
-        });
-      }
-    }
-
-    setState(() {});
   }
 
   String _getTurnoBasedOnTime() {
@@ -962,29 +939,11 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
   Future<void> _handleNuevaOperacion(Map<String, dynamic> data) async {
     DatabaseHelper dbHelper = DatabaseHelper();
 
-    print('📦 Datos recibidos en _handleNuevaOperacion:');
-    print('   fecha: ${data['fecha']}');
-    print('   turno: ${data['turno']}');
-    print('   equipo: ${data['equipo']}');
-
-    // 🔥 1. OBTENER HORÓMETROS DE SCALAMIN
-    List<Map<String, dynamic>> horometros = await dbHelper
-        .getHorometrosPorOperacion('scalamin');
-
-    print("✅ Horómetros scalamin:");
-    for (var h in horometros) {
-      print("Tipo: ${h['tipo_horometro']} - Final: ${h['final']}");
-    }
-
     List<Map<String, dynamic>> checklistItems = await DatabaseHelper()
         .getCheckListByProceso('SCALAMIN');
 
     List<Map<String, dynamic>> checkListJson = checklistItems.map((item) {
-      return {
-        'id': item['id'],
-        'decision': 0,
-        'observacion': '',
-      };
+      return {'id': item['id'], 'decision': 0, 'observacion': ''};
     }).toList();
 
     /// Insertar operación
@@ -1001,7 +960,7 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
       equipoId: data['equipo_id'] as int?,
       jefeGuardiaId: data['jefe_guardia_id'] as int?,
       checkListJson: checkListJson,
-      horometrosBase: horometros,
+      //horometrosBase: horometros,
     );
 
     /// Refrescar UI
@@ -1173,9 +1132,9 @@ class _TaladroScalaminScreenState extends State<TaladroScalaminScreen> {
         .getCheckListByOperacionIdScalamin(operacionId);
     List<Map<String, dynamic>> checklistData =
         await ChecklistHelper.enrichForDisplay(
-      proceso: 'SCALAMIN',
-      savedDecisions: savedDecisions,
-    );
+          proceso: 'SCALAMIN',
+          savedDecisions: savedDecisions,
+        );
 
     showDialog(
       context: context,

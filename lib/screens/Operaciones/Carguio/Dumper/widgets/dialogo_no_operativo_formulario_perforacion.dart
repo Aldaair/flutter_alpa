@@ -82,20 +82,11 @@ List<PlanMetraje> planesMetrajeCompletos = [];
     
     // Cargar las tres tablas en paralelo
     final results = await Future.wait([
-      dbHelper.getPlanesMensual(),
-      dbHelper.getPlanesProduccion(),
-      dbHelper.getPlanesMetraje(),
       dbHelper.getOrigenDestino('DUMPER', 'ORIGEN'),
     ]);
     
-    planesMensualCompletos = results[0] as List<PlanMensual>;
-planesProduccionCompletos = results[1] as List<PlanProduccion>;
-planesMetrajeCompletos = results[2] as List<PlanMetraje>;
-final origenes = results[3] as List<Map<String, dynamic>>;
+final origenes = results[0] as List<Map<String, dynamic>>;
 
-    print("Planes Mensual obtenidos: ${planesMensualCompletos.length}");
-    print("Planes Producción obtenidos: ${planesProduccionCompletos.length}");
-    print("Planes Metraje obtenidos: ${planesMetrajeCompletos.length}");
 
     Set<String> nivelesSet = {};
     Set<String> tiposLaborSet = {};

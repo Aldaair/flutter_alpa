@@ -54,8 +54,6 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
     'FUERA DE PLAN': const Color(0xFFF44336),
   };
 
-  List<Map<String, dynamic>> estadosBD = [];
-
   final Map<String, List<Map<String, String>>> datadialog = {
     'OPERATIVO': [],
     'DEMORA': [],
@@ -69,7 +67,6 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
     super.initState();
     selectedTurno = _getTurnoBasedOnTime();
     _initializeScreen();
-    obtenerEstadosBD();
   }
 
   bool get _isMaster => widget.rolUsuario == 'Master';
@@ -107,26 +104,6 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
     if (selected.isEmpty) return null;
     final operator = selected.first;
     return '${operator['nombres'] ?? ''} ${operator['apellidos'] ?? ''}'.trim();
-  }
-
-  void obtenerEstadosBD() async {
-    estadosBD = await DatabaseHelper().getEstadosBD('ROMPEBANCOS');
-
-    // Limpiamos la lista antes de actualizar
-    datadialog.forEach((key, value) => value.clear());
-
-    // Agregar los estados filtrados a la lista correcta
-    for (var estado in estadosBD) {
-      String estadoPrincipal = estado['estado_principal'];
-      if (datadialog.containsKey(estadoPrincipal)) {
-        datadialog[estadoPrincipal]?.add({
-          "Nombre": estado['tipo_estado'],
-          "Código": estado['codigo'].toString(),
-        });
-      }
-    }
-
-    setState(() {});
   }
 
   String _getTurnoBasedOnTime() {
@@ -963,29 +940,12 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
   Future<void> _handleNuevaOperacion(Map<String, dynamic> data) async {
     DatabaseHelper dbHelper = DatabaseHelper();
 
-    print('📦 Datos recibidos en _handleNuevaOperacion:');
-    print('   fecha: ${data['fecha']}');
-    print('   turno: ${data['turno']}');
-    print('   equipo: ${data['equipo']}');
-
-    List<Map<String, dynamic>> horometros = await dbHelper
-        .getHorometrosPorOperacion('rompebanco');
-
-    print("✅ Horómetros rompebanco:");
-    for (var h in horometros) {
-      print("Tipo: ${h['tipo_horometro']} - Final: ${h['final']}");
-    }
-
     /// Checklist (RompeBanco / ROMPEBANCOS)
     List<Map<String, dynamic>> checklistItems = await DatabaseHelper()
         .getCheckListByProceso('ROMPEBANCOS');
 
     List<Map<String, dynamic>> checkListJson = checklistItems.map((item) {
-      return {
-        'id': item['id'],
-        'decision': 0,
-        'observacion': '',
-      };
+      return {'id': item['id'], 'decision': 0, 'observacion': ''};
     }).toList();
 
     /// Insertar operación
@@ -1005,7 +965,7 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
       registradorNombre: data['registrador_nombre'] as String?,
       jefeGuardiaId: data['jefe_guardia_id'] as int?,
       checkListJson: checkListJson,
-      horometrosBase: horometros,
+      //horometrosBase: horometros,
     );
 
     /// Refrescar UI
@@ -1177,9 +1137,9 @@ class _TaladroRompebancosScreenState extends State<TaladroRompebancosScreen> {
         .getCheckListByOperacionIdRompeBaco(operacionId);
     List<Map<String, dynamic>> checklistData =
         await ChecklistHelper.enrichForDisplay(
-      proceso: 'ROMPEBANCOS',
-      savedDecisions: savedDecisions,
-    );
+          proceso: 'ROMPEBANCOS',
+          savedDecisions: savedDecisions,
+        );
 
     showDialog(
       context: context,

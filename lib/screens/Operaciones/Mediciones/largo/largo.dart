@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/models/Explosivo.dart';
+
 import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:i_miner/screens/Operaciones/Mediciones/horizontal/listar_mediciones.dart';
 
@@ -20,7 +20,7 @@ List<TipoPerforacion> _tiposPerforacion = [];
   List<Map<String, dynamic>> _exploracionesSucio = [];
   bool _isLoading = true;
   Map<String, TextEditingController> controllers = {};
-    List<Explosivo> _explosivos = [];
+
   Map<int, Map<String, dynamic>> registrosEditados = {};
 
   
@@ -59,7 +59,7 @@ final TextEditingController turnoController = TextEditingController();
     'Diciembre'
   ];
 
-List<Map<String, dynamic>> _toneladas = [];
+
 
   @override
   void initState() {
@@ -67,67 +67,11 @@ List<Map<String, dynamic>> _toneladas = [];
     final now = DateTime.now();
     _getTiposPerforacion();
     _cargarExploraciones();
-    _cargarDatosExplosivos();
-    _cargarDatosToneladas();
+
     
   }
   
-void _cargarDatosToneladas() async {
-  List<Map<String, dynamic>> toneladas = await DatabaseHelper().obtenerTodasToneladas();
-  print("Toneladas locales: $toneladas");
 
-  setState(() {
-    _toneladas = toneladas;
-    // Si ya tenemos las exploraciones, asignamos las toneladas
-    if (_exploracionesSucio.isNotEmpty) {
-      _asignarToneladasAExploraciones();
-    }
-  });
-}
-
-void _asignarToneladasAExploraciones() {
-  List<Map<String, dynamic>> exploracionesActualizadas = List.from(_exploracionesSucio);
-
-  for (var exploracion in exploracionesActualizadas) {
-    // Construimos el labor compuesto igual que en la tabla
-    String laborExploracion = [
-      exploracion['tipo_labor']?.toString() ?? '',
-      exploracion['labor']?.toString() ?? '',
-      exploracion['ala']?.toString() ?? ''
-    ].where((part) => part.isNotEmpty).join(' ').trim();
-
-    // Buscamos una tonelada que coincida en los campos clave
-    var toneladaCorrespondiente = _toneladas.firstWhere(
-      (tonelada) =>
-        tonelada['fecha'] == exploracion['fecha'] &&
-        tonelada['turno'] == exploracion['turno'] &&
-        tonelada['zona'] == exploracion['zona'] &&
-        tonelada['labor'] == laborExploracion,
-      orElse: () => {},
-    );
-
-    // Asignamos las toneladas (0.0 si no hay coincidencia)
-    exploracion['toneladas'] = toneladaCorrespondiente.isNotEmpty 
-      ? toneladaCorrespondiente['toneladas']?.toString() ?? '0.0'
-      : '0.0';
-  }
-
-  setState(() {
-    _exploracionesSucio = exploracionesActualizadas;
-    if (_exploraciones.isNotEmpty) {
-      _filtrarExploraciones();
-    }
-  });
-}
-
-    void _cargarDatosExplosivos() async {
-    List<Explosivo> explosivos = await DatabaseHelper().getExplosivos();
-    print("explosivos local $explosivos");
-
-    setState(() {
-      _explosivos = explosivos;
-    });
-  }
 Future<void> _getTiposPerforacion() async {
   try {
     final dbHelper = DatabaseHelper();
@@ -146,7 +90,7 @@ Future<void> _getTiposPerforacion() async {
 Future<void> _cargarExploraciones() async {
   try {
     final dbHelper = DatabaseHelper();
-    final exploraciones = await dbHelper.obtenerExploracionesCompletas();
+    final exploraciones = await dbHelper.getExploraciones();
 
     setState(() {
       _exploracionesSucio = exploraciones;
@@ -156,12 +100,6 @@ Future<void> _cargarExploraciones() async {
     // Si ya tenemos los tipos de perforación, aplicar el filtro
     if (_tiposPerforacion.isNotEmpty) {
       _filtrarExploraciones();
-    }
-    if (_explosivos.isNotEmpty) {
-        calcularKgExplosivos();
-      }
-       if (_toneladas.isNotEmpty) {
-      _asignarToneladasAExploraciones();
     }
   } catch (e) {
     setState(() {
@@ -173,57 +111,7 @@ Future<void> _cargarExploraciones() async {
   }
 }
 
-  void calcularKgExplosivos() {
-    for (var registro in _exploracionesSucio) {
-      double totalKg = 0.0;
 
-      Map<String, double> despachosTotales = {};
-      for (var despacho in registro['despachos'] ?? []) {
-        for (var detalle in despacho['detalles'] ?? []) {
-          String nombre = detalle['nombre_material'];
-          double cantidad =
-              double.tryParse(detalle['cantidad'].toString()) ?? 0.0;
-
-          despachosTotales[nombre] = (despachosTotales[nombre] ?? 0) + cantidad;
-        }
-      }
-
-      // Procesar devoluciones
-      Map<String, double> devolucionesTotales = {};
-      for (var devolucion in registro['devoluciones'] ?? []) {
-        for (var detalle in devolucion['detalles'] ?? []) {
-          String nombre = detalle['nombre_material'];
-          double cantidad =
-              double.tryParse(detalle['cantidad'].toString()) ?? 0.0;
-
-          devolucionesTotales[nombre] =
-              (devolucionesTotales[nombre] ?? 0) + cantidad;
-        }
-      }
-
-      // Calcular diferencias y totalKg
-      despachosTotales.forEach((nombre, cantidadDespacho) {
-        double cantidadDevolucion = devolucionesTotales[nombre] ?? 0.0;
-        double diferencia = cantidadDespacho - cantidadDevolucion;
-
-        // Buscar el explosivo correspondiente
-        Explosivo? explosivo;
-        try {
-          explosivo = _explosivos.firstWhere((e) => e.tipoExplosivo == nombre);
-        } catch (e) {
-          explosivo = null;
-        }
-
-        if (explosivo != null) {
-          double kg = diferencia * explosivo.pesoUnitario;
-          totalKg += kg;
-        }
-      });
-
-      // Guardar el resultado en el registro
-      registro['kg_explosivos'] = totalKg.toStringAsFixed(2);
-    }
-  }
 
 void _filtrarExploraciones() {
   // Extraemos los nombres de los tipos de perforación para comparar
@@ -364,19 +252,18 @@ void _filtrarExploraciones() {
                                     borderRadius: BorderRadius.circular(8),
                                     color: Colors.grey,
                                   ),
-                                  columnWidths: const {
-                                    0: FlexColumnWidth(
-                                        0.8),
-                                    1: FlexColumnWidth(1.2),
-                                    2: FlexColumnWidth(1.2),
-                                    3: FlexColumnWidth(1.2),
-                                    4: FlexColumnWidth(1.4),
-                                    5: FlexColumnWidth(1.2),
-                                    6: FlexColumnWidth(1.3),
-                                    7: FlexColumnWidth(1.4),
-                                    8: FlexColumnWidth(1.3),
-                                    9: FlexColumnWidth(1.3),
-                                  },
+                                   columnWidths: const {
+                                     0: FlexColumnWidth(
+                                         0.8),
+                                     1: FlexColumnWidth(1.2),
+                                     2: FlexColumnWidth(1.2),
+                                     3: FlexColumnWidth(1.2),
+                                     4: FlexColumnWidth(1.4),
+                                     5: FlexColumnWidth(1.2),
+                                     6: FlexColumnWidth(1.3),
+                                     7: FlexColumnWidth(1.4),
+                                     8: FlexColumnWidth(1.3),
+                                   },
                                   children: [
                                     // Encabezados de tabla
                                     TableRow(
@@ -395,7 +282,6 @@ void _filtrarExploraciones() {
                                         tableCellBold(context, 'VETA'),
                                         tableCellBold(
                                             context, 'TIPO PERFORACIÓN'),
-                                        tableCellBold(context, 'KG EXPLOSIVOS'),
                                         tableCellBold(
                                             context, 'TONELADAS'),
                                       ],
@@ -435,10 +321,6 @@ void _filtrarExploraciones() {
                                             ''),
                                         tableCell(_exploraciones[i]
                                                     ['tipo_perforacion']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCell(_exploraciones[i]
-                                                    ['kg_explosivos']
                                                 ?.toString() ??
                                             ''),
                                             tableCell(_exploraciones[i]
@@ -508,39 +390,26 @@ Future<void> insertarYActualizarMedicionesLargo() async {
 
   if (registros.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('No hay registros con datos válidos (kg_explosivos o toneladas > 0)')),
+      SnackBar(content: Text('No hay registros con datos válidos (toneladas > 0)')),
     );
     return;
   }
 
   final dbHelper = DatabaseHelper();
-  List<int> idsParaActualizar = [];
   int registrosInsertados = 0;
 
   try {
     for (var registro in registros) {
-      int? idExplosivo = registro['id_explosivo'];
-      if (idExplosivo == null) {
-        print("⚠️ Registro sin id_explosivo. Se omite: $registro");
-        continue;
-      }
-
       int idInsertado = await dbHelper.insertarMedicionLargo(registro);
       print("✅ Registro insertado con id: $idInsertado");
-      idsParaActualizar.add(idExplosivo);
       registrosInsertados++;
     }
 
-    if (idsParaActualizar.isNotEmpty) {
-      await dbHelper.actualizarMedicionEXplosivo(idsParaActualizar);
-      print("🔄 ${idsParaActualizar.length} registros actualizados en nube_Datos_trabajo_exploraciones");
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$registrosInsertados registros guardados exitosamente')),
       );
       
       await _recargarDatos();
-    }
   } catch (e) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Error al guardar datos: ${e.toString()}')),
@@ -553,7 +422,6 @@ List<Map<String, dynamic>> obtenerDatosEditadosFormateados() {
   List<Map<String, dynamic>> listaDatos = [];
 
   for (var exploracion in _exploraciones) {
-    double kgExplosivos = double.tryParse(exploracion['kg_explosivos']?.toString() ?? '0.0') ?? 0.0;
     double toneladas = double.tryParse(exploracion['toneladas']?.toString() ?? '0.0') ?? 0.0;
 
     // ✅ Cambio clave: Ahora verificamos específicamente que toneladas > 0
@@ -574,7 +442,6 @@ List<Map<String, dynamic>> obtenerDatosEditadosFormateados() {
         'labor': tipoLaborLaborAla,
         'veta': exploracion['veta'],
         'tipo_perforacion': exploracion['tipo_perforacion'],
-        'kg_explosivos': kgExplosivos.toStringAsFixed(2),
         'toneladas': toneladas.toStringAsFixed(2),
         'idnube': exploracion['idnube'] ?? 0,
       };
@@ -604,7 +471,6 @@ Future<void> _recargarDatos() async {
   // Vuelve a cargar todos los datos
   await _getTiposPerforacion();
   await _cargarExploraciones();
-  _cargarDatosExplosivos();
   
   setState(() {
     _isLoading = false;

@@ -169,7 +169,6 @@ class _DialogoFormularioPerforacionState
 
     try {
       await Future.wait([
-        _cargarPlanesProduccionYMetraje(),
         _cargarTiposPerforacion(),
         _cargarLongitudBarras(),
         _cargarMisLabores(),
@@ -469,95 +468,7 @@ class _DialogoFormularioPerforacionState
       print("Error cargando longitudes: $e");
     }
   }
-
-  Future<void> _cargarPlanesProduccionYMetraje() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      final results = await Future.wait([
-        dbHelper.getPlanesProduccion(),
-        dbHelper.getPlanesMetraje(),
-      ]);
-
-      planesProduccionCompletos = results[0] as List<PlanProduccion>;
-      planesMetrajeCompletos = results[1] as List<PlanMetraje>;
-
-      ubicacionesPlanCompletas = _buildPlanLocations();
-
-      print(
-        '🔍 _cargarPlanesProduccionYMetraje → ${planesProduccionCompletos.length} planes prod, ${planesMetrajeCompletos.length} planes metraje, ${ubicacionesPlanCompletas.length} ubicaciones',
-      );
-
-      final minasSet = <String>{};
-      final zonasSet = <String>{};
-      final areasSet = <String>{};
-      final fasesSet = <String>{};
-      final estructurasSet = <String>{};
-      Set<String> nivelesSet = {};
-      Set<String> tiposLaborSet = {};
-      Set<String> laboresSet = {};
-      Set<String> alasSet = {};
-
-      for (final ubicacion in ubicacionesPlanCompletas) {
-        minasSet.add(ubicacion.mina);
-        zonasSet.add(ubicacion.zona);
-        areasSet.add(ubicacion.area);
-        fasesSet.add(ubicacion.fase);
-        estructurasSet.add(ubicacion.estructuraMineral);
-        nivelesSet.add(ubicacion.nivel);
-        tiposLaborSet.add(ubicacion.tipoLabor);
-        laboresSet.add(ubicacion.labor);
-        if (ubicacion.ala.isNotEmpty) {
-          alasSet.add(ubicacion.ala);
-        }
-      }
-
-      setState(() {
-        opcionesMina = minasSet.toList()..sort();
-        opcionesZona = zonasSet.toList()..sort();
-        opcionesArea = areasSet.toList()..sort();
-        opcionesFase = fasesSet.toList()..sort();
-        opcionesEstructuraMineral = estructurasSet.toList()..sort();
-        opcionesNivel = nivelesSet.toList()..sort();
-        opcionesTipoLabor = tiposLaborSet.toList()..sort();
-        opcionesLabor = laboresSet.toList()..sort();
-        opcionesAla = alasSet.toList()..sort();
-        filteredMinas = List.from(opcionesMina);
-        filteredZonas = List.from(opcionesZona);
-        filteredAreas = List.from(opcionesArea);
-        filteredFases = List.from(opcionesFase);
-        filteredEstructurasMinerales = List.from(opcionesEstructuraMineral);
-        filteredTiposLabor = List.from(opcionesTipoLabor);
-        filteredLabores = List.from(opcionesLabor);
-        filteredAlas = List.from(opcionesAla);
-        filteredNiveles = List.from(opcionesNivel);
-      });
-
-      _actualizarFiltros();
-      if (laboresAsignadas.isNotEmpty) {
-        _sincronizarFrentePlanificado();
-      }
-    } catch (e) {
-      print("Error cargando planes: $e");
-      setState(() {
-        opcionesNivel = ['Nivel 1', 'Nivel 2', 'Nivel 3', 'Nivel 4'];
-        opcionesTipoLabor = [
-          'Galería',
-          'Crucero',
-          'Rampa',
-          'Chimenea',
-          'Subterráneo',
-        ];
-        opcionesLabor = ['Labor A', 'Labor B', 'Labor C', 'Labor D'];
-        opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
-        filteredTiposLabor = List.from(opcionesTipoLabor);
-        filteredLabores = List.from(opcionesLabor);
-        filteredAlas = List.from(opcionesAla);
-        filteredNiveles = List.from(opcionesNivel);
-      });
-    }
-  }
-
-  Future<void> _cargarTiposPerforacion() async {
+Future<void> _cargarTiposPerforacion() async {
     try {
       final dbHelper = DatabaseHelper();
       tiposPerforacionCompletos = await dbHelper.getTiposPerforacionByProceso(

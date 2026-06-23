@@ -51,8 +51,6 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
     'FUERA DE PLAN': const Color(0xFFF44336),
   };
 
-  List<Map<String, dynamic>> estadosBD = [];
-
   final Map<String, List<Map<String, String>>> datadialog = {
     'OPERATIVO': [],
     'DEMORA': [],
@@ -66,7 +64,6 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
     super.initState();
     selectedTurno = _getTurnoBasedOnTime();
     _initializeScreen();
-    obtenerEstadosBD();
   }
 
   bool get _isMaster => widget.rolUsuario == 'Master';
@@ -116,28 +113,6 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
 
     final operator = selected.first;
     return '${operator['nombres'] ?? ''} ${operator['apellidos'] ?? ''}'.trim();
-  }
-
-  void obtenerEstadosBD() async {
-    estadosBD = await DatabaseHelper().getEstadosBD(
-      'PERFORACIÓN TALADROS LARGOS',
-    );
-
-    // Limpiamos la lista antes de actualizar
-    datadialog.forEach((key, value) => value.clear());
-
-    // Agregar los estados filtrados a la lista correcta
-    for (var estado in estadosBD) {
-      String estadoPrincipal = estado['estado_principal'];
-      if (datadialog.containsKey(estadoPrincipal)) {
-        datadialog[estadoPrincipal]?.add({
-          "Nombre": estado['tipo_estado'],
-          "Código": estado['codigo'].toString(),
-        });
-      }
-    }
-
-    setState(() {});
   }
 
   String _getTurnoBasedOnTime() {
@@ -994,27 +969,13 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
   Future<void> _handleNuevaOperacion(Map<String, dynamic> data) async {
     DatabaseHelper dbHelper = DatabaseHelper();
 
-    // 🔥 1. OBTENER HORÓMETROS DE TALADRO LARGO
-    List<Map<String, dynamic>> horometros = await dbHelper
-        .getHorometrosPorOperacion('tal_largo');
-
-    print("✅ Horómetros tal_largo:");
-
-    for (var h in horometros) {
-      print("Tipo: ${h['tipo_horometro']} - Final: ${h['final']}");
-    }
-
     // 🔹 Obtener la lista de checklist para este tipo de operación
     List<Map<String, dynamic>> checklistItems = await DatabaseHelper()
         .getCheckListByProceso('PERFORACIÓN TALADROS LARGOS');
 
     // 🔹 Convertir la lista de items a la estructura JSON que quieres guardar
     List<Map<String, dynamic>> checkListJson = checklistItems.map((item) {
-      return {
-        'id': item['id'],
-        'decision': 0,
-        'observacion': '',
-      };
+      return {'id': item['id'], 'decision': 0, 'observacion': ''};
     }).toList();
 
     // 🔹 Insertar la operación
@@ -1036,7 +997,7 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
       registradorNombre: data['registrador_nombre'] as String?,
       jefeGuardiaId: data['jefe_guardia_id'] as int?,
       checkListJson: checkListJson,
-      horometrosBase: horometros,
+      //horometrosBase: data['horometros'],
     );
 
     // 🔹 Refrescar la UI
@@ -1202,9 +1163,9 @@ class _TaladroLargoScreenState extends State<TaladroLargoScreen> {
         .getCheckListByOperacionId(operacionId);
     List<Map<String, dynamic>> checklistData =
         await ChecklistHelper.enrichForDisplay(
-      proceso: 'PERFORACIÓN TALADROS LARGOS',
-      savedDecisions: savedDecisions,
-    );
+          proceso: 'PERFORACIÓN TALADROS LARGOS',
+          savedDecisions: savedDecisions,
+        );
 
     showDialog(
       context: context,

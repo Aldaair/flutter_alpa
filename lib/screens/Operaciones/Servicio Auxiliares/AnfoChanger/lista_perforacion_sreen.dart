@@ -53,8 +53,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     'FUERA DE PLAN': const Color(0xFFF44336),
   };
 
-  List<Map<String, dynamic>> estadosBD = [];
-
   final Map<String, List<Map<String, String>>> datadialog = {
     'OPERATIVO': [],
     'DEMORA': [],
@@ -68,7 +66,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     super.initState();
     selectedTurno = _getTurnoBasedOnTime();
     _initializeScreen();
-    obtenerEstadosBD();
   }
 
   bool get _isMaster => widget.rolUsuario == 'Master';
@@ -106,26 +103,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     if (selected.isEmpty) return null;
     final operator = selected.first;
     return '${operator['nombres'] ?? ''} ${operator['apellidos'] ?? ''}'.trim();
-  }
-
-  void obtenerEstadosBD() async {
-    estadosBD = await DatabaseHelper().getEstadosBD('ANFOCHANGER');
-
-    // Limpiamos la lista antes de actualizar
-    datadialog.forEach((key, value) => value.clear());
-
-    // Agregar los estados filtrados a la lista correcta
-    for (var estado in estadosBD) {
-      String estadoPrincipal = estado['estado_principal'];
-      if (datadialog.containsKey(estadoPrincipal)) {
-        datadialog[estadoPrincipal]?.add({
-          "Nombre": estado['tipo_estado'],
-          "Código": estado['codigo'].toString(),
-        });
-      }
-    }
-
-    setState(() {});
   }
 
   String _getTurnoBasedOnTime() {
@@ -963,25 +940,12 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
   Future<void> _handleNuevaOperacion(Map<String, dynamic> data) async {
     DatabaseHelper dbHelper = DatabaseHelper();
 
-    // 🔥 1. OBTENER HORÓMETROS DE ANFOCHANGER
-    List<Map<String, dynamic>> horometros = await dbHelper
-        .getHorometrosPorOperacion('anfochanger');
-
-    print("✅ Horómetros anfochanger:");
-    for (var h in horometros) {
-      print("Tipo: ${h['tipo_horometro']} - Final: ${h['final']}");
-    }
-
     /// Obtener checklist del proceso correcto
     List<Map<String, dynamic>> checklistItems = await dbHelper
         .getCheckListByProceso('ANFOCHANGER');
 
     List<Map<String, dynamic>> checkListJson = checklistItems.map((item) {
-      return {
-        'id': item['id'],
-        'decision': 0,
-        'observacion': '',
-      };
+      return {'id': item['id'], 'decision': 0, 'observacion': ''};
     }).toList();
 
     /// Insertar operación
@@ -1001,7 +965,7 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       registradorNombre: data['registrador_nombre'] as String?,
       jefeGuardiaId: data['jefe_guardia_id'] as int?,
       checkListJson: checkListJson,
-      horometrosBase: horometros,
+      //horometrosBase: horometros,
     );
 
     /// Refrescar UI
@@ -1173,9 +1137,9 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         .getCheckListByOperacionIdAnfochanger(operacionId);
     List<Map<String, dynamic>> checklistData =
         await ChecklistHelper.enrichForDisplay(
-      proceso: 'ANFOCHANGER',
-      savedDecisions: savedDecisions,
-    );
+          proceso: 'ANFOCHANGER',
+          savedDecisions: savedDecisions,
+        );
 
     showDialog(
       context: context,

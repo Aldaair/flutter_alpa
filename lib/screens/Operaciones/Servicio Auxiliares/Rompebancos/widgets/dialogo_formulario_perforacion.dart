@@ -23,10 +23,12 @@ class DialogoFormularioRompebanco extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<DialogoFormularioRompebanco> createState() => _DialogoFormularioRompebancoState();
+  State<DialogoFormularioRompebanco> createState() =>
+      _DialogoFormularioRompebancoState();
 }
 
-class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanco> {
+class _DialogoFormularioRompebancoState
+    extends State<DialogoFormularioRompebanco> {
   bool isEditable = false;
   bool isLoading = true;
 
@@ -51,216 +53,129 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
   List<String> filteredAlas = [];
 
   // Almacenar objetos completos para referencia
-List<PlanMensual> planesMensualCompletos = [];
-List<PlanProduccion> planesProduccionCompletos = [];
-List<PlanMetraje> planesMetrajeCompletos = [];
+  List<PlanMensual> planesMensualCompletos = [];
+  List<PlanProduccion> planesProduccionCompletos = [];
+  List<PlanMetraje> planesMetrajeCompletos = [];
 
   @override
   void initState() {
     super.initState();
     isEditable = widget.estado.toLowerCase() != "cerrado";
     _cargarDatosIniciales();
-    _cargarDatosDesdeBD();
   }
-
-  Future<void> _cargarDatosDesdeBD() async {
-    setState(() => isLoading = true);
-
-    try {
-      await _cargarPlanesCombinados();
-    } catch (e) {
-      print("Error cargando datos: $e");
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
-  // ✅ NUEVO: Cargar las tres tablas y combinar opciones
-Future<void> _cargarPlanesCombinados() async {
-  try {
-    final dbHelper = DatabaseHelper();
-    
-    // Cargar las tres tablas en paralelo
-    final results = await Future.wait([
-      dbHelper.getPlanesMensual(),
-      dbHelper.getPlanesProduccion(),
-      dbHelper.getPlanesMetraje(),
-    ]);
-    
-   planesMensualCompletos = results[0] as List<PlanMensual>;
-planesProduccionCompletos = results[1] as List<PlanProduccion>;
-planesMetrajeCompletos = results[2] as List<PlanMetraje>;
-
-    print("Planes Mensual obtenidos: ${planesMensualCompletos.length}");
-    print("Planes Producción obtenidos: ${planesProduccionCompletos.length}");
-    print("Planes Metraje obtenidos: ${planesMetrajeCompletos.length}");
-
-    Set<String> nivelesSet = {};
-    Set<String> tiposLaborSet = {};
-    Set<String> laboresSet = {};
-    Set<String> alasSet = {};
-
-    // Procesar PlanMensual
-    for (var plan in planesMensualCompletos) {
-      if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-      if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-      if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-      if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-    }
-
-    // Procesar PlanProduccion
-    for (var plan in planesProduccionCompletos) {
-      if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-      if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-      if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-      if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-    }
-
-    // Procesar PlanMetraje
-    for (var plan in planesMetrajeCompletos) {
-      if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-      if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-      if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-      if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-    }
-
-    setState(() {
-      opcionesNivel = nivelesSet.toList()..sort();
-      opcionesTipoLabor = tiposLaborSet.toList()..sort();
-      opcionesLabor = laboresSet.toList()..sort();
-      opcionesAla = alasSet.toList()..sort();
-
-      // Inicializar listas filtradas
-      filteredTiposLabor = List.from(opcionesTipoLabor);
-      filteredLabores = List.from(opcionesLabor);
-      filteredAlas = List.from(opcionesAla);
-    });
-
-  } catch (e) {
-    print("Error cargando planes combinados: $e");
-    // Fallback con datos de ejemplo
-    setState(() {
-      opcionesNivel = ['Nv 300', 'Nv 320', 'Nv 340', 'Nv 360'];
-      opcionesTipoLabor = ['Galería', 'Crucero', 'Rampa', 'Chimenea'];
-      opcionesLabor = ['Labor 01', 'Labor 02', 'Labor 03', 'Labor 04'];
-      opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
-      
-      filteredTiposLabor = List.from(opcionesTipoLabor);
-      filteredLabores = List.from(opcionesLabor);
-      filteredAlas = List.from(opcionesAla);
-    });
-  }
-}
 
   // Actualizar filtros
   void _actualizarFiltros() {
-  // Filtrar tipos de labor basados en nivel seleccionado
-  if (nivelSeleccionado != null) {
-    Set<String> tiposLaborFiltrados = {};
-    
-    // Buscar en PlanMensual
-    for (var plan in planesMensualCompletos) {
-      if (plan.nivel == nivelSeleccionado && (plan.tipoLabor?.isNotEmpty ?? false)) {
-        tiposLaborFiltrados.add(plan.tipoLabor!);
-      }
-    }
-    
-    // Buscar en PlanProduccion
-    for (var plan in planesProduccionCompletos) {
-      if (plan.nivel == nivelSeleccionado && (plan.tipoLabor?.isNotEmpty ?? false)) {
-        tiposLaborFiltrados.add(plan.tipoLabor!);
-      }
-    }
-    
-    // Buscar en PlanMetraje
-    for (var plan in planesMetrajeCompletos) {
-      if (plan.nivel == nivelSeleccionado && (plan.tipoLabor?.isNotEmpty ?? false)) {
-        tiposLaborFiltrados.add(plan.tipoLabor!);
-      }
-    }
-    
-    filteredTiposLabor = tiposLaborFiltrados.toList()..sort();
-  } else {
-    filteredTiposLabor = List.from(opcionesTipoLabor);
-  }
+    // Filtrar tipos de labor basados en nivel seleccionado
+    if (nivelSeleccionado != null) {
+      Set<String> tiposLaborFiltrados = {};
 
-  // Filtrar labores basados en nivel y tipo labor
-  if (nivelSeleccionado != null && tipoLaborSeleccionado != null) {
-    Set<String> laboresFiltrados = {};
-    
-    // Buscar en PlanMensual
-    for (var plan in planesMensualCompletos) {
-      if (plan.nivel == nivelSeleccionado &&
-          plan.tipoLabor == tipoLaborSeleccionado &&
-          (plan.labor?.isNotEmpty ?? false)) {
-        laboresFiltrados.add(plan.labor!);
+      // Buscar en PlanMensual
+      for (var plan in planesMensualCompletos) {
+        if (plan.nivel == nivelSeleccionado &&
+            (plan.tipoLabor?.isNotEmpty ?? false)) {
+          tiposLaborFiltrados.add(plan.tipoLabor!);
+        }
       }
-    }
-    
-    // Buscar en PlanProduccion
-    for (var plan in planesProduccionCompletos) {
-      if (plan.nivel == nivelSeleccionado &&
-          plan.tipoLabor == tipoLaborSeleccionado &&
-          (plan.labor?.isNotEmpty ?? false)) {
-        laboresFiltrados.add(plan.labor!);
-      }
-    }
-    
-    // Buscar en PlanMetraje
-    for (var plan in planesMetrajeCompletos) {
-      if (plan.nivel == nivelSeleccionado &&
-          plan.tipoLabor == tipoLaborSeleccionado &&
-          (plan.labor?.isNotEmpty ?? false)) {
-        laboresFiltrados.add(plan.labor!);
-      }
-    }
-    
-    filteredLabores = laboresFiltrados.toList()..sort();
-  } else {
-    filteredLabores = List.from(opcionesLabor);
-  }
 
-  // Filtrar alas basados en nivel, tipo labor y labor
-  if (nivelSeleccionado != null &&
-      tipoLaborSeleccionado != null &&
-      laborSeleccionado != null) {
-    Set<String> alasFiltrados = {};
-    
-    // Buscar en PlanMensual
-    for (var plan in planesMensualCompletos) {
-      if (plan.nivel == nivelSeleccionado &&
-          plan.tipoLabor == tipoLaborSeleccionado &&
-          plan.labor == laborSeleccionado &&
-          (plan.ala?.isNotEmpty ?? false)) {
-        alasFiltrados.add(plan.ala!);
+      // Buscar en PlanProduccion
+      for (var plan in planesProduccionCompletos) {
+        if (plan.nivel == nivelSeleccionado &&
+            (plan.tipoLabor?.isNotEmpty ?? false)) {
+          tiposLaborFiltrados.add(plan.tipoLabor!);
+        }
       }
-    }
-    
-    // Buscar en PlanProduccion
-    for (var plan in planesProduccionCompletos) {
-      if (plan.nivel == nivelSeleccionado &&
-          plan.tipoLabor == tipoLaborSeleccionado &&
-          plan.labor == laborSeleccionado &&
-          (plan.ala?.isNotEmpty ?? false)) {
-        alasFiltrados.add(plan.ala!);
+
+      // Buscar en PlanMetraje
+      for (var plan in planesMetrajeCompletos) {
+        if (plan.nivel == nivelSeleccionado &&
+            (plan.tipoLabor?.isNotEmpty ?? false)) {
+          tiposLaborFiltrados.add(plan.tipoLabor!);
+        }
       }
+
+      filteredTiposLabor = tiposLaborFiltrados.toList()..sort();
+    } else {
+      filteredTiposLabor = List.from(opcionesTipoLabor);
     }
-    
-    // Buscar en PlanMetraje
-    for (var plan in planesMetrajeCompletos) {
-      if (plan.nivel == nivelSeleccionado &&
-          plan.tipoLabor == tipoLaborSeleccionado &&
-          plan.labor == laborSeleccionado &&
-          (plan.ala?.isNotEmpty ?? false)) {
-        alasFiltrados.add(plan.ala!);
+
+    // Filtrar labores basados en nivel y tipo labor
+    if (nivelSeleccionado != null && tipoLaborSeleccionado != null) {
+      Set<String> laboresFiltrados = {};
+
+      // Buscar en PlanMensual
+      for (var plan in planesMensualCompletos) {
+        if (plan.nivel == nivelSeleccionado &&
+            plan.tipoLabor == tipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor!);
+        }
       }
+
+      // Buscar en PlanProduccion
+      for (var plan in planesProduccionCompletos) {
+        if (plan.nivel == nivelSeleccionado &&
+            plan.tipoLabor == tipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor!);
+        }
+      }
+
+      // Buscar en PlanMetraje
+      for (var plan in planesMetrajeCompletos) {
+        if (plan.nivel == nivelSeleccionado &&
+            plan.tipoLabor == tipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor!);
+        }
+      }
+
+      filteredLabores = laboresFiltrados.toList()..sort();
+    } else {
+      filteredLabores = List.from(opcionesLabor);
     }
-    
-    filteredAlas = alasFiltrados.toList()..sort();
-  } else {
-    filteredAlas = List.from(opcionesAla);
+
+    // Filtrar alas basados en nivel, tipo labor y labor
+    if (nivelSeleccionado != null &&
+        tipoLaborSeleccionado != null &&
+        laborSeleccionado != null) {
+      Set<String> alasFiltrados = {};
+
+      // Buscar en PlanMensual
+      for (var plan in planesMensualCompletos) {
+        if (plan.nivel == nivelSeleccionado &&
+            plan.tipoLabor == tipoLaborSeleccionado &&
+            plan.labor == laborSeleccionado &&
+            (plan.ala?.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala!);
+        }
+      }
+
+      // Buscar en PlanProduccion
+      for (var plan in planesProduccionCompletos) {
+        if (plan.nivel == nivelSeleccionado &&
+            plan.tipoLabor == tipoLaborSeleccionado &&
+            plan.labor == laborSeleccionado &&
+            (plan.ala?.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala!);
+        }
+      }
+
+      // Buscar en PlanMetraje
+      for (var plan in planesMetrajeCompletos) {
+        if (plan.nivel == nivelSeleccionado &&
+            plan.tipoLabor == tipoLaborSeleccionado &&
+            plan.labor == laborSeleccionado &&
+            (plan.ala?.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala!);
+        }
+      }
+
+      filteredAlas = alasFiltrados.toList()..sort();
+    } else {
+      filteredAlas = List.from(opcionesAla);
+    }
   }
-}
 
   void _cargarDatosIniciales() {
     if (widget.datosIniciales != null) {
@@ -269,7 +184,8 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
         nivelSeleccionado = widget.datosIniciales!['nivel']?.isNotEmpty == true
             ? widget.datosIniciales!['nivel']
             : null;
-        tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor']?.isNotEmpty == true
+        tipoLaborSeleccionado =
+            widget.datosIniciales!['tipo_labor']?.isNotEmpty == true
             ? widget.datosIniciales!['tipo_labor']
             : null;
         laborSeleccionado = widget.datosIniciales!['labor']?.isNotEmpty == true
@@ -280,7 +196,8 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
             : null;
 
         // Observaciones
-        observacionesController.text = widget.datosIniciales!['observaciones'] ?? '';
+        observacionesController.text =
+            widget.datosIniciales!['observaciones'] ?? '';
       });
 
       // Después de cargar, actualizar filtros
@@ -297,7 +214,7 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
       'tipo_labor': tipoLaborSeleccionado ?? '',
       'labor': laborSeleccionado ?? '',
       'ala': alaSeleccionado ?? '',
-      
+
       // Observaciones
       'observaciones': observacionesController.text,
     };
@@ -327,14 +244,10 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 1000,
-        constraints: const BoxConstraints(
-          maxHeight: 500,
-        ),
+        constraints: const BoxConstraints(maxHeight: 500),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: Colors.white,
@@ -390,7 +303,11 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
                   color: widget.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Icon(Icons.location_on, size: 14, color: widget.primaryColor),
+                child: Icon(
+                  Icons.location_on,
+                  size: 14,
+                  color: widget.primaryColor,
+                ),
               ),
               const SizedBox(width: 6),
               Text(
@@ -551,7 +468,11 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
               color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.rocket_launch, color: Colors.white, size: 18),
+            child: const Icon(
+              Icons.rocket_launch,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 10),
           const Text(
@@ -573,9 +494,14 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isEditable ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+        color: isEditable
+            ? Colors.green.withOpacity(0.2)
+            : Colors.grey.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isEditable ? Colors.green : Colors.grey, width: 0.5),
+        border: Border.all(
+          color: isEditable ? Colors.green : Colors.grey,
+          width: 0.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -633,7 +559,9 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
                   items.isEmpty ? 'Cargando...' : label,
                   style: TextStyle(
                     fontSize: 11,
-                    color: isEnabled ? Colors.grey.shade600 : Colors.grey.shade400,
+                    color: isEnabled
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade400,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -641,7 +569,11 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
             ],
           ),
           isExpanded: true,
-          icon: Icon(Icons.arrow_drop_down, size: 18, color: widget.primaryColor),
+          icon: Icon(
+            Icons.arrow_drop_down,
+            size: 18,
+            color: widget.primaryColor,
+          ),
           style: const TextStyle(fontSize: 12, color: Colors.black87),
           dropdownColor: Colors.white,
           borderRadius: BorderRadius.circular(6),
@@ -651,17 +583,17 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
                     value: null,
                     child: Text(
                       'No hay opciones',
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
                   ),
                 ]
               : items.map((String item) {
                   return DropdownMenuItem<String>(
                     value: item,
-                    child: Text(
-                      item,
-                      style: const TextStyle(fontSize: 12),
-                    ),
+                    child: Text(item, style: const TextStyle(fontSize: 12)),
                   );
                 }).toList(),
           onChanged: isEnabled ? onChanged : null,
@@ -692,10 +624,7 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
             ),
             child: Text(
               'Cancelar',
-              style: TextStyle(
-                color: Colors.grey.shade700,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
             ),
           ),
           const SizedBox(width: 8),
@@ -705,7 +634,10 @@ planesMetrajeCompletos = results[2] as List<PlanMetraje>;
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 minimumSize: Size.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),

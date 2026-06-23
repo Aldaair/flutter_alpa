@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:i_miner/models/Accesorio.dart';
 import 'package:i_miner/models/DimPeriodo.dart';
 import 'package:i_miner/models/DimMina.dart';
 import 'package:i_miner/models/DimZona.dart';
@@ -19,12 +20,7 @@ import 'package:crypt/crypt.dart';
 import 'package:i_miner/models/guardia.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:i_miner/models/Accesorio.dart';
 import 'package:i_miner/models/Equipo.dart';
-import 'package:i_miner/models/Explosivo.dart';
-import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/PlanMetraje.dart';
-import 'package:i_miner/models/PlanProduccion.dart';
 import 'package:i_miner/models/tipo_horometro.dart';
 import 'package:i_miner/models/EquipoHorometroTipo.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
@@ -37,11 +33,11 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 18;
+  static const int _sharedCatalogDbVersion = 19;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
-  static const int _currentDbVersion = 28;
+  static const int _currentDbVersion = 29;
 
   DatabaseHelper._internal() {
     // Inicialización única para evitar múltiples llamadas
@@ -213,17 +209,6 @@ CREATE TABLE equipo_horometro_tipos (
 ''');
 
     await db.execute('''
-CREATE TABLE Seccion (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  proceso TEXT,
-  nombre TEXT,
-  mina_id INTEGER,
-  codigo TEXT,
-  estado TEXT
-)
-''');
-
-    await db.execute('''
 CREATE TABLE Guardia (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   guardia TEXT NOT NULL
@@ -245,6 +230,18 @@ CREATE TABLE usuario_directorio (
   nombres TEXT NOT NULL,
   apellidos TEXT NOT NULL,
   rol TEXT,
+  cargo TEXT,
+  empresa TEXT,
+  guardia TEXT,
+  autorizado_equipo TEXT,
+  area TEXT,
+  clasificacion TEXT,
+  correo TEXT,
+  firma TEXT,
+  operaciones_autorizadas TEXT,
+  cargo_id INTEGER,
+  password TEXT,
+  createdAt TEXT,
   updated_at TEXT NOT NULL
 )
 ''');
@@ -465,6 +462,30 @@ CREATE TABLE IF NOT EXISTS usuario_equipos (
   usuarios_id INTEGER NOT NULL,
   proceso_id INTEGER NOT NULL,
   equipo_id INTEGER NOT NULL
+)
+''');
+
+    // v19: tablas movidas desde user DB
+    await db.execute('''
+CREATE TABLE longitud_barras (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  proceso TEXT NOT NULL,
+  longitud_pies REAL NOT NULL
+)
+''');
+
+    await db.execute('''
+CREATE TABLE pernos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tipo_perno TEXT NOT NULL,
+  longitud REAL NOT NULL
+)
+''');
+
+    await db.execute('''
+CREATE TABLE mallas (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tipo_malla TEXT NOT NULL
 )
 ''');
   }
@@ -859,238 +880,69 @@ CREATE TABLE IF NOT EXISTS usuario_equipos (
 ''');
       }
     }
-  }
 
-  // Método de creación de tablas
-  Future<void> _onCreate(Database db, int version) async {
-    //Tabla de usuarios
-    await db.execute('''
-  CREATE TABLE Usuario (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    codigo_dni TEXT NOT NULL UNIQUE,
-    operador_id INTEGER,
-    apellidos TEXT NOT NULL,
-    nombres TEXT NOT NULL,
-    cargo TEXT,
-    empresa TEXT,
-    guardia TEXT,
-    autorizado_equipo TEXT,
-    area TEXT,
-    clasificacion TEXT,
-    correo TEXT,
-    password TEXT NOT NULL,
-    firma TEXT,
-    rol TEXT,
-    operaciones_autorizadas TEXT,
-    createdAt TEXT NOT NULL,
-    updatedAt TEXT NOT NULL
-  )
-''');
+    if (oldVersion < 19) {
+      await db.execute('DROP TABLE IF EXISTS Seccion');
 
-    // Tabla de planes mensuales
-    await db.execute('''
-  CREATE TABLE PlanMensual(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    anio INTEGER,
-    mes TEXT,
-    minado_tipo TEXT, 
-    empresa TEXT,
-    zona TEXT,
-    area TEXT,
-    tipo_mineral TEXT,
-    fase TEXT,
-    estructura_veta TEXT,
-    nivel TEXT,
-    tipo_labor TEXT,
-    labor TEXT,
-    ala TEXT,
-    avance_m REAL,
-    ancho_m REAL,
-    alto_m REAL,
-    tms REAL,
-    ${List.generate(28, (i) => "col_${i + 1}A TEXT").join(", ")},
-    ${List.generate(28, (i) => "col_${i + 1}B TEXT").join(", ")}
-  )
-''');
-
-    await db.execute('''
-  CREATE TABLE PlanProduccion (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    anio INTEGER,
-    mes TEXT NOT NULL,
-    semana TEXT NOT NULL,
-    mina TEXT NOT NULL,
-    zona TEXT NOT NULL,
-    area TEXT NOT NULL,
-    fase TEXT NOT NULL,
-    minado_tipo TEXT NOT NULL,
-    tipo_labor TEXT NOT NULL,
-    tipo_mineral TEXT NOT NULL,
-    estructura_veta TEXT NOT NULL,
-    nivel TEXT,
-    block TEXT,
-    labor TEXT NOT NULL,
-    ala TEXT,
-    ancho_veta REAL,
-    ancho_minado_sem REAL,
-    ancho_minado_mes REAL,
-    ag_gr REAL,
-    porcentaje_cu REAL,
-    porcentaje_pb REAL,
-    porcentaje_zn REAL,
-    vpt_act REAL,
-    vpt_final REAL,
-    cut_off_1 REAL,
-    cut_off_2 REAL,
-    
-    programado TEXT CHECK(programado IN ('Programado', 'No Programado')) NOT NULL DEFAULT 'Programado',
-
-    ${List.generate(28, (i) => "columna_${i + 1}A TEXT").join(", ")},
-    ${List.generate(28, (i) => "columna_${i + 1}B TEXT").join(", ")},
-
-    createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )
-''');
-
-    await db.execute('''
-  CREATE TABLE PlanMetraje (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    anio INTEGER,
-    mes TEXT NOT NULL,
-    semana TEXT NOT NULL,
-    mina TEXT NOT NULL,
-    zona TEXT NOT NULL,
-    area TEXT NOT NULL,
-    fase TEXT NOT NULL,
-    minado_tipo TEXT NOT NULL,
-    tipo_labor TEXT NOT NULL,
-    tipo_mineral TEXT NOT NULL,
-    estructura_veta TEXT NOT NULL,
-    nivel TEXT,
-    block TEXT,
-    labor TEXT NOT NULL,
-    ala TEXT,
-    ancho_veta REAL,
-    ancho_minado_sem REAL,
-    ancho_minado_mes REAL,
-    burden REAL,
-    espaciamiento REAL,
-    longitud_perforacion REAL,
-    programado TEXT CHECK(programado IN ('Programado', 'No Programado')) NOT NULL DEFAULT 'Programado',
-    ${List.generate(28, (i) => "columna_${i + 1}A TEXT").join(", ")},
-    ${List.generate(28, (i) => "columna_${i + 1}B TEXT").join(", ")},
-    createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )
-''');
-
-    //tabla de equipos
-    await db.execute('''
-CREATE TABLE Equipo (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT,
-  proceso TEXT,
-  codigo TEXT,
-  marca TEXT,
-  modelo TEXT,
-  serie TEXT,
-  tipo TEXT,
-  capasidad TEXT,
-  anioFabricacion INTEGER,
-  fechaIngreso TEXT,
-  capacidadYd3 REAL,
-  capacidadM3 REAL
-)
-''');
-
-    await db.execute('''
-CREATE TABLE TipoEquipo (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL
-)
-''');
-
-    await db.execute('''
-CREATE TABLE Seccion (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  proceso TEXT,
-  nombre TEXT
-)
-''');
-
-    await db.execute('''
-CREATE TABLE Guardia (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  guardia TEXT NOT NULL
-)
-''');
-
-    await db.execute('''
-  CREATE TABLE Secciones (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL,
-    proceso TEXT NULL
-  )
-''');
-
-    //Tabla de checklist
-    await db.execute('''
-  CREATE TABLE IF NOT EXISTS checklist_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    proceso TEXT NOT NULL,
-    categoria TEXT NOT NULL,
-    nombre TEXT NOT NULL
-  )
-''');
-
-    //Tala de estados
-    await db.execute('''CREATE TABLE EstadostBD(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    estado_principal TEXT,
-    codigo TEXT,
-    tipo_estado TEXT,
-    categoria TEXT,
-    proceso TEXT
-  )''');
-
-    await db.execute('''
-CREATE TABLE jefe_guardias (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombres TEXT NOT NULL,
-  apellidos TEXT NOT NULL
-)
-''');
-
-    await db.execute('''
-CREATE TABLE checklists_telemando (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL
-)
-''');
-
-    await db.execute('''
+      if (!await _tablaExiste(db, 'longitud_barras')) {
+        await db.execute('''
 CREATE TABLE longitud_barras (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   proceso TEXT NOT NULL,
   longitud_pies REAL NOT NULL
 )
 ''');
+      }
 
-    await db.execute('''
+      if (!await _tablaExiste(db, 'pernos')) {
+        await db.execute('''
 CREATE TABLE pernos (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tipo_perno TEXT NOT NULL,
   longitud REAL NOT NULL
 )
 ''');
+      }
 
-    await db.execute('''
+      if (!await _tablaExiste(db, 'mallas')) {
+        await db.execute('''
 CREATE TABLE mallas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tipo_malla TEXT NOT NULL
 )
 ''');
+      }
+
+      // Migrar columnas faltantes en usuario_directorio
+      for (final col in [
+        'cargo',
+        'empresa',
+        'guardia',
+        'autorizado_equipo',
+        'area',
+        'clasificacion',
+        'correo',
+        'firma',
+        'operaciones_autorizadas',
+        'createdAt',
+      ]) {
+        if (!await _columnaExiste(db, 'usuario_directorio', col)) {
+          await db.execute(
+            'ALTER TABLE usuario_directorio ADD COLUMN $col TEXT',
+          );
+        }
+      }
+    }
+  }
+
+  // Método de creación de tablas
+  Future<void> _onCreate(Database db, int version) async {
+    // (Usuario, PlanMensual, PlanProduccion, PlanMetraje removidas - ya no existen)
+
+    // (Equipo, TipoEquipo, Seccion, Guardia, Secciones, checklist_items removidas - están en shared DB o ya no existen)
+
+    // (EstadostBD, jefe_guardias, checklists_telemando, horometros_nube removidas)
+    // (longitud_barras, pernos, mallas movidas a shared DB)
 
     await db.execute('''
 CREATE TABLE origen_destino(
@@ -1098,18 +950,6 @@ CREATE TABLE origen_destino(
   proceso TEXT,
   tipo TEXT,
   nombre TEXT
-)
-''');
-
-    await db.execute('''
-CREATE TABLE horometros_nube (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  operacion TEXT NOT NULL,
-  tipo_horometro TEXT NOT NULL, 
-  inicio REAL,
-  final REAL,
-  op INTEGER,
-  inop INTEGER
 )
 ''');
 
@@ -1453,71 +1293,7 @@ CREATE TABLE Operacion_anfochanger(
   )
 ''');
 
-    await db.execute('''
-  CREATE TABLE Despacho (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    datos_trabajo_id INTEGER,
-    mili_segundo REAL,
-    medio_segundo REAL,
-    observaciones TEXT,
-    cantidad_retardos INTEGER,
-    FOREIGN KEY(datos_trabajo_id) REFERENCES Datos_trabajo_exploraciones(id) ON DELETE CASCADE
-  );
-''');
-
-    await db.execute('''
-  CREATE TABLE DespachoDetalle (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    despacho_id INTEGER,
-    nombre_material TEXT NOT NULL,  
-    cantidad TEXT NOT NULL,
-    FOREIGN KEY(despacho_id) REFERENCES Despacho(id) ON DELETE CASCADE
-  );
-''');
-
-    await db.execute('''
-  CREATE TABLE Devoluciones (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    datos_trabajo_id INTEGER,
-    mili_segundo REAL, 
-    medio_segundo REAL,
-    observaciones TEXT,
-    cantidad_retardos INTEGER,
-    FOREIGN KEY(datos_trabajo_id) REFERENCES Datos_trabajo_exploraciones(id) ON DELETE CASCADE
-  );
-''');
-
-    await db.execute('''
-  CREATE TABLE DevolucionDetalle (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    devolucion_id INTEGER,
-    nombre_material TEXT NOT NULL,  
-    cantidad TEXT NOT NULL,         
-    FOREIGN KEY(devolucion_id) REFERENCES Devoluciones(id) ON DELETE CASCADE
-  );
-''');
-
-    await db.execute('''
-  CREATE TABLE DetalleDespachoExplosivos(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_despacho INTEGER,
-    numero INTEGER,
-    ms_cant1 TEXT,
-    lp_cant1 TEXT,
-    FOREIGN KEY (id_despacho) REFERENCES Despacho(id) ON DELETE CASCADE
-  )
-''');
-
-    await db.execute('''
-  CREATE TABLE DetalleDevolucionesExplosivos(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_devolucion INTEGER,
-    numero INTEGER,
-    ms_cant1 TEXT,
-    lp_cant1 TEXT,
-    FOREIGN KEY (id_devolucion) REFERENCES Devoluciones(id) ON DELETE CASCADE
-  )
-''');
+    // (Despacho, DespachoDetalle, Devoluciones, DevolucionDetalle, DetalleDespachoExplosivos, DetalleDevolucionesExplosivos, explosivos, ExplosivosUni, toneladas, nube_*, numero_retardos removidas)
 
     await db.execute('''
   CREATE TABLE accesorios (
@@ -1526,127 +1302,6 @@ CREATE TABLE Operacion_anfochanger(
     costo REAL NOT NULL,
     unidad_medida TEXT NOT NULL
   );
-''');
-
-    await db.execute('''
-  CREATE TABLE explosivos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tipo_explosivo TEXT NOT NULL,
-    cantidad_por_caja INTEGER NOT NULL,
-    peso_unitario REAL NOT NULL,
-    costo_por_kg REAL NOT NULL,
-    unidad_medida TEXT NOT NULL
-  );
-''');
-
-    await db.execute('''
-  CREATE TABLE ExplosivosUni (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    dato REAL NOT NULL,
-    tipo TEXT NOT NULL
-  )
-''');
-
-    await db.execute('''
-  CREATE TABLE IF NOT EXISTS toneladas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    fecha TEXT NOT NULL,
-    turno TEXT,
-    zona TEXT NOT NULL,
-    tipo TEXT NOT NULL,
-    labor TEXT NOT NULL,
-    toneladas REAL NOT NULL
-  )
-''');
-
-    await db.execute('''
-  CREATE TABLE nube_Datos_trabajo_exploraciones(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    fecha TEXT,
-    turno TEXT,
-    taladro TEXT,
-    pies_por_taladro TEXT,
-    zona TEXT,
-    tipo_labor TEXT,
-    labor TEXT,
-    ala TEXT,
-    veta TEXT,
-    nivel TEXT,
-    tipo_perforacion TEXT,
-    estado TEXT DEFAULT 'Creado',
-    cerrado INTEGER DEFAULT 0,
-    envio INTEGER DEFAULT 0,
-    semanaDefault TEXT,
-    semanaSelect TEXT,
-    empresa TEXT,
-    seccion TEXT,
-    idnube TEXT,
-    medicion INTEGER DEFAULT 0
-  )
-''');
-
-    await db.execute('''
-  CREATE TABLE nube_Despacho (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    datos_trabajo_id INTEGER,
-    mili_segundo REAL,
-    medio_segundo REAL,
-    observaciones TEXT,
-    FOREIGN KEY(datos_trabajo_id) REFERENCES nube_Datos_trabajo_exploraciones(id) ON DELETE CASCADE
-  );
-''');
-
-    await db.execute('''
-  CREATE TABLE nube_DespachoDetalle (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    despacho_id INTEGER,
-    nombre_material TEXT NOT NULL,  
-    cantidad TEXT NOT NULL,
-    FOREIGN KEY(despacho_id) REFERENCES nube_Despacho(id) ON DELETE CASCADE
-  );
-''');
-
-    await db.execute('''
-  CREATE TABLE nube_Devoluciones (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    datos_trabajo_id INTEGER,
-    mili_segundo REAL,
-    medio_segundo REAL,
-    observaciones TEXT,
-    FOREIGN KEY(datos_trabajo_id) REFERENCES nube_Datos_trabajo_exploraciones(id) ON DELETE CASCADE
-  );
-''');
-
-    await db.execute('''
-  CREATE TABLE nube_DevolucionDetalle (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    devolucion_id INTEGER,
-    nombre_material TEXT NOT NULL,  
-    cantidad TEXT NOT NULL,         
-    FOREIGN KEY(devolucion_id) REFERENCES nube_Devoluciones(id) ON DELETE CASCADE
-  );
-''');
-
-    await db.execute('''
-  CREATE TABLE nube_DetalleDespachoExplosivos(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_despacho INTEGER,
-    numero INTEGER,
-    ms_cant1 TEXT,
-    lp_cant1 TEXT,
-    FOREIGN KEY (id_despacho) REFERENCES nube_Despacho(id) ON DELETE CASCADE
-  )
-''');
-
-    await db.execute('''
-  CREATE TABLE nube_DetalleDevolucionesExplosivos(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_devolucion INTEGER,
-    numero INTEGER,
-    ms_cant1 TEXT,
-    lp_cant1 TEXT,
-    FOREIGN KEY (id_devolucion) REFERENCES nube_Devoluciones(id) ON DELETE CASCADE
-  )
 ''');
 
     await db.execute('''
@@ -1686,15 +1341,6 @@ CREATE TABLE Operacion_anfochanger(
       idnube INTEGER
     )
   ''');
-
-    await db.execute('''
-CREATE TABLE numero_retardos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  mes TEXT NOT NULL,
-  anio INTEGER NOT NULL,
-  cantidad INTEGER NOT NULL
-)
-''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -2476,6 +2122,49 @@ CREATE TABLE UsuarioEquipo (
     if (oldVersion < 28) {
       await db.execute('DROP TABLE IF EXISTS UsuarioEquipo');
     }
+
+    if (oldVersion < 29) {
+      // Limpieza: tablas que ya no deben existir en user DB
+      for (final tbl in [
+        'Usuario',
+        'PlanMensual',
+        'PlanProduccion',
+        'PlanMetraje',
+        'Equipo',
+        'TipoEquipo',
+        'Seccion',
+        'Secciones',
+        'Guardia',
+        'checklist_items',
+        'EstadostBD',
+        'jefe_guardias',
+        'checklists_telemando',
+        'longitud_barras',
+        'pernos',
+        'mallas',
+        'DespachoDetalle',
+        'Despacho',
+        'DetalleDespachoExplosivos',
+        'DevolucionDetalle',
+        'Devoluciones',
+        'DetalleDevolucionesExplosivos',
+        'explosivos',
+        'ExplosivosUni',
+        'toneladas',
+        'nube_DetalleDevolucionesExplosivos',
+        'nube_DetalleDespachoExplosivos',
+        'nube_DevolucionDetalle',
+        'nube_Devoluciones',
+        'nube_DespachoDetalle',
+        'nube_Despacho',
+        'nube_Datos_trabajo_exploraciones',
+        'numero_retardos',
+        'horometros_nube',
+        'ProcesoAutorizado',
+      ]) {
+        await db.execute('DROP TABLE IF EXISTS $tbl');
+      }
+    }
   }
 
   static const List<String> _operationTables = [
@@ -2644,7 +2333,6 @@ CREATE TABLE UsuarioEquipo (
     'tipo_horometro',
     'equipo_horometro_tipos',
     'checklist_items',
-    'Seccion',
     'Guardia',
     'jefe_guardias',
     'usuario_directorio',
@@ -2663,6 +2351,9 @@ CREATE TABLE UsuarioEquipo (
     'planes_metrajes_avances',
     'planes_produccion',
     'tipo_perforaciones',
+    'longitud_barras',
+    'pernos',
+    'mallas',
   };
 
   Future<Database> _getDbForTable(String table) async {
@@ -2704,32 +2395,26 @@ CREATE TABLE UsuarioEquipo (
   //USUARIOS
   // **Guardar Usuario en SQLite**
   Future<void> saveUser(Map<String, dynamic> userData, String password) async {
-    final db = await database;
-    final hashedPassword = Crypt.sha256(
-      password,
-    ).toString(); // Encriptar la contraseña
+    final db = await sharedCatalogDatabase;
+    final hashedPassword = Crypt.sha256(password).toString();
 
-    await db.insert('Usuario', {
+    await db.insert('usuario_directorio', {
       'codigo_dni': userData['codigo_dni'],
+      'operador_id': userData['operador_id'],
       'apellidos': userData['apellidos'],
       'nombres': userData['nombres'],
       'cargo': userData['cargo'],
       'empresa': userData['empresa'],
       'guardia': userData['guardia'],
       'autorizado_equipo': userData['autorizado_equipo'],
-      'area': userData['area'], // Nuevo campo
+      'area': userData['area'],
       'clasificacion': userData['clasificacion'],
       'correo': userData['correo'],
       'password': hashedPassword,
       'firma': userData['firma'] ?? '',
       'rol': userData['rol']?.toString() ?? '',
-      'createdAt':
-          userData['createdAt'] ??
-          DateTime.now().toIso8601String(), // Fecha de creación
-      'updatedAt':
-          userData['updatedAt'] ??
-          DateTime.now().toIso8601String(), // Fecha de actualización
-
+      'createdAt': userData['createdAt'] ?? DateTime.now().toIso8601String(),
+      'updated_at': userData['updatedAt'] ?? DateTime.now().toIso8601String(),
       'operaciones_autorizadas': jsonEncode(
         userData['operaciones_autorizadas'] ?? {},
       ),
@@ -2755,9 +2440,9 @@ CREATE TABLE UsuarioEquipo (
     Map<String, dynamic> userData, {
     String? password,
   }) async {
-    final db = await database;
+    final sharedDb = await sharedCatalogDatabase;
     final updates = <String, dynamic>{
-      'updatedAt': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
     };
     if (password != null && password.isNotEmpty) {
       final hashedPassword = Crypt.sha256(password).toString();
@@ -2767,8 +2452,8 @@ CREATE TABLE UsuarioEquipo (
     if (operadorId != null) {
       updates['operador_id'] = operadorId;
     }
-    await db.update(
-      'Usuario',
+    await sharedDb.update(
+      'usuario_directorio',
       updates,
       where: 'codigo_dni = ?',
       whereArgs: [userData['codigo_dni']],
@@ -2780,7 +2465,6 @@ CREATE TABLE UsuarioEquipo (
     final dni = userData['codigo_dni']?.toString();
     if (dni == null || dni.isEmpty) return;
     if (operadorId != null) {
-      final sharedDb = await sharedCatalogDatabase;
       final usuarioProcesos = auth['usuario_procesos'] as List?;
       await sharedDb.transaction((txn) async {
         await txn.delete(
@@ -2800,7 +2484,6 @@ CREATE TABLE UsuarioEquipo (
     }
 
     if (operadorId != null) {
-      final sharedDb = await sharedCatalogDatabase;
       final usuarioEquipos = auth['usuario_equipos'] as List?;
       await sharedDb.transaction((txn) async {
         await txn.delete(
@@ -2833,18 +2516,6 @@ CREATE TABLE UsuarioEquipo (
       if (count != null && count > 0) return true;
     } catch (_) {}
 
-    try {
-      final db = await DatabaseHelper().database;
-      final result = await db.query(
-        'Usuario',
-        columns: ['codigo_dni'],
-        where: 'codigo_dni = ?',
-        whereArgs: [dni],
-        limit: 1,
-      );
-      if (result.isNotEmpty) return true;
-    } catch (_) {}
-
     return false;
   }
 
@@ -2853,7 +2524,7 @@ CREATE TABLE UsuarioEquipo (
       final sharedDb = await sharedCatalogDatabase;
       final rows = await sharedDb.query(
         'usuario_directorio',
-        columns: ['password'],
+        columns: ['password', 'nombres', 'apellidos', 'rol', 'operador_id'],
         where: 'codigo_dni = ?',
         whereArgs: [dni],
         limit: 1,
@@ -2864,33 +2535,6 @@ CREATE TABLE UsuarioEquipo (
         if (hash != null && hash.isNotEmpty) {
           if (Crypt(hash).match(password)) {
             await setCurrentUserDni(dni);
-            final db = await database;
-            final existing = await db.query(
-              'Usuario',
-              where: 'codigo_dni = ?',
-              whereArgs: [dni],
-              limit: 1,
-            );
-            if (existing.isEmpty) {
-              final operadorRow = await sharedDb.query(
-                'usuario_directorio',
-                columns: ['operador_id', 'nombres', 'apellidos', 'rol'],
-                where: 'codigo_dni = ?',
-                whereArgs: [dni],
-                limit: 1,
-              );
-              final dir = operadorRow.isNotEmpty ? operadorRow.first : null;
-              await db.insert('Usuario', {
-                'codigo_dni': dni,
-                'operador_id': dir?['operador_id'],
-                'nombres': dir?['nombres'] ?? '',
-                'apellidos': dir?['apellidos'] ?? '',
-                'rol': dir?['rol'],
-                'password': hash,
-                'createdAt': DateTime.now().toIso8601String(),
-                'updatedAt': DateTime.now().toIso8601String(),
-              });
-            }
             return true;
           }
         }
@@ -2898,58 +2542,42 @@ CREATE TABLE UsuarioEquipo (
       }
     } catch (_) {}
 
-    try {
-      final db = await DatabaseHelper().database;
-      final result = await db.query(
-        'Usuario',
-        where: 'codigo_dni = ?',
-        whereArgs: [dni],
-      );
-
-      if (result.isNotEmpty) {
-        final storedPassword = result.first['password'] as String? ?? '';
-        return Crypt(storedPassword).match(password);
-      }
-    } catch (_) {}
-
     return false;
   }
 
   Future<Map<String, dynamic>?> getUserByDni(String dni) async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
     final List<Map<String, dynamic>> result = await db.query(
-      'Usuario',
+      'usuario_directorio',
       where: 'codigo_dni = ?',
       whereArgs: [dni],
     );
 
     if (result.isNotEmpty) {
-      return result.first; // Devuelve el primer usuario encontrado
+      final user = Map<String, dynamic>.from(result.first);
+      // Compatibilidad con campos esperados por screens
+      user['id'] = user['codigo_dni'];
+      user['createdAt'] = user['createdAt'] ?? user['updated_at'];
+      user['updatedAt'] = user['updated_at'];
+      user['password'] = user['password'] ?? '';
+      return user;
     }
-    return null; // Devuelve null si no hay usuario con ese DNI
+    return null;
   }
 
   Future<List<Map<String, dynamic>>> getKnownOperators() async {
-    final db = await database;
-    final users = await db.query('Usuario');
-    return users.map((u) {
-      final map = Map<String, dynamic>.from(u);
-      map['operador_id'] = u['id'];
-      map['nombre_completo'] = '${u['nombres']} ${u['apellidos']}';
-      return map;
+    final db = await sharedCatalogDatabase;
+    final users = await db.query('usuario_directorio');
+    return users.asMap().entries.map((entry) {
+      final u = Map<String, dynamic>.from(entry.value);
+      u['id'] = entry.key + 1;
+      u['operador_id'] = u['operador_id'] ?? u['codigo_dni'];
+      u['nombre_completo'] = '${u['nombres']} ${u['apellidos']}';
+      return u;
     }).toList();
   }
 
   //ESTADOS
-  Future<List<Map<String, dynamic>>> getEstadosBD(String proceso) async {
-    final db = await database; // Obtiene la instancia de la base de datos
-    return await db.query(
-      'EstadostBD',
-      where: 'proceso = ?',
-      whereArgs: [proceso], // Filtra por el valor del proceso
-    );
-  }
-
   Future<List<Map<String, dynamic>>> getOrigenDestino(
     String proceso,
     String tipo,
@@ -2974,12 +2602,6 @@ CREATE TABLE UsuarioEquipo (
       whereArgs: [proceso],
       orderBy: 'orden ASC, id ASC',
     );
-    return result;
-  }
-
-  Future<List<Map<String, dynamic>>> getChecklistTelemando() async {
-    final db = await database;
-    final result = await db.query('checklists_telemando');
     return result;
   }
 
@@ -3055,7 +2677,7 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Zona>> getZonasByProceso(String proceso) async {
     final db = await sharedCatalogDatabase;
     final List<Map<String, dynamic>> maps = await db.query(
-      'Seccion',
+      'zona',
       orderBy: 'nombre ASC',
     );
     return List.generate(maps.length, (i) => Zona.fromJson(maps[i]));
@@ -3063,7 +2685,7 @@ CREATE TABLE UsuarioEquipo (
 
   Future<List<Zona>> getZonas() async {
     final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query('Seccion');
+    final List<Map<String, dynamic>> maps = await db.query('zona');
     return List.generate(maps.length, (i) => Zona.fromJson(maps[i]));
   }
 
@@ -3195,26 +2817,6 @@ CREATE TABLE UsuarioEquipo (
     return List.generate(maps.length, (i) => TipoPerforacion.fromJson(maps[i]));
   }
 
-  Future<List<PlanMensual>> getPlanesMensual() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('PlanMensual');
-    return List.generate(maps.length, (i) => PlanMensual.fromJson(maps[i]));
-  }
-
-  Future<List<PlanProduccion>> getPlanesProduccion() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('PlanProduccion');
-
-    return List.generate(maps.length, (i) => PlanProduccion.fromJson(maps[i]));
-  }
-
-  Future<List<PlanMetraje>> getPlanesMetraje() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('PlanMetraje');
-
-    return List.generate(maps.length, (i) => PlanMetraje.fromJson(maps[i]));
-  }
-
   Future<List<PlanMetrajeTL>> getPlanesMetrajeTL() async {
     final db = await sharedCatalogDatabase;
     final List<Map<String, dynamic>> maps = await db.query('PlanMetrajeTL');
@@ -3224,7 +2826,7 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Map<String, dynamic>>> getLongitudBarrasPorProceso(
     String proceso,
   ) async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
 
     return await db.query(
       'longitud_barras',
@@ -3234,30 +2836,15 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<Map<String, dynamic>>> getPernos() async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
 
     return await db.query('pernos');
   }
 
   Future<List<Map<String, dynamic>>> getMallas() async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
 
     return await db.query('mallas');
-  }
-
-  Future<List<Map<String, dynamic>>> getHorometrosPorOperacion(
-    String operacion,
-  ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'horometros_nube',
-      columns: ['tipo_horometro', 'final'], // 🔥 solo lo necesario
-      where: 'operacion = ?',
-      whereArgs: [operacion],
-    );
-
-    return result;
   }
 
   //OPERACION TALADRO LARGO  INICIO --------------------------------------------------------------------------------------------------------------
@@ -12145,38 +11732,6 @@ CREATE TABLE UsuarioEquipo (
     return List.generate(maps.length, (i) => TipoPerforacion.fromJson(maps[i]));
   }
 
-  Future<List<PlanMensual>> getPlanes() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('PlanMensual');
-    return List.generate(maps.length, (i) => PlanMensual.fromJson(maps[i]));
-  }
-
-  Future<Map<String, dynamic>?> getPlanMensual({
-    required String zona,
-    required String tipoLabor,
-    required String labor,
-    required String estructuraVeta,
-    required String nivel,
-  }) async {
-    final db = await database;
-
-    List<Map<String, dynamic>> result = await db.query(
-      'PlanMensual',
-      columns: ['ancho_m', 'alto_m'], // Solo obtenemos estos campos
-      where:
-          'zona = ? AND tipo_labor = ? AND labor = ? AND estructura_veta = ? AND nivel = ?',
-      whereArgs: [zona, tipoLabor, labor, estructuraVeta, nivel],
-    );
-
-    // Verificar si se encontraron resultados
-    if (result.isNotEmpty) {
-      return result
-          .first; // Retorna solo los campos requeridos del primer registro encontrado
-    } else {
-      return null; // No se encontraron registros que coincidan
-    }
-  }
-
   Future<Map<String, dynamic>?> getExploracionById(int id) async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db.query(
@@ -12222,159 +11777,11 @@ CREATE TABLE UsuarioEquipo (
         .toList();
   }
 
-  Future<List<Map<String, String>>> getExplosivosunidad() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'explosivos',
-      columns: ['tipo_explosivo', 'unidad_medida'],
-    );
-
-    return maps
-        .map(
-          (map) => {
-            'tipo': map['tipo_explosivo'] as String,
-            'unidad_medida': map['unidad_medida'] as String,
-          },
-        )
-        .toList();
-  }
-
-  Future<List<Map<String, dynamic>>> getDetalleDespachoByExploracionId(
-    int exploracionId,
-  ) async {
-    final db = await database;
-    return await db.query(
-      'Despacho',
-      where: 'datos_trabajo_id = ?', // Corrección aquí
-      whereArgs: [exploracionId],
-    );
-  }
-
-  Future<List<Map<String, dynamic>>>
-  getDetalleDespachoByDesapachoExposivosyAccesorios(int despachoId) async {
-    final db = await database; // Obtiene la instancia de la base de datos
-    return await db.query(
-      'DespachoDetalle', // Nombre de la tabla a consultar
-      where:
-          'despacho_id = ?', // Condición de búsqueda: despacho_id debe coincidir
-      whereArgs: [
-        despachoId,
-      ], // Se pasa el valor de despachoId para evitar inyección SQL
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getDetalleDespachoByDespachoId(
-    int despachoId,
-  ) async {
-    final db = await database;
-    return await db.query(
-      'DetalleDespachoExplosivos',
-      where: 'id_despacho = ?',
-      whereArgs: [despachoId],
-    );
-  }
-
-  Future<int> updateDespacho(int id, Map<String, dynamic> row) async {
-    final db = await database;
-    return await db.update('Despacho', row, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> updateDespachoDetalle(int id, Map<String, dynamic> row) async {
-    final db = await database;
-    return await db.update(
-      'DespachoDetalle',
-      row,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<void> insertDetallesDespacho(
-    int idDespacho,
-    List<Map<String, dynamic>> detalles,
-  ) async {
-    final db = await database;
-
-    for (var detalle in detalles) {
-      if (detalle['ms_cant1'].isNotEmpty || detalle['lp_cant1'].isNotEmpty) {
-        await db.insert(
-          'DetalleDespachoExplosivos',
-          {
-            'id_despacho':
-                idDespacho, // Debe ser id_despacho en lugar de id_exploracion
-            'numero': detalle['numero'],
-            'ms_cant1': detalle['ms_cant1'],
-            'lp_cant1': detalle['lp_cant1'],
-          },
-          conflictAlgorithm:
-              ConflictAlgorithm.replace, // Reemplaza si ya existe
-        );
-      }
-    }
-  }
-
-  Future<int> actualizarDetalleDespacho(int idDespacho, String detalle) async {
-    final db = await database;
-    return await db.update(
-      'Despacho',
-      {'observaciones': detalle},
-      where: 'id = ?',
-      whereArgs: [idDespacho],
-    );
-  }
-
-  Future<int> actualizarTiemposDespacho(
-    int idDespacho,
-    double? milisegundo,
-    double? medioSegundo,
-  ) async {
-    final db = await database;
-
-    Map<String, dynamic> valores = {};
-    if (milisegundo != null) valores['mili_segundo'] = milisegundo;
-    if (medioSegundo != null) valores['medio_segundo'] = medioSegundo;
-
-    if (valores.isEmpty) return 0; // Nada que actualizar
-
-    return await db.update(
-      'Despacho',
-      valores,
-      where: 'id = ?',
-      whereArgs: [idDespacho],
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getDetalleDevolucionesByExploracionId(
-    int exploracionId,
-  ) async {
-    final db = await database;
-    return await db.query(
-      'Devoluciones',
-      where: 'datos_trabajo_id = ?', // Corrección aquí
-      whereArgs: [exploracionId],
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getDetalleDevolucionByDevolucionId(
-    int devolucionId,
-  ) async {
-    final db = await database; // Obtiene la instancia de la base de datos
-    return await db.query(
-      'DevolucionDetalle', // Nombre de la tabla
-      where: 'devolucion_id = ?', // Filtra por el ID de la devolución
-      whereArgs: [
-        devolucionId,
-      ], // Se pasa el ID como argumento para evitar inyección SQL
-    );
-  }
-
-  //Exportar pdf:
   Future<List<Map<String, dynamic>>> obtenerEstructuraCompleta(
     int idPadre,
   ) async {
     final Database db = await database;
 
-    // Obtener los datos del padre
     List<Map<String, dynamic>> datosTrabajo = await db.query(
       'Datos_trabajo_exploraciones',
       where: 'id = ?',
@@ -12383,130 +11790,7 @@ CREATE TABLE UsuarioEquipo (
 
     if (datosTrabajo.isEmpty) return [];
 
-    // Obtener despacho relacionado con el padre
-    List<Map<String, dynamic>> despachosRaw = await db.query(
-      'Despacho',
-      where: 'datos_trabajo_id = ?',
-      whereArgs: [idPadre],
-    );
-
-    List<Map<String, dynamic>> despachos = [];
-    for (var despacho in despachosRaw) {
-      int despachoId = despacho['id'];
-
-      // Obtener los detalles del despacho (explosivos)
-      List<Map<String, dynamic>> detallesExplosivos = await db.query(
-        'DetalleDespachoExplosivos',
-        where: 'id_despacho = ?',
-        whereArgs: [despachoId],
-      );
-
-      // Obtener los detalles del despacho (materiales)
-      List<Map<String, dynamic>> detallesMateriales = await db.query(
-        'DespachoDetalle',
-        where: 'despacho_id = ?',
-        whereArgs: [despachoId],
-      );
-
-      // Crear un nuevo mapa copiando los valores
-      Map<String, dynamic> despachoModificado = Map<String, dynamic>.from(
-        despacho,
-      );
-      despachoModificado['detalles_explosivos'] = detallesExplosivos;
-      despachoModificado['detalles_materiales'] = detallesMateriales;
-      despachos.add(despachoModificado);
-    }
-
-    // Obtener devoluciones relacionadas con el padre
-    List<Map<String, dynamic>> devolucionesRaw = await db.query(
-      'Devoluciones',
-      where: 'datos_trabajo_id = ?',
-      whereArgs: [idPadre],
-    );
-
-    List<Map<String, dynamic>> devoluciones = [];
-    for (var devolucion in devolucionesRaw) {
-      int devolucionId = devolucion['id'];
-
-      // Obtener los detalles de la devolución (explosivos)
-      List<Map<String, dynamic>> detallesExplosivos = await db.query(
-        'DetalleDevolucionesExplosivos',
-        where: 'id_devolucion = ?',
-        whereArgs: [devolucionId],
-      );
-
-      // Obtener los detalles de la devolución (materiales)
-      List<Map<String, dynamic>> detallesMateriales = await db.query(
-        'DevolucionDetalle',
-        where: 'devolucion_id = ?',
-        whereArgs: [devolucionId],
-      );
-
-      // Crear un nuevo mapa copiando los valores
-      Map<String, dynamic> devolucionModificada = Map<String, dynamic>.from(
-        devolucion,
-      );
-      devolucionModificada['detalles_explosivos'] = detallesExplosivos;
-      devolucionModificada['detalles_materiales'] = detallesMateriales;
-      devoluciones.add(devolucionModificada);
-    }
-
-    // Estructurar la respuesta
-    return datosTrabajo.map((dato) {
-      return {...dato, 'despachos': despachos, 'devoluciones': devoluciones};
-    }).toList();
-  }
-
-  Future<List<Map<String, dynamic>>> getDetalleDevolucionesByDevolucionesId(
-    int _DevolucionesId,
-  ) async {
-    final db = await database;
-    return await db.query(
-      'DetalleDevolucionesExplosivos',
-      where: 'id_devolucion = ?',
-      whereArgs: [_DevolucionesId],
-    );
-  }
-
-  Future<int> updateDevoluciones(int id, Map<String, dynamic> row) async {
-    final db = await database;
-    return await db.update(
-      'Devoluciones',
-      row,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> updateDevolucionDetalle(int id, Map<String, dynamic> row) async {
-    final db = await database;
-    return await db.update(
-      'DevolucionDetalle',
-      row,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> actualizarTiemposDevoluciones(
-    int _DevolucionesId,
-    double? milisegundo,
-    double? medioSegundo,
-  ) async {
-    final db = await database;
-
-    Map<String, dynamic> valores = {};
-    if (milisegundo != null) valores['mili_segundo'] = milisegundo;
-    if (medioSegundo != null) valores['medio_segundo'] = medioSegundo;
-
-    if (valores.isEmpty) return 0; // Nada que actualizar
-
-    return await db.update(
-      'Devoluciones',
-      valores,
-      where: 'id = ?',
-      whereArgs: [_DevolucionesId],
-    );
+    return datosTrabajo;
   }
 
   Future<void> cerrarRegistro(int idExploracion) async {
@@ -12519,93 +11803,18 @@ CREATE TABLE UsuarioEquipo (
     );
   }
 
-  Future<void> insertDetallesDevoluciones(
-    int _DevolucionesId,
-    List<Map<String, dynamic>> detalles,
-  ) async {
-    final db = await database;
-
-    for (var detalle in detalles) {
-      if (detalle['ms_cant1'].isNotEmpty || detalle['lp_cant1'].isNotEmpty) {
-        await db.insert(
-          'DetalleDevolucionesExplosivos',
-          {
-            'id_devolucion':
-                _DevolucionesId, // Debe ser id_devolucion en lugar de id_exploracion
-            'numero': detalle['numero'],
-            'ms_cant1': detalle['ms_cant1'],
-            'lp_cant1': detalle['lp_cant1'],
-          },
-          conflictAlgorithm:
-              ConflictAlgorithm.replace, // Reemplaza si ya existe
-        );
-      }
-    }
-  }
-
-  Future<int> actualizarDetalleDevolucion(
-    int idDevolucion,
-    String detalle,
-  ) async {
-    final db = await database;
-    return await db.update(
-      'Devoluciones',
-      {'observaciones': detalle},
-      where: 'id = ?',
-      whereArgs: [idDevolucion],
-    );
-  }
-
   Future<int> insertExploracion(
     String fecha,
     String turno,
     String semanaDefault,
-    int cantidadRetardos,
-    Map<String, String> materialesDespacho,
-    Map<String, String> materialesDevolucion,
   ) async {
     final db = await database;
 
-    // Insertar en Datos_trabajo_exploraciones y obtener el ID generado
     int idExploracion = await db.insert('Datos_trabajo_exploraciones', {
       'fecha': fecha,
       'turno': turno,
       'semanaDefault': semanaDefault,
       'estado': 'Creado',
-    });
-
-    // Insertar un registro vacío en Despacho
-    int idDespacho = await db.insert('Despacho', {
-      'datos_trabajo_id': idExploracion,
-      'mili_segundo': 0.0,
-      'medio_segundo': 0.0,
-      'cantidad_retardos': cantidadRetardos,
-    });
-
-    // Insertar los detalles del despacho (materiales)
-    materialesDespacho.forEach((nombreMaterial, cantidad) async {
-      await db.insert('DespachoDetalle', {
-        'despacho_id': idDespacho,
-        'nombre_material': nombreMaterial,
-        'cantidad': cantidad,
-      });
-    });
-
-    // Insertar un registro vacío en Devoluciones
-    int idDevolucion = await db.insert('Devoluciones', {
-      'datos_trabajo_id': idExploracion,
-      'mili_segundo': 0.0,
-      'medio_segundo': 0.0,
-      'cantidad_retardos': cantidadRetardos,
-    });
-
-    // Insertar los detalles de la devolución (materiales)
-    materialesDevolucion.forEach((nombreMaterial, cantidad) async {
-      await db.insert('DevolucionDetalle', {
-        'devolucion_id': idDevolucion,
-        'nombre_material': nombreMaterial,
-        'cantidad': cantidad,
-      });
     });
 
     return idExploracion;
@@ -12623,17 +11832,9 @@ CREATE TABLE UsuarioEquipo (
     return List.generate(maps.length, (i) => Accesorio.fromJson(maps[i]));
   }
 
-  Future<List<Explosivo>> getExplosivos() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('explosivos');
-
-    return List.generate(maps.length, (i) => Explosivo.fromJson(maps[i]));
-  }
-
   Future<bool> eliminarEstructuraCompletaManual(int idExploracion) async {
     final db = await database;
 
-    // Verificar si el registro está cerrado
     List<Map<String, dynamic>> resultado = await db.query(
       'Datos_trabajo_exploraciones',
       columns: ['cerrado'],
@@ -12646,182 +11847,13 @@ CREATE TABLE UsuarioEquipo (
       return false;
     }
 
-    return await db.transaction((txn) async {
-      // Eliminar primero los detalles de Despacho y Devoluciones
-      await txn.delete(
-        'DespachoDetalle',
-        where:
-            'despacho_id IN (SELECT id FROM Despacho WHERE datos_trabajo_id = ?)',
-        whereArgs: [idExploracion],
-      );
-
-      await txn.delete(
-        'DevolucionDetalle',
-        where:
-            'devolucion_id IN (SELECT id FROM Devoluciones WHERE datos_trabajo_id = ?)',
-        whereArgs: [idExploracion],
-      );
-
-      // Eliminar los detalles de explosivos
-      await txn.delete(
-        'DetalleDespachoExplosivos',
-        where:
-            'id_despacho IN (SELECT id FROM Despacho WHERE datos_trabajo_id = ?)',
-        whereArgs: [idExploracion],
-      );
-
-      await txn.delete(
-        'DetalleDevolucionesExplosivos',
-        where:
-            'id_devolucion IN (SELECT id FROM Devoluciones WHERE datos_trabajo_id = ?)',
-        whereArgs: [idExploracion],
-      );
-
-      // Eliminar los registros principales de Despacho y Devoluciones
-      await txn.delete(
-        'Despacho',
-        where: 'datos_trabajo_id = ?',
-        whereArgs: [idExploracion],
-      );
-      await txn.delete(
-        'Devoluciones',
-        where: 'datos_trabajo_id = ?',
-        whereArgs: [idExploracion],
-      );
-
-      // Finalmente, eliminar la exploración principal
-      await txn.delete(
-        'Datos_trabajo_exploraciones',
-        where: 'id = ?',
-        whereArgs: [idExploracion],
-      );
-
-      return true;
-    });
-  }
-
-  //MEDICIONES.----------------------
-  Future<List<Map<String, dynamic>>> obtenerExploracionesCompletas() async {
-    try {
-      final Database db = await database;
-
-      // Obtener solo las exploraciones con medicion = 0
-      final List<Map<String, dynamic>> exploraciones = await db.query(
-        'nube_Datos_trabajo_exploraciones',
-        where: 'medicion = ?',
-        whereArgs: [0],
-        orderBy: 'fecha DESC, turno DESC',
-      );
-
-      if (exploraciones.isEmpty) return [];
-
-      List<Map<String, dynamic>> resultado = [];
-
-      for (var exploracion in exploraciones) {
-        // Crear un nuevo mapa mutable para la exploración
-        Map<String, dynamic> exploracionCompleta = Map<String, dynamic>.from(
-          exploracion,
-        );
-        int exploracionId = exploracion['id'];
-        String idnube = exploracion['idnube']?.toString() ?? '';
-
-        // Obtener despachos relacionados
-        exploracionCompleta['despachos'] =
-            await _obtenerDespachosPorExploracion(exploracionId);
-
-        // Obtener devoluciones relacionadas
-        exploracionCompleta['devoluciones'] =
-            await _obtenerDevolucionesPorExploracion(exploracionId);
-
-        // Asegurar que idnube está incluido
-        exploracionCompleta['idnube'] = idnube;
-
-        resultado.add(exploracionCompleta);
-      }
-
-      return resultado;
-    } catch (e) {
-      print('Error al obtener exploraciones completas: $e');
-      return [];
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _obtenerDespachosPorExploracion(
-    int exploracionId,
-  ) async {
-    final Database db = await database;
-    final List<Map<String, dynamic>> despachos = await db.query(
-      'nube_Despacho',
-      where: 'datos_trabajo_id = ?',
-      whereArgs: [exploracionId],
+    await db.delete(
+      'Datos_trabajo_exploraciones',
+      where: 'id = ?',
+      whereArgs: [idExploracion],
     );
 
-    List<Map<String, dynamic>> despachosCompletos = [];
-
-    for (var despacho in despachos) {
-      // Crear un nuevo mapa mutable para el despacho
-      Map<String, dynamic> despachoCompleto = Map<String, dynamic>.from(
-        despacho,
-      );
-      int despachoId = despacho['id'];
-
-      // Obtener detalles normales del despacho
-      despachoCompleto['detalles'] = await db.query(
-        'nube_DespachoDetalle',
-        where: 'despacho_id = ?',
-        whereArgs: [despachoId],
-      );
-
-      // Obtener detalles de explosivos del despacho
-      despachoCompleto['detalles_explosivos'] = await db.query(
-        'nube_DetalleDespachoExplosivos',
-        where: 'id_despacho = ?',
-        whereArgs: [despachoId],
-      );
-
-      despachosCompletos.add(despachoCompleto);
-    }
-
-    return despachosCompletos;
-  }
-
-  Future<List<Map<String, dynamic>>> _obtenerDevolucionesPorExploracion(
-    int exploracionId,
-  ) async {
-    final Database db = await database;
-    final List<Map<String, dynamic>> devoluciones = await db.query(
-      'nube_Devoluciones',
-      where: 'datos_trabajo_id = ?',
-      whereArgs: [exploracionId],
-    );
-
-    List<Map<String, dynamic>> devolucionesCompletas = [];
-
-    for (var devolucion in devoluciones) {
-      // Crear un nuevo mapa mutable para la devolución
-      Map<String, dynamic> devolucionCompleta = Map<String, dynamic>.from(
-        devolucion,
-      );
-      int devolucionId = devolucion['id'];
-
-      // Obtener detalles normales de la devolución
-      devolucionCompleta['detalles'] = await db.query(
-        'nube_DevolucionDetalle',
-        where: 'devolucion_id = ?',
-        whereArgs: [devolucionId],
-      );
-
-      // Obtener detalles de explosivos de la devolución
-      devolucionCompleta['detalles_explosivos'] = await db.query(
-        'nube_DetalleDevolucionesExplosivos',
-        where: 'id_devolucion = ?',
-        whereArgs: [devolucionId],
-      );
-
-      devolucionesCompletas.add(devolucionCompleta);
-    }
-
-    return devolucionesCompletas;
+    return true;
   }
 
   Future<List<TipoPerforacion>> getTiposPerforacionhorizontalfil() async {
@@ -12843,65 +11875,6 @@ CREATE TABLE UsuarioEquipo (
     );
   }
 
-  Future<void> actualizarMedicionEXplosivo(List<int> ids) async {
-    final db = await database;
-
-    // Construir placeholders dinámicos (?, ?, ?)
-    final placeholders = List.filled(ids.length, '?').join(',');
-
-    await db.rawUpdate(
-      'UPDATE nube_Datos_trabajo_exploraciones SET medicion = 1 WHERE id IN ($placeholders)',
-      ids,
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> obtenerExploracionesCompletasPorZona(
-    String zona,
-  ) async {
-    try {
-      final Database db = await database;
-
-      // Obtener solo las exploraciones con medicion = 0 y la zona especificada
-      final List<Map<String, dynamic>> exploraciones = await db.query(
-        'nube_Datos_trabajo_exploraciones',
-        where: 'medicion = ? AND zona = ?',
-        whereArgs: [0, zona],
-        orderBy: 'fecha DESC, turno DESC',
-      );
-
-      if (exploraciones.isEmpty) return [];
-
-      List<Map<String, dynamic>> resultado = [];
-
-      for (var exploracion in exploraciones) {
-        // Crear un nuevo mapa mutable para la exploración
-        Map<String, dynamic> exploracionCompleta = Map<String, dynamic>.from(
-          exploracion,
-        );
-        int exploracionId = exploracion['id'];
-        String idnube = exploracion['idnube']?.toString() ?? '';
-
-        // Obtener despachos relacionados
-        exploracionCompleta['despachos'] =
-            await _obtenerDespachosPorExploracion(exploracionId);
-
-        // Obtener devoluciones relacionadas
-        exploracionCompleta['devoluciones'] =
-            await _obtenerDevolucionesPorExploracion(exploracionId);
-
-        // Asegurar que idnube está incluido
-        exploracionCompleta['idnube'] = idnube;
-
-        resultado.add(exploracionCompleta);
-      }
-
-      return resultado;
-    } catch (e) {
-      print('Error al obtener exploraciones completas por zona: $e');
-      return [];
-    }
-  }
-
   Future<List<Map<String, dynamic>>> obtenerTodasMedicionesHorizontal() async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db.query(
@@ -12909,20 +11882,6 @@ CREATE TABLE UsuarioEquipo (
       orderBy: 'fecha DESC', // Ordenar por fecha descendente
     );
     return result;
-  }
-
-  Future<void> actualizarMedicionExplosivoACero(List<int> ids) async {
-    if (ids.isEmpty) return; // ✅ Evita ejecución si la lista está vacía
-
-    final db = await database;
-
-    // Construir placeholders dinámicos (?, ?, ?)
-    final placeholders = List.filled(ids.length, '?').join(',');
-
-    await db.rawUpdate(
-      'UPDATE nube_Datos_trabajo_exploraciones SET medicion = 0 WHERE id IN ($placeholders)',
-      ids,
-    );
   }
 
   Future<int> eliminarMultiplesMedicionesLargo(List<int> ids) async {
@@ -12939,15 +11898,6 @@ CREATE TABLE UsuarioEquipo (
   }
 
   //TONELADASSSS----------------------------------------------------------------------
-  Future<List<Map<String, dynamic>>> obtenerTodasToneladas() async {
-    final db = await database;
-    final List<Map<String, dynamic>> result = await db.query(
-      'toneladas',
-      orderBy: 'fecha DESC', // Ordenar por fecha descendente
-    );
-    return result;
-  }
-
   Future<List<TipoPerforacion>> getTiposPerforacionLargofil() async {
     final db = await sharedCatalogDatabase;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -13042,23 +11992,5 @@ CREATE TABLE UsuarioEquipo (
       where: 'id IN ($idPlaceholders)',
       whereArgs: ids,
     );
-  }
-
-  //EXPLOSIVOSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
-  //Cantidad de retardos a mostrar
-  Future<Map<String, dynamic>?> getUltimoNumeroRetardos() async {
-    final db = await database;
-
-    final result = await db.query(
-      'numero_retardos',
-      orderBy: 'id DESC',
-      limit: 1,
-    );
-
-    if (result.isNotEmpty) {
-      return result.first;
-    }
-
-    return null;
   }
 }

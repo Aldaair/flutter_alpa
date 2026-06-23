@@ -78,58 +78,6 @@ class _DialogoFormularioEmpernadorState
     super.initState();
     isEditable = widget.estado.toLowerCase() != "cerrado";
     _cargarDatosIniciales();
-    _cargarDatosDesdeBD();
-  }
-
-  Future<void> _cargarDatosDesdeBD() async {
-    setState(() => isLoading = true);
-
-    try {
-      await _cargarPlanesMensuales();
-      _cargarPernos();
-      _cargarMallas();
-    } catch (e) {
-      print("Error cargando datos: $e");
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> _cargarPernos() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      final data = await dbHelper.getPernos();
-
-      pernosCompletos = data;
-
-      final tipos = data.map((e) => e['tipo_perno'].toString()).toSet().toList()
-        ..sort();
-
-      setState(() {
-        tiposPerno = tipos;
-      });
-
-      // 🔥 IMPORTANTE: reconstruir longitudes si ya hay tipo seleccionado
-      _setLongitudesDesdeTipoInicial();
-    } catch (e) {
-      print("Error cargando pernos: $e");
-    }
-  }
-
-  Future<void> _cargarMallas() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      final data = await dbHelper.getMallas();
-
-      final lista = data.map((e) => e['tipo_malla'].toString()).toSet().toList()
-        ..sort();
-
-      setState(() {
-        opcionesMalla = lista;
-      });
-    } catch (e) {
-      print("Error cargando mallas: $e");
-    }
   }
 
   void _onTipoPernoChanged(String? tipo) {
@@ -170,66 +118,6 @@ class _DialogoFormularioEmpernadorState
     setState(() {
       longitudesPerno = filtrados;
     });
-  }
-
-  // Cargar planes mensuales y construir opciones únicas
-  Future<void> _cargarPlanesMensuales() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      planesCompletos = await dbHelper.getPlanesMensual();
-
-      print("Planes Mensuales obtenidos: ${planesCompletos.length}");
-
-      Set<String> nivelesSet = {};
-      Set<String> tiposLaborSet = {};
-      Set<String> laboresSet = {};
-      Set<String> alasSet = {};
-
-      for (var plan in planesCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false)
-          tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      setState(() {
-        opcionesNivel = nivelesSet.toList()..sort();
-        opcionesTipoLabor = tiposLaborSet.toList()..sort();
-        opcionesLabor = laboresSet.toList()..sort();
-        opcionesAla = alasSet.toList()..sort();
-
-        // Inicializar listas filtradas
-        filteredTiposLabor = List.from(opcionesTipoLabor);
-        filteredLabores = List.from(opcionesLabor);
-        filteredAlas = List.from(opcionesAla);
-        filteredNiveles = List.from(opcionesNivel); 
-      });
-
-      print('Niveles cargados: $opcionesNivel');
-      print('Tipos Labor cargados: $opcionesTipoLabor');
-      print('Labores cargados: $opcionesLabor');
-      print('Alas cargados: $opcionesAla');
-    } catch (e) {
-      print("Error cargando planes mensuales: $e");
-      // Fallback con datos de ejemplo
-      setState(() {
-        opcionesNivel = ['Nivel 1', 'Nivel 2', 'Nivel 3', 'Nivel 4'];
-        opcionesTipoLabor = [
-          'Galería',
-          'Crucero',
-          'Rampa',
-          'Chimenea',
-          'Subterráneo',
-        ];
-        opcionesLabor = ['Labor A', 'Labor B', 'Labor C', 'Labor D'];
-        opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
-
-        filteredTiposLabor = List.from(opcionesTipoLabor);
-        filteredLabores = List.from(opcionesLabor);
-        filteredAlas = List.from(opcionesAla);
-      });
-    }
   }
 
   void _onTipoLaborChanged(String? nuevoTipoLabor) {

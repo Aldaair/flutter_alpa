@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/models/Explosivo.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:i_miner/screens/Operaciones/Mediciones/horizontal/listar_mediciones.dart';
 
@@ -26,7 +25,7 @@ class _RegistroExplosivoPageHorizontalState
   List<Map<String, dynamic>> _exploracionesSucio = [];
   bool _isLoading = true;
   Map<String, TextEditingController> controllers = {};
-  List<Explosivo> _explosivos = [];
+
   Map<int, Map<String, dynamic>> registrosEditados = {};
   final TextEditingController fechaController = TextEditingController();
   final TextEditingController turnoController = TextEditingController();
@@ -43,16 +42,6 @@ class _RegistroExplosivoPageHorizontalState
     super.initState();
     _getTiposPerforacion();
     _cargarExploraciones();
-    _cargarDatosExplosivos();
-  }
-
-  void _cargarDatosExplosivos() async {
-    List<Explosivo> explosivos = await DatabaseHelper().getExplosivos();
-    print("explosivos local $explosivos");
-
-    setState(() {
-      _explosivos = explosivos;
-    });
   }
 
   Future<void> _getTiposPerforacion() async {
@@ -72,7 +61,7 @@ class _RegistroExplosivoPageHorizontalState
   Future<void> _cargarExploraciones() async {
     try {
       final dbHelper = DatabaseHelper();
-      final exploraciones = await dbHelper.obtenerExploracionesCompletasPorZona(widget.zona);
+      final exploraciones = await dbHelper.getExploraciones();
 
       setState(() {
         _exploracionesSucio = exploraciones;
@@ -82,11 +71,6 @@ class _RegistroExplosivoPageHorizontalState
       if (_tiposPerforacion.isNotEmpty) {
         _filtrarExploraciones();
       }
-
-      // Si ya cargaste explosivos, calcula kg_explosivos
-      if (_explosivos.isNotEmpty) {
-        calcularKgExplosivos();
-      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -94,58 +78,6 @@ class _RegistroExplosivoPageHorizontalState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al cargar exploraciones: $e')),
       );
-    }
-  }
-
-  void calcularKgExplosivos() {
-    for (var registro in _exploracionesSucio) {
-      double totalKg = 0.0;
-
-      Map<String, double> despachosTotales = {};
-      for (var despacho in registro['despachos'] ?? []) {
-        for (var detalle in despacho['detalles'] ?? []) {
-          String nombre = detalle['nombre_material'];
-          double cantidad =
-              double.tryParse(detalle['cantidad'].toString()) ?? 0.0;
-
-          despachosTotales[nombre] = (despachosTotales[nombre] ?? 0) + cantidad;
-        }
-      }
-
-      // Procesar devoluciones
-      Map<String, double> devolucionesTotales = {};
-      for (var devolucion in registro['devoluciones'] ?? []) {
-        for (var detalle in devolucion['detalles'] ?? []) {
-          String nombre = detalle['nombre_material'];
-          double cantidad =
-              double.tryParse(detalle['cantidad'].toString()) ?? 0.0;
-
-          devolucionesTotales[nombre] =
-              (devolucionesTotales[nombre] ?? 0) + cantidad;
-        }
-      }
-
-      // Calcular diferencias y totalKg
-      despachosTotales.forEach((nombre, cantidadDespacho) {
-        double cantidadDevolucion = devolucionesTotales[nombre] ?? 0.0;
-        double diferencia = cantidadDespacho - cantidadDevolucion;
-
-        // Buscar el explosivo correspondiente
-        Explosivo? explosivo;
-        try {
-          explosivo = _explosivos.firstWhere((e) => e.tipoExplosivo == nombre);
-        } catch (e) {
-          explosivo = null;
-        }
-
-        if (explosivo != null) {
-          double kg = diferencia * explosivo.pesoUnitario;
-          totalKg += kg;
-        }
-      });
-
-      // Guardar el resultado en el registro
-      registro['kg_explosivos'] = totalKg.toStringAsFixed(2);
     }
   }
 
@@ -289,32 +221,30 @@ class _RegistroExplosivoPageHorizontalState
                                     borderRadius: BorderRadius.circular(8),
                                     color: Colors.grey,
                                   ),
-                                  columnWidths: const {
-                                    0: FlexColumnWidth(
-                                        0.8), // Nueva columna para el número de fila
-                                    1: FlexColumnWidth(
-                                        1.2), // FECHA (antes era 0)
-                                    2: FlexColumnWidth(
-                                        1.2), // TURNO (antes era 1)
-                                    3: FlexColumnWidth(
-                                        1.2), // EMPRESA (antes era 2)
-                                    4: FlexColumnWidth(
-                                        1.3), // ZONA (antes era 3)
-                                    5: FlexColumnWidth(
-                                        1.2), // LABOR (antes era 4)
-                                    6: FlexColumnWidth(
-                                        1.5), // VETA (antes era 5)
-                                    7: FlexColumnWidth(
-                                        1.2), // TIPO PERFORACIÓN (antes era 6)
-                                    8: FlexColumnWidth(
-                                        1.5), // KG EXPLOSIVOS (antes era 7)
-                                    9: FlexColumnWidth(
-                                        1.2), // AVANCE PROGRAMADO (antes era 8)
-                                    10: FlexColumnWidth(
-                                        1.0), // ANCHO (antes era 9)
-                                    11: FlexColumnWidth(
-                                        1.0), // ALTO (antes era 10)
-                                  },
+                                   columnWidths: const {
+                                     0: FlexColumnWidth(
+                                         0.8), // Nueva columna para el número de fila
+                                     1: FlexColumnWidth(
+                                         1.2), // FECHA (antes era 0)
+                                     2: FlexColumnWidth(
+                                         1.2), // TURNO (antes era 1)
+                                     3: FlexColumnWidth(
+                                         1.2), // EMPRESA (antes era 2)
+                                     4: FlexColumnWidth(
+                                         1.3), // ZONA (antes era 3)
+                                     5: FlexColumnWidth(
+                                         1.2), // LABOR (antes era 4)
+                                     6: FlexColumnWidth(
+                                         1.5), // VETA (antes era 5)
+                                     7: FlexColumnWidth(
+                                         1.2), // TIPO PERFORACIÓN (antes era 6)
+                                     8: FlexColumnWidth(
+                                         1.2), // AVANCE PROGRAMADO (antes era 8)
+                                     9: FlexColumnWidth(
+                                         1.0), // ANCHO (antes era 9)
+                                     10: FlexColumnWidth(
+                                         1.0), // ALTO (antes era 10)
+                                   },
                                   children: [
                                     // Encabezados de tabla
                                     TableRow(
@@ -333,7 +263,6 @@ class _RegistroExplosivoPageHorizontalState
                                         tableCellBold(context, 'VETA'),
                                         tableCellBold(
                                             context, 'TIPO PERFORACIÓN'),
-                                        tableCellBold(context, 'KG EXPLOSIVOS'),
                                         tableCellBold(
                                             context, 'AVANCE PROGRAMADO (m)'),
                                         tableCellBold(context, 'ANCHO (m)'),
@@ -375,10 +304,6 @@ class _RegistroExplosivoPageHorizontalState
                                             ''),
                                         tableCell(_exploraciones[i]
                                                     ['tipo_perforacion']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCell(_exploraciones[i]
-                                                    ['kg_explosivos']
                                                 ?.toString() ??
                                             ''),
                                         tableCellEditable(
@@ -464,26 +389,13 @@ class _RegistroExplosivoPageHorizontalState
     }
 
     final dbHelper = DatabaseHelper();
-    List<int> idsParaActualizar = [];
 
     try {
       for (var registro in registros) {
-        int? idExplosivo = registro['id_explosivo'];
-        if (idExplosivo == null) {
-          print("⚠️ Registro sin id_explosivo. Se omite: $registro");
-          continue;
-        }
-
         int idInsertado = await dbHelper.insertarMedicionHorizontal(registro);
         print(
-            "Registro insertado con id: $idInsertado, id_explosivo original: $idExplosivo");
-        idsParaActualizar.add(idExplosivo);
+            "Registro insertado con id: $idInsertado");
       }
-
-      if (idsParaActualizar.isNotEmpty) {
-        await dbHelper.actualizarMedicionEXplosivo(idsParaActualizar);
-        print(
-            "Registros actualizados en nube_Datos_trabajo_exploraciones con medicion=1");
 
         // Mostrar mensaje de éxito
         ScaffoldMessenger.of(context).showSnackBar(
@@ -492,7 +404,6 @@ class _RegistroExplosivoPageHorizontalState
 
         // Recargar los datos
         await _recargarDatos();
-      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al guardar datos: $e')),
@@ -519,7 +430,6 @@ class _RegistroExplosivoPageHorizontalState
         'labor': tipoLaborLaborAla,
         'veta': registro['veta'],
         'tipo_perforacion': registro['tipo_perforacion'],
-        'kg_explosivos': registro['kg_explosivos'],
         'avance_programado': registro['avance_programado'],
         'ancho': registro['ancho'],
         'alto': registro['alto'],
@@ -546,7 +456,6 @@ class _RegistroExplosivoPageHorizontalState
     // Vuelve a cargar todos los datos
     await _getTiposPerforacion();
     await _cargarExploraciones();
-    _cargarDatosExplosivos();
 
     setState(() {
       _isLoading = false;

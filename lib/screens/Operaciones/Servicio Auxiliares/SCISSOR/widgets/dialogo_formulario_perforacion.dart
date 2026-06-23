@@ -23,10 +23,12 @@ class DialogoFormularioRompebanco extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<DialogoFormularioRompebanco> createState() => _DialogoFormularioRompebancoState();
+  State<DialogoFormularioRompebanco> createState() =>
+      _DialogoFormularioRompebancoState();
 }
 
-class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanco> {
+class _DialogoFormularioRompebancoState
+    extends State<DialogoFormularioRompebanco> {
   bool isEditable = false;
   bool isLoading = true;
 
@@ -34,16 +36,16 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
   final TextEditingController observacionesController = TextEditingController();
 
   // Variables para ORIGEN (NUEVO ORDEN: Tipo Labor → Labor → Ala, Nivel interno)
-  String? origenTipoLaborSeleccionado;    // 1º
-  String? origenLaborSeleccionado;         // 2º
-  String? origenAlaSeleccionado;           // 3º
-  String? origenNivelSeleccionado;         // 4º (interno, no visible)
+  String? origenTipoLaborSeleccionado; // 1º
+  String? origenLaborSeleccionado; // 2º
+  String? origenAlaSeleccionado; // 3º
+  String? origenNivelSeleccionado; // 4º (interno, no visible)
 
   // Variables para DESTINO (NUEVO ORDEN: Tipo Labor → Labor → Ala, Nivel interno)
-  String? destTipoLaborSeleccionado;       // 1º
-  String? destinoLaborSeleccionado;        // 2º
-  String? destinoAlaSeleccionado;          // 3º
-  String? destinoNivelSeleccionado;        // 4º (interno, no visible)
+  String? destTipoLaborSeleccionado; // 1º
+  String? destinoLaborSeleccionado; // 2º
+  String? destinoAlaSeleccionado; // 3º
+  String? destinoNivelSeleccionado; // 4º (interno, no visible)
 
   // Opciones para los dropdowns
   List<String> opcionesNivel = [];
@@ -73,96 +75,6 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
     super.initState();
     isEditable = widget.estado.toLowerCase() != "cerrado";
     _cargarDatosIniciales();
-    _cargarDatosDesdeBD();
-  }
-
-  Future<void> _cargarDatosDesdeBD() async {
-    setState(() => isLoading = true);
-    try {
-      await _cargarPlanesCombinados();
-    } catch (e) {
-      print("Error cargando datos: $e");
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> _cargarPlanesCombinados() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      
-      final results = await Future.wait([
-        dbHelper.getPlanesMensual(),
-        dbHelper.getPlanesProduccion(),
-        dbHelper.getPlanesMetraje(),
-      ]);
-      
-      planesMensualCompletos = results[0] as List<PlanMensual>;
-      planesProduccionCompletos = results[1] as List<PlanProduccion>;
-      planesMetrajeCompletos = results[2] as List<PlanMetraje>;
-
-      Set<String> nivelesSet = {};
-      Set<String> tiposLaborSet = {};
-      Set<String> laboresSet = {};
-      Set<String> alasSet = {};
-
-      for (var plan in planesMensualCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      setState(() {
-        opcionesNivel = nivelesSet.toList()..sort();
-        opcionesTipoLabor = tiposLaborSet.toList()..sort();
-        opcionesLabor = laboresSet.toList()..sort();
-        opcionesAla = alasSet.toList()..sort();
-
-        filteredOrigenTiposLabor = List.from(opcionesTipoLabor);
-        filteredOrigenLabores = List.from(opcionesLabor);
-        filteredOrigenAlas = List.from(opcionesAla);
-        filteredOrigenNiveles = List.from(opcionesNivel);
-        
-        filteredDestinoTiposLabor = List.from(opcionesTipoLabor);
-        filteredDestinoLabores = List.from(opcionesLabor);
-        filteredDestinoAlas = List.from(opcionesAla);
-        filteredDestinoNiveles = List.from(opcionesNivel);
-      });
-
-    } catch (e) {
-      print("Error cargando planes combinados: $e");
-      setState(() {
-        opcionesNivel = ['Nv 300', 'Nv 320', 'Nv 340', 'Nv 360'];
-        opcionesTipoLabor = ['Galería', 'Crucero', 'Rampa', 'Chimenea'];
-        opcionesLabor = ['Labor 01', 'Labor 02', 'Labor 03', 'Labor 04'];
-        opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
-
-        filteredOrigenTiposLabor = List.from(opcionesTipoLabor);
-        filteredOrigenLabores = List.from(opcionesLabor);
-        filteredOrigenAlas = List.from(opcionesAla);
-        filteredOrigenNiveles = List.from(opcionesNivel);
-        
-        filteredDestinoTiposLabor = List.from(opcionesTipoLabor);
-        filteredDestinoLabores = List.from(opcionesLabor);
-        filteredDestinoAlas = List.from(opcionesAla);
-        filteredDestinoNiveles = List.from(opcionesNivel);
-      });
-    }
   }
 
   // ==================== FUNCIONES PARA ORIGEN ====================
@@ -197,34 +109,38 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
     // Filtrar Labores basado en Tipo Labor
     if (origenTipoLaborSeleccionado != null) {
       Set<String> laboresFiltrados = {};
-      
+
       for (var plan in planesMensualCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado && (plan.labor?.isNotEmpty ?? false)) {
+        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
+
       for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado && (plan.labor?.isNotEmpty ?? false)) {
+        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
+
       for (var plan in planesMetrajeCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado && (plan.labor?.isNotEmpty ?? false)) {
+        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
+
       filteredOrigenLabores = laboresFiltrados.toList()..sort();
     } else {
       filteredOrigenLabores = List.from(opcionesLabor);
     }
 
     // Filtrar Alas basado en Tipo Labor y Labor
-    if (origenTipoLaborSeleccionado != null && origenLaborSeleccionado != null) {
+    if (origenTipoLaborSeleccionado != null &&
+        origenLaborSeleccionado != null) {
       Set<String> alasFiltrados = {};
-      
+
       for (var plan in planesMensualCompletos) {
         if (plan.tipoLabor == origenTipoLaborSeleccionado &&
             plan.labor == origenLaborSeleccionado &&
@@ -232,7 +148,7 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
           alasFiltrados.add(plan.ala!);
         }
       }
-      
+
       for (var plan in planesProduccionCompletos) {
         if (plan.tipoLabor == origenTipoLaborSeleccionado &&
             plan.labor == origenLaborSeleccionado &&
@@ -240,7 +156,7 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
           alasFiltrados.add(plan.ala!);
         }
       }
-      
+
       for (var plan in planesMetrajeCompletos) {
         if (plan.tipoLabor == origenTipoLaborSeleccionado &&
             plan.labor == origenLaborSeleccionado &&
@@ -248,44 +164,61 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
           alasFiltrados.add(plan.ala!);
         }
       }
-      
+
       filteredOrigenAlas = alasFiltrados.toList()..sort();
     } else {
       filteredOrigenAlas = List.from(opcionesAla);
     }
 
     // Filtrar Niveles (INTERNO)
-    if (origenTipoLaborSeleccionado != null && origenLaborSeleccionado != null) {
+    if (origenTipoLaborSeleccionado != null &&
+        origenLaborSeleccionado != null) {
       Set<String> nivelesFiltrados = {};
-      
+
       for (var plan in planesMensualCompletos) {
-        bool coincideBase = plan.tipoLabor == origenTipoLaborSeleccionado && plan.labor == origenLaborSeleccionado;
-        bool coincideAla = origenAlaSeleccionado == null || origenAlaSeleccionado!.isEmpty || plan.ala == origenAlaSeleccionado;
+        bool coincideBase =
+            plan.tipoLabor == origenTipoLaborSeleccionado &&
+            plan.labor == origenLaborSeleccionado;
+        bool coincideAla =
+            origenAlaSeleccionado == null ||
+            origenAlaSeleccionado!.isEmpty ||
+            plan.ala == origenAlaSeleccionado;
         if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
           nivelesFiltrados.add(plan.nivel!);
         }
       }
-      
+
       for (var plan in planesProduccionCompletos) {
-        bool coincideBase = plan.tipoLabor == origenTipoLaborSeleccionado && plan.labor == origenLaborSeleccionado;
-        bool coincideAla = origenAlaSeleccionado == null || origenAlaSeleccionado!.isEmpty || plan.ala == origenAlaSeleccionado;
+        bool coincideBase =
+            plan.tipoLabor == origenTipoLaborSeleccionado &&
+            plan.labor == origenLaborSeleccionado;
+        bool coincideAla =
+            origenAlaSeleccionado == null ||
+            origenAlaSeleccionado!.isEmpty ||
+            plan.ala == origenAlaSeleccionado;
         if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
           nivelesFiltrados.add(plan.nivel!);
         }
       }
-      
+
       for (var plan in planesMetrajeCompletos) {
-        bool coincideBase = plan.tipoLabor == origenTipoLaborSeleccionado && plan.labor == origenLaborSeleccionado;
-        bool coincideAla = origenAlaSeleccionado == null || origenAlaSeleccionado!.isEmpty || plan.ala == origenAlaSeleccionado;
+        bool coincideBase =
+            plan.tipoLabor == origenTipoLaborSeleccionado &&
+            plan.labor == origenLaborSeleccionado;
+        bool coincideAla =
+            origenAlaSeleccionado == null ||
+            origenAlaSeleccionado!.isEmpty ||
+            plan.ala == origenAlaSeleccionado;
         if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
           nivelesFiltrados.add(plan.nivel!);
         }
       }
-      
+
       filteredOrigenNiveles = nivelesFiltrados.toList()..sort();
 
       if (filteredOrigenNiveles.isNotEmpty) {
-        if (origenNivelSeleccionado == null || !filteredOrigenNiveles.contains(origenNivelSeleccionado)) {
+        if (origenNivelSeleccionado == null ||
+            !filteredOrigenNiveles.contains(origenNivelSeleccionado)) {
           origenNivelSeleccionado = filteredOrigenNiveles.first;
         }
       } else {
@@ -293,7 +226,8 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
       }
     } else {
       filteredOrigenNiveles = List.from(opcionesNivel);
-      if (origenTipoLaborSeleccionado == null || origenLaborSeleccionado == null) {
+      if (origenTipoLaborSeleccionado == null ||
+          origenLaborSeleccionado == null) {
         origenNivelSeleccionado = null;
       }
     }
@@ -331,25 +265,28 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
     // Filtrar Labores basado en Tipo Labor
     if (destTipoLaborSeleccionado != null) {
       Set<String> laboresFiltrados = {};
-      
+
       for (var plan in planesMensualCompletos) {
-        if (plan.tipoLabor == destTipoLaborSeleccionado && (plan.labor?.isNotEmpty ?? false)) {
+        if (plan.tipoLabor == destTipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
+
       for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == destTipoLaborSeleccionado && (plan.labor?.isNotEmpty ?? false)) {
+        if (plan.tipoLabor == destTipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
+
       for (var plan in planesMetrajeCompletos) {
-        if (plan.tipoLabor == destTipoLaborSeleccionado && (plan.labor?.isNotEmpty ?? false)) {
+        if (plan.tipoLabor == destTipoLaborSeleccionado &&
+            (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
+
       filteredDestinoLabores = laboresFiltrados.toList()..sort();
     } else {
       filteredDestinoLabores = List.from(opcionesLabor);
@@ -358,7 +295,7 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
     // Filtrar Alas basado en Tipo Labor y Labor
     if (destTipoLaborSeleccionado != null && destinoLaborSeleccionado != null) {
       Set<String> alasFiltrados = {};
-      
+
       for (var plan in planesMensualCompletos) {
         if (plan.tipoLabor == destTipoLaborSeleccionado &&
             plan.labor == destinoLaborSeleccionado &&
@@ -366,7 +303,7 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
           alasFiltrados.add(plan.ala!);
         }
       }
-      
+
       for (var plan in planesProduccionCompletos) {
         if (plan.tipoLabor == destTipoLaborSeleccionado &&
             plan.labor == destinoLaborSeleccionado &&
@@ -374,7 +311,7 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
           alasFiltrados.add(plan.ala!);
         }
       }
-      
+
       for (var plan in planesMetrajeCompletos) {
         if (plan.tipoLabor == destTipoLaborSeleccionado &&
             plan.labor == destinoLaborSeleccionado &&
@@ -382,7 +319,7 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
           alasFiltrados.add(plan.ala!);
         }
       }
-      
+
       filteredDestinoAlas = alasFiltrados.toList()..sort();
     } else {
       filteredDestinoAlas = List.from(opcionesAla);
@@ -391,35 +328,51 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
     // Filtrar Niveles (INTERNO)
     if (destTipoLaborSeleccionado != null && destinoLaborSeleccionado != null) {
       Set<String> nivelesFiltrados = {};
-      
+
       for (var plan in planesMensualCompletos) {
-        bool coincideBase = plan.tipoLabor == destTipoLaborSeleccionado && plan.labor == destinoLaborSeleccionado;
-        bool coincideAla = destinoAlaSeleccionado == null || destinoAlaSeleccionado!.isEmpty || plan.ala == destinoAlaSeleccionado;
+        bool coincideBase =
+            plan.tipoLabor == destTipoLaborSeleccionado &&
+            plan.labor == destinoLaborSeleccionado;
+        bool coincideAla =
+            destinoAlaSeleccionado == null ||
+            destinoAlaSeleccionado!.isEmpty ||
+            plan.ala == destinoAlaSeleccionado;
         if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
           nivelesFiltrados.add(plan.nivel!);
         }
       }
-      
+
       for (var plan in planesProduccionCompletos) {
-        bool coincideBase = plan.tipoLabor == destTipoLaborSeleccionado && plan.labor == destinoLaborSeleccionado;
-        bool coincideAla = destinoAlaSeleccionado == null || destinoAlaSeleccionado!.isEmpty || plan.ala == destinoAlaSeleccionado;
+        bool coincideBase =
+            plan.tipoLabor == destTipoLaborSeleccionado &&
+            plan.labor == destinoLaborSeleccionado;
+        bool coincideAla =
+            destinoAlaSeleccionado == null ||
+            destinoAlaSeleccionado!.isEmpty ||
+            plan.ala == destinoAlaSeleccionado;
         if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
           nivelesFiltrados.add(plan.nivel!);
         }
       }
-      
+
       for (var plan in planesMetrajeCompletos) {
-        bool coincideBase = plan.tipoLabor == destTipoLaborSeleccionado && plan.labor == destinoLaborSeleccionado;
-        bool coincideAla = destinoAlaSeleccionado == null || destinoAlaSeleccionado!.isEmpty || plan.ala == destinoAlaSeleccionado;
+        bool coincideBase =
+            plan.tipoLabor == destTipoLaborSeleccionado &&
+            plan.labor == destinoLaborSeleccionado;
+        bool coincideAla =
+            destinoAlaSeleccionado == null ||
+            destinoAlaSeleccionado!.isEmpty ||
+            plan.ala == destinoAlaSeleccionado;
         if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
           nivelesFiltrados.add(plan.nivel!);
         }
       }
-      
+
       filteredDestinoNiveles = nivelesFiltrados.toList()..sort();
 
       if (filteredDestinoNiveles.isNotEmpty) {
-        if (destinoNivelSeleccionado == null || !filteredDestinoNiveles.contains(destinoNivelSeleccionado)) {
+        if (destinoNivelSeleccionado == null ||
+            !filteredDestinoNiveles.contains(destinoNivelSeleccionado)) {
           destinoNivelSeleccionado = filteredDestinoNiveles.first;
         }
       } else {
@@ -427,7 +380,8 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
       }
     } else {
       filteredDestinoNiveles = List.from(opcionesNivel);
-      if (destTipoLaborSeleccionado == null || destinoLaborSeleccionado == null) {
+      if (destTipoLaborSeleccionado == null ||
+          destinoLaborSeleccionado == null) {
         destinoNivelSeleccionado = null;
       }
     }
@@ -437,34 +391,43 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
     if (widget.datosIniciales != null) {
       setState(() {
         // ORIGEN
-        origenTipoLaborSeleccionado = widget.datosIniciales!['origen_tipo_labor']?.isNotEmpty == true
+        origenTipoLaborSeleccionado =
+            widget.datosIniciales!['origen_tipo_labor']?.isNotEmpty == true
             ? widget.datosIniciales!['origen_tipo_labor']
             : null;
-        origenLaborSeleccionado = widget.datosIniciales!['origen_labor']?.isNotEmpty == true
+        origenLaborSeleccionado =
+            widget.datosIniciales!['origen_labor']?.isNotEmpty == true
             ? widget.datosIniciales!['origen_labor']
             : null;
-        origenAlaSeleccionado = widget.datosIniciales!['origen_ala']?.isNotEmpty == true
+        origenAlaSeleccionado =
+            widget.datosIniciales!['origen_ala']?.isNotEmpty == true
             ? widget.datosIniciales!['origen_ala']
             : null;
-        origenNivelSeleccionado = widget.datosIniciales!['origen_nivel']?.isNotEmpty == true
+        origenNivelSeleccionado =
+            widget.datosIniciales!['origen_nivel']?.isNotEmpty == true
             ? widget.datosIniciales!['origen_nivel']
             : null;
 
         // DESTINO
-        destTipoLaborSeleccionado = widget.datosIniciales!['destino_tipo_labor']?.isNotEmpty == true
+        destTipoLaborSeleccionado =
+            widget.datosIniciales!['destino_tipo_labor']?.isNotEmpty == true
             ? widget.datosIniciales!['destino_tipo_labor']
             : null;
-        destinoLaborSeleccionado = widget.datosIniciales!['destino_labor']?.isNotEmpty == true
+        destinoLaborSeleccionado =
+            widget.datosIniciales!['destino_labor']?.isNotEmpty == true
             ? widget.datosIniciales!['destino_labor']
             : null;
-        destinoAlaSeleccionado = widget.datosIniciales!['destino_ala']?.isNotEmpty == true
+        destinoAlaSeleccionado =
+            widget.datosIniciales!['destino_ala']?.isNotEmpty == true
             ? widget.datosIniciales!['destino_ala']
             : null;
-        destinoNivelSeleccionado = widget.datosIniciales!['destino_nivel']?.isNotEmpty == true
+        destinoNivelSeleccionado =
+            widget.datosIniciales!['destino_nivel']?.isNotEmpty == true
             ? widget.datosIniciales!['destino_nivel']
             : null;
 
-        observacionesController.text = widget.datosIniciales!['observaciones'] ?? '';
+        observacionesController.text =
+            widget.datosIniciales!['observaciones'] ?? '';
       });
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -566,11 +529,25 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
             children: [
               Container(
                 padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(4)),
-                child: const Icon(Icons.exit_to_app, size: 14, color: Colors.white),
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Icon(
+                  Icons.exit_to_app,
+                  size: 14,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(width: 6),
-              Text('ORIGEN', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue.shade800)),
+              Text(
+                'ORIGEN',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade800,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -592,7 +569,9 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
                   label: 'Labor',
                   value: origenLaborSeleccionado,
                   items: filteredOrigenLabores,
-                  onChanged: (origenTipoLaborSeleccionado != null && isEditable) ? _onOrigenLaborChanged : null,
+                  onChanged: (origenTipoLaborSeleccionado != null && isEditable)
+                      ? _onOrigenLaborChanged
+                      : null,
                   icon: Icons.factory,
                   color: Colors.blue,
                 ),
@@ -603,7 +582,9 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
                   label: 'Ala',
                   value: origenAlaSeleccionado,
                   items: filteredOrigenAlas,
-                  onChanged: (origenLaborSeleccionado != null && isEditable) ? _onOrigenAlaChanged : null,
+                  onChanged: (origenLaborSeleccionado != null && isEditable)
+                      ? _onOrigenAlaChanged
+                      : null,
                   icon: Icons.compare_arrows,
                   color: Colors.blue,
                 ),
@@ -630,11 +611,21 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
             children: [
               Container(
                 padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(4)),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(4),
+                ),
                 child: const Icon(Icons.login, size: 14, color: Colors.white),
               ),
               const SizedBox(width: 6),
-              Text('DESTINO', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green.shade800)),
+              Text(
+                'DESTINO',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green.shade800,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -656,7 +647,9 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
                   label: 'Labor',
                   value: destinoLaborSeleccionado,
                   items: filteredDestinoLabores,
-                  onChanged: (destTipoLaborSeleccionado != null && isEditable) ? _onDestinoLaborChanged : null,
+                  onChanged: (destTipoLaborSeleccionado != null && isEditable)
+                      ? _onDestinoLaborChanged
+                      : null,
                   icon: Icons.factory,
                   color: Colors.green,
                 ),
@@ -667,7 +660,9 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
                   label: 'Ala',
                   value: destinoAlaSeleccionado,
                   items: filteredDestinoAlas,
-                  onChanged: (destinoLaborSeleccionado != null && isEditable) ? _onDestinoAlaChanged : null,
+                  onChanged: (destinoLaborSeleccionado != null && isEditable)
+                      ? _onDestinoAlaChanged
+                      : null,
                   icon: Icons.compare_arrows,
                   color: Colors.green,
                 ),
@@ -694,7 +689,14 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
             children: [
               Icon(Icons.comment, size: 16, color: widget.primaryColor),
               const SizedBox(width: 6),
-              Text('Observaciones', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: widget.primaryColor)),
+              Text(
+                'Observaciones',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: widget.primaryColor,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -704,9 +706,18 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
             maxLines: 3,
             decoration: InputDecoration(
               hintText: 'Escriba observaciones adicionales...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: widget.primaryColor)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: widget.primaryColor),
+              ),
               contentPadding: const EdgeInsets.all(10),
             ),
           ),
@@ -720,17 +731,34 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: widget.primaryColor,
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
-            child: const Icon(Icons.rocket_launch, color: Colors.white, size: 18),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(
+              Icons.rocket_launch,
+              color: Colors.white,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 10),
-          const Text('Formulario Rompebanco', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+          const Text(
+            'Formulario Rompebanco',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const Spacer(),
           _buildEstadoBadge(),
         ],
@@ -742,16 +770,35 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isEditable ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+        color: isEditable
+            ? Colors.green.withOpacity(0.2)
+            : Colors.grey.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isEditable ? Colors.green : Colors.grey, width: 0.5),
+        border: Border.all(
+          color: isEditable ? Colors.green : Colors.grey,
+          width: 0.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 6, height: 6, decoration: BoxDecoration(color: isEditable ? Colors.green : Colors.grey, shape: BoxShape.circle)),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: isEditable ? Colors.green : Colors.grey,
+              shape: BoxShape.circle,
+            ),
+          ),
           const SizedBox(width: 4),
-          Text(isEditable ? 'EDITABLE' : 'LECTURA', style: TextStyle(color: isEditable ? Colors.green : Colors.grey, fontSize: 10, fontWeight: FontWeight.w600)),
+          Text(
+            isEditable ? 'EDITABLE' : 'LECTURA',
+            style: TextStyle(
+              color: isEditable ? Colors.green : Colors.grey,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -770,7 +817,11 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
 
     return Container(
       height: 42,
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.grey.shade300)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -780,7 +831,18 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
             children: [
               Icon(icon, size: 14, color: color),
               const SizedBox(width: 4),
-              Expanded(child: Text(items.isEmpty ? 'Cargando...' : label, style: TextStyle(fontSize: 11, color: isEnabled ? Colors.grey.shade600 : Colors.grey.shade400), overflow: TextOverflow.ellipsis)),
+              Expanded(
+                child: Text(
+                  items.isEmpty ? 'Cargando...' : label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isEnabled
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade400,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           isExpanded: true,
@@ -789,8 +851,26 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
           dropdownColor: Colors.white,
           borderRadius: BorderRadius.circular(6),
           items: items.isEmpty
-              ? [DropdownMenuItem<String>(value: null, child: Text('No hay opciones', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)))]
-              : items.map((item) => DropdownMenuItem<String>(value: item, child: Text(item, style: const TextStyle(fontSize: 12)))).toList(),
+              ? [
+                  DropdownMenuItem<String>(
+                    value: null,
+                    child: Text(
+                      'No hay opciones',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
+                ]
+              : items
+                    .map(
+                      (item) => DropdownMenuItem<String>(
+                        value: item,
+                        child: Text(item, style: const TextStyle(fontSize: 12)),
+                      ),
+                    )
+                    .toList(),
           onChanged: isEnabled ? onChanged : null,
         ),
       ),
@@ -802,7 +882,10 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
@@ -810,8 +893,14 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
         children: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), minimumSize: Size.zero),
-            child: Text('Cancelar', style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              minimumSize: Size.zero,
+            ),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+            ),
           ),
           const SizedBox(width: 8),
           if (isEditable)
@@ -820,11 +909,26 @@ class _DialogoFormularioRompebancoState extends State<DialogoFormularioRompebanc
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 minimumSize: Size.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.save, size: 14), SizedBox(width: 6), Text('Guardar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600))]),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.save, size: 14),
+                  SizedBox(width: 6),
+                  Text(
+                    'Guardar',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
             ),
         ],
       ),

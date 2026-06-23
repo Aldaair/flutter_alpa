@@ -54,21 +54,6 @@ Future<void> _eliminarSeleccionadas() async {
 
   if (confirm == true) {
     try {
-      // ✅ Obtener los id_explosivo antes de eliminar
-      List<Map<String, dynamic>> medicionesSeleccionadas = _mediciones
-          .where((medicion) => _selectedIds.contains(medicion['id']))
-          .toList();
-
-      List<int> idsExplosivo = medicionesSeleccionadas
-          .map((medicion) => medicion['id_explosivo'] as int)
-          .where((id) => id != null)
-          .toList();
-
-      print('Ids de explosivo a actualizar a cero: $idsExplosivo');
-
-      // ✅ Actualizar medicion de esos id_explosivo a 0 antes de eliminar
-      await DatabaseHelper().actualizarMedicionExplosivoACero(idsExplosivo);
-
       // ✅ Eliminar las mediciones seleccionadas
       await DatabaseHelper().eliminarMultiplesMedicionesLargo(_selectedIds.toList());
 
@@ -195,8 +180,6 @@ Future<void> _eliminarSeleccionadas() async {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               _buildInfoItem('toneladas', '${medicion['toneladas']?.toStringAsFixed(2) ?? '0'} m'),
-                              
-                              _buildInfoItem('Explosivos', '${medicion['kg_explosivos']?.toStringAsFixed(2) ?? '0'} kg'),
                             ],
                           ),
                           SizedBox(height: 8),

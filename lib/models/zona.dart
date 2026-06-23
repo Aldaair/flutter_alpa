@@ -43,17 +43,11 @@ class Zona {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'proceso': proceso,
-      'nombre': nombre,
+      'zona_id': id,
       'mina_id': minaId,
+      'nombre': nombre,
       'codigo': codigo,
       'estado': estado,
-      'mina_nombre': minaNombre,
-      'created_at': createdAt,
-      'updated_at': updatedAt,
-      'created_by': createdBy,
-      'updated_by': updatedBy,
     };
   }
 

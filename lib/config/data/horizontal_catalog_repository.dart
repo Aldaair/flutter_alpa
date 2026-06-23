@@ -51,7 +51,7 @@ class HorizontalCatalogRepository {
 
   Future<void> refreshZonas(List<Zona> zonas) async {
     await _refreshCatalog(
-      table: 'Seccion',
+      table: 'zona',
       items: zonas.map((zona) => zona.toMap()).toList(),
     );
   }

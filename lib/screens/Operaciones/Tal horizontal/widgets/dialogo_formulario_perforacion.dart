@@ -90,7 +90,6 @@ class _DialogoFormularioPerforacionState
 
     try {
       await Future.wait([
-        _cargarPlanesMensuales(),
         _cargarTiposPerforacion(),
         _cargarLongitudBarras(),
         _cargarMisLabores(),
@@ -218,67 +217,7 @@ class _DialogoFormularioPerforacionState
       print("Error cargando longitudes: $e");
     }
   }
-
-  // ✅ NUEVO: Cargar planes mensuales y construir opciones únicas
-  Future<void> _cargarPlanesMensuales() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      planesCompletos = await dbHelper.getPlanesMensual();
-
-      print("Planes Mensuales obtenidos: ${planesCompletos.length}");
-
-      Set<String> nivelesSet = {};
-      Set<String> tiposLaborSet = {};
-      Set<String> laboresSet = {};
-      Set<String> alasSet = {};
-
-      for (var plan in planesCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false)
-          tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      setState(() {
-        opcionesNivel = nivelesSet.toList()..sort();
-        opcionesTipoLabor = tiposLaborSet.toList()..sort();
-        opcionesLabor = laboresSet.toList()..sort();
-        opcionesAla = alasSet.toList()..sort();
-
-        filteredTiposLabor = List.from(opcionesTipoLabor);
-        filteredLabores = List.from(opcionesLabor);
-        filteredAlas = List.from(opcionesAla);
-        filteredNiveles = List.from(opcionesNivel); // ← AGREGAR
-      });
-
-      print('Niveles cargados: $opcionesNivel');
-      print('Tipos Labor cargados: $opcionesTipoLabor');
-      print('Labores cargados: $opcionesLabor');
-      print('Alas cargados: $opcionesAla');
-    } catch (e) {
-      print("Error cargando planes mensuales: $e");
-      // Fallback con datos de ejemplo
-      setState(() {
-        opcionesNivel = ['Nivel 1', 'Nivel 2', 'Nivel 3', 'Nivel 4'];
-        opcionesTipoLabor = [
-          'Galería',
-          'Crucero',
-          'Rampa',
-          'Chimenea',
-          'Subterráneo',
-        ];
-        opcionesLabor = ['Labor A', 'Labor B', 'Labor C', 'Labor D'];
-        opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
-
-        filteredTiposLabor = List.from(opcionesTipoLabor);
-        filteredLabores = List.from(opcionesLabor);
-        filteredAlas = List.from(opcionesAla);
-      });
-    }
-  }
-
-  // ✅ Cargar tipos de perforación
+// ✅ Cargar tipos de perforación
   Future<void> _cargarTiposPerforacion() async {
     try {
       final dbHelper = DatabaseHelper();

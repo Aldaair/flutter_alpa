@@ -42,23 +42,18 @@ class OfflineAuthorizationRepository {
     Database? userDatabase,
     Database? sharedDatabase,
   }) : _databaseHelper = databaseHelper ?? DatabaseHelper(),
-       _userDatabase = userDatabase,
        _sharedDatabase = sharedDatabase;
 
   final DatabaseHelper _databaseHelper;
-  final Database? _userDatabase;
   final Database? _sharedDatabase;
-
-  Future<Database> get _userDb async =>
-      _userDatabase ?? _databaseHelper.database;
 
   Future<Database> get _sharedDb async =>
       _sharedDatabase ?? _databaseHelper.sharedCatalogDatabase;
 
   Future<int?> _getOperadorId(String dni) async {
-    final db = await _userDb;
+    final db = await _sharedDb;
     final rows = await db.query(
-      'Usuario',
+      'usuario_directorio',
       columns: ['operador_id'],
       where: 'codigo_dni = ?',
       whereArgs: [dni],
@@ -113,10 +108,14 @@ class OfflineAuthorizationRepository {
       [operadorId],
     );
 
-    return rows.map((r) => AuthorizedProcess(
-      id: r['proceso_id'] as int,
-      name: r['nombre']?.toString() ?? '',
-    )).toList();
+    return rows
+        .map(
+          (r) => AuthorizedProcess(
+            id: r['proceso_id'] as int,
+            name: r['nombre']?.toString() ?? '',
+          ),
+        )
+        .toList();
   }
 
   Future<int?> findAuthorizedProcessIdByName(
@@ -145,9 +144,9 @@ class OfflineAuthorizationRepository {
       return processIds.contains(processId);
     }
 
-    final db = await _userDb;
+    final db = await _sharedDb;
     final users = await db.query(
-      'Usuario',
+      'usuario_directorio',
       columns: ['operaciones_autorizadas'],
       where: 'codigo_dni = ?',
       whereArgs: [dni],

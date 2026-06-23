@@ -54,8 +54,6 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
     'FUERA DE PLAN': const Color(0xFFF44336),
   };
 
-  List<Map<String, dynamic>> estadosBD = [];
-
   final Map<String, List<Map<String, String>>> datadialog = {
     'OPERATIVO': [],
     'DEMORA': [],
@@ -69,7 +67,6 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
     super.initState();
     selectedTurno = _getTurnoBasedOnTime();
     _initializeScreen();
-    obtenerEstadosBD();
   }
 
   bool get _isMaster => widget.rolUsuario == 'Master';
@@ -119,26 +116,6 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
 
     final operator = selected.first;
     return '${operator['nombres'] ?? ''} ${operator['apellidos'] ?? ''}'.trim();
-  }
-
-  void obtenerEstadosBD() async {
-    estadosBD = await DatabaseHelper().getEstadosBD('SCOOPTRAM');
-
-    // Limpiamos la lista antes de actualizar
-    datadialog.forEach((key, value) => value.clear());
-
-    // Agregar los estados filtrados a la lista correcta
-    for (var estado in estadosBD) {
-      String estadoPrincipal = estado['estado_principal'];
-      if (datadialog.containsKey(estadoPrincipal)) {
-        datadialog[estadoPrincipal]?.add({
-          "Nombre": estado['tipo_estado'],
-          "Código": estado['codigo'].toString(),
-        });
-      }
-    }
-
-    setState(() {});
   }
 
   String _getTurnoBasedOnTime() {
@@ -981,46 +958,13 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
   Future<void> _handleNuevaOperacion(Map<String, dynamic> data) async {
     DatabaseHelper dbHelper = DatabaseHelper();
 
-    print('📦 Datos recibidos en _handleNuevaOperacion:');
-    print(
-      '   capacidad: ${data['capacidad']} (${data['capacidad'].runtimeType})',
-    );
-    print('   tipo_equipo: ${data['tipo_equipo']}');
-
-    // 🔥 1. OBTENER HORÓMETRO DE CARGUIO
-    List<Map<String, dynamic>> horometros = await dbHelper
-        .getHorometrosPorOperacion('carguio');
-
-    print("✅ Horómetro carguio:");
-    for (var h in horometros) {
-      print("Tipo: ${h['tipo_horometro']} - Final: ${h['final']}");
-    }
-
     /// Checklist normal (SCOOPTRAM)
     List<Map<String, dynamic>> checklistItems = await DatabaseHelper()
         .getCheckListByProceso('SCOOPTRAM');
 
     List<Map<String, dynamic>> checkListJson = checklistItems.map((item) {
-      return {
-        'id': item['id'],
-        'decision': 0,
-        'observacion': '',
-      };
+      return {'id': item['id'], 'decision': 0, 'observacion': ''};
     }).toList();
-
-    /// ✅ Checklist telemando
-    List<Map<String, dynamic>> checklistTelemandoItems = await DatabaseHelper()
-        .getChecklistTelemando();
-
-    List<Map<String, dynamic>> checkListTelemandoJson = checklistTelemandoItems
-        .map((item) {
-          return {
-            'descripcion': item['nombre'],
-            'decision': 0,
-            'observacion': '',
-          };
-        })
-        .toList();
 
     /// Insertar operación
     await dbHelper.insertOperacionCarguio(
@@ -1043,8 +987,7 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
       jefeGuardiaId: data['jefe_guardia_id'] as int?,
 
       checkListJson: checkListJson,
-      checkListTelemandoJson: checkListTelemandoJson, // ✅ nuevo
-      horometrosBase: horometros,
+      //horometrosBase: horometros,
     );
 
     /// Refrescar UI
@@ -1199,9 +1142,9 @@ class _TaladroCarguioScreenState extends State<TaladroCarguioScreen> {
         .getCheckListByOperacionIdCarguio(operacionId);
     List<Map<String, dynamic>> checklistData =
         await ChecklistHelper.enrichForDisplay(
-      proceso: 'SCOOPTRAM',
-      savedDecisions: savedDecisions,
-    );
+          proceso: 'SCOOPTRAM',
+          savedDecisions: savedDecisions,
+        );
 
     showDialog(
       context: context,
