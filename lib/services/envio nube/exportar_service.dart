@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/models/api/v2/operation_dtos.dart';
 
 class ExportarService {
   final DatabaseHelper dbHelper;
@@ -22,8 +23,7 @@ class ExportarService {
 
       if (tipo == 'tal_horizontal' && !_isSyncableV2(op)) continue;
 
-      final map = _buildOperationMap(op, tipo);
-      map['local_id'] = id;
+      final map = _buildOperationMap(tipo, op, id);
       results.add(map);
     }
 
@@ -31,59 +31,207 @@ class ExportarService {
   }
 
   Map<String, dynamic> _buildOperationMap(
-    Map<String, dynamic> op,
     String tipo,
+    Map<String, dynamic> op,
+    int localId,
   ) {
-    final horometros = _decodeMap(op['horometros']);
-    final condiciones = _decodeMap(op['condiciones_equipo']);
-    final controlLlantas = _decodeMap(op['control_llantas']);
-    final registros = _cleanRegistros(op['registros']);
-    final checklist = _decodeList(op['check_list']);
-
-    final map = <String, dynamic>{
-      // v2 contract fields
-      'fecha': op['fecha'],
-      'turno_id': op['turno_id'],
-      'labor_id': op['labor_id'],
-      'operador_id': op['operador_id'],
-      'jefe_guardia_id': op['jefe_guardia_id'],
-      'equipo_id': op['equipo_id'],
-      'estado': op['estado'] ?? 'activo',
-      'envio': op['envio'] ?? 0,
-      'revisado': op['revisado'],
-      'aprobacion': op['aprobacion'],
-      'horometros': horometros,
-      'condiciones_equipo': condiciones,
-      'check_list': checklist,
-      'control_llantas': controlLlantas,
-      'registros': registros,
-
-      // display / legacy fields (ignored by v2 API via JsonPropertyName)
-      'turno': op['turno'] ?? '',
-      'seccion': op['seccion'] ?? '',
-      'operador': op['operador'] ?? '',
-      'jefe_guardia': op['jefe_guardia'] ?? '',
-      'equipo': op['equipo'] ?? '',
-      'n_equipo': op['n_equipo'] ?? '',
-      'modelo_equipo': op['modelo_equipo'] ?? '',
-      'frente_origen': op['frente_origen'],
-      'registrador_usuario_id': op['registrador_usuario_id'],
-      'registrador_nombre': op['registrador_nombre'],
-      'seccion_id': op['seccion_id'],
-      'capacidad': op['capacidad'] ?? '',
-    };
-
-    // tipo-specific nested fields
-    if (tipo == 'carguio' || tipo == 'dumper') {
-      map['tipo_equipo'] = _decodeMap(op['tipo_equipo']);
-      map['programa_trabajo'] = _decodeMap(op['programa_trabajo']);
-    }
-
-    if (tipo == 'carguio' || tipo == 'dumper' || tipo == 'empernador') {
-      map['check_list_telemando'] = _decodeList(op['check_list_telemando']);
-    }
-
+    final dto = _buildDto(tipo, op);
+    final map = dto.toJson();
+    map['local_id'] = localId;
     return map;
+  }
+
+  OperacionUpsertRequest _buildDto(String tipo, Map<String, dynamic> op) {
+    final horometrosRaw = _decodeMap(op['horometros']);
+    final horometros = horometrosRaw.isNotEmpty
+        ? HorometrosRequest(horometrosRaw)
+        : null;
+    final condicionesRaw = _decodeMap(op['condiciones_equipo']);
+    final condiciones = condicionesRaw.isNotEmpty
+        ? CondicionEquipoRequest(condicionesRaw)
+        : null;
+    final controlLlantasRaw = _decodeMap(op['control_llantas']);
+    final controlLlantas = controlLlantasRaw.isNotEmpty
+        ? ControlLlantasRequest(controlLlantasRaw)
+        : null;
+    final checkList = _decodeList(
+      op['check_list'],
+    ).map((e) => ChecklistRespuestaRequest.fromJson(e)).toList();
+    final checkListOrNull = checkList.isNotEmpty ? checkList : null;
+
+    final registrosRaw = _cleanRegistros(op['registros']);
+
+    switch (tipo) {
+      case 'tal_largo':
+        return OperacionTalLargoUpsertRequest(
+          fecha: op['fecha'],
+          turnoId: op['turno_id'],
+          laborId: op['labor_id'],
+          operadorId: op['operador_id'],
+          jefeGuardiaId: op['jefe_guardia_id'],
+          equipoId: op['equipo_id'],
+          estado: op['estado'] ?? 'activo',
+          envio: op['envio'] ?? 0,
+          revisado: op['revisado'],
+          aprobacion: op['aprobacion'],
+          horometros: horometros,
+          condicionesEquipo: condiciones,
+          controlLlantas: controlLlantas,
+          checkList: checkListOrNull,
+          registros: _buildRegistros(
+            registrosRaw,
+            RegistroOperacionTalLargoDetalleRequest.fromJson,
+          ),
+        );
+
+      case 'tal_horizontal':
+        return OperacionTalHorizontalUpsertRequest(
+          fecha: op['fecha'],
+          turnoId: op['turno_id'],
+          laborId: op['labor_id'],
+          operadorId: op['operador_id'],
+          jefeGuardiaId: op['jefe_guardia_id'],
+          equipoId: op['equipo_id'],
+          estado: op['estado'] ?? 'activo',
+          envio: op['envio'] ?? 0,
+          revisado: op['revisado'],
+          aprobacion: op['aprobacion'],
+          horometros: horometros,
+          condicionesEquipo: condiciones,
+          controlLlantas: controlLlantas,
+          checkList: checkListOrNull,
+          registros: _buildRegistros(
+            registrosRaw,
+            RegistroOperacionTalHorizontalDetalleRequest.fromJson,
+          ),
+        );
+
+      case 'carguio':
+        return OperacionCarguioUpsertRequest(
+          fecha: op['fecha'],
+          turnoId: op['turno_id'],
+          laborId: op['labor_id'],
+          operadorId: op['operador_id'],
+          jefeGuardiaId: op['jefe_guardia_id'],
+          equipoId: op['equipo_id'],
+          estado: op['estado'] ?? 'activo',
+          envio: op['envio'] ?? 0,
+          revisado: op['revisado'],
+          aprobacion: op['aprobacion'],
+          horometros: horometros,
+          condicionesEquipo: condiciones,
+          controlLlantas: controlLlantas,
+          checkList: checkListOrNull,
+          registros: _buildRegistros(
+            registrosRaw,
+            OperacionCarguioRegistroDetalleRequest.fromJson,
+          ),
+        );
+
+      case 'empernador':
+        return OperacionEmpernadorUpsertRequest(
+          fecha: op['fecha'],
+          turnoId: op['turno_id'],
+          laborId: op['labor_id'],
+          operadorId: op['operador_id'],
+          jefeGuardiaId: op['jefe_guardia_id'],
+          equipoId: op['equipo_id'],
+          estado: op['estado'] ?? 'activo',
+          envio: op['envio'] ?? 0,
+          revisado: op['revisado'],
+          aprobacion: op['aprobacion'],
+          horometros: horometros,
+          condicionesEquipo: condiciones,
+          controlLlantas: controlLlantas,
+          checkList: checkListOrNull,
+          registros: _buildRegistros(
+            registrosRaw,
+            OperacionEmpernadorRegistroDetalleRequest.fromJson,
+          ),
+        );
+
+      case 'scalamin':
+        return OperacionScalaminUpsertRequest(
+          fecha: op['fecha'],
+          turnoId: op['turno_id'],
+          laborId: op['labor_id'],
+          operadorId: op['operador_id'],
+          jefeGuardiaId: op['jefe_guardia_id'],
+          equipoId: op['equipo_id'],
+          estado: op['estado'] ?? 'activo',
+          envio: op['envio'] ?? 0,
+          revisado: op['revisado'],
+          aprobacion: op['aprobacion'],
+          horometros: horometros,
+          condicionesEquipo: condiciones,
+          controlLlantas: controlLlantas,
+          checkList: checkListOrNull,
+          registros: _buildRegistros(
+            registrosRaw,
+            OperacionScalaminRegistroDetalleRequest.fromJson,
+          ),
+        );
+
+      case 'scissor':
+        return OperacionScissorUpsertRequest(
+          fecha: op['fecha'],
+          turnoId: op['turno_id'],
+          laborId: op['labor_id'],
+          operadorId: op['operador_id'],
+          jefeGuardiaId: op['jefe_guardia_id'],
+          equipoId: op['equipo_id'],
+          estado: op['estado'] ?? 'activo',
+          envio: op['envio'] ?? 0,
+          revisado: op['revisado'],
+          aprobacion: op['aprobacion'],
+          horometros: horometros,
+          condicionesEquipo: condiciones,
+          controlLlantas: controlLlantas,
+          checkList: checkListOrNull,
+          registros: _buildRegistros(
+            registrosRaw,
+            OperacionScissorRegistroDetalleRequest.fromJson,
+          ),
+        );
+
+      default:
+        return OperacionUpsertRequest(
+          fecha: op['fecha'],
+          turnoId: op['turno_id'],
+          laborId: op['labor_id'],
+          operadorId: op['operador_id'],
+          jefeGuardiaId: op['jefe_guardia_id'],
+          equipoId: op['equipo_id'],
+          estado: op['estado'] ?? 'activo',
+          envio: op['envio'] ?? 0,
+          revisado: op['revisado'],
+          aprobacion: op['aprobacion'],
+          horometros: horometros,
+          condicionesEquipo: condiciones,
+          controlLlantas: controlLlantas,
+          checkList: checkListOrNull,
+        );
+    }
+  }
+
+  List<RegistroRequest<T>> _buildRegistros<T>(
+    List<Map<String, dynamic>> registros,
+    T Function(Map<String, dynamic>) detalleFactory,
+  ) {
+    if (registros.isEmpty) return [];
+
+    return registros.map((r) {
+      final opDetalle = r['operacion'] as Map<String, dynamic>?;
+      return RegistroRequest<T>(
+        id: r['id'],
+        numero: r['numero'] ?? 0,
+        estado: r['estado'] ?? '',
+        codigo: r['codigo'] ?? '',
+        horaInicio: r['hora_inicio'] ?? '',
+        horaFinal: r['hora_final'] ?? '',
+        operacion: opDetalle != null ? detalleFactory(opDetalle) : null,
+      );
+    }).toList();
   }
 
   bool _isSyncableV2(Map<String, dynamic> op) {
@@ -129,17 +277,13 @@ class ExportarService {
       'area',
       'fase',
       'estructura_mineral',
-      'tipo_labor',
-      'labor',
-      'ala',
-      'nivel',
     };
 
     return registros.map((registro) {
       final copy = Map<String, dynamic>.from(registro);
-      final operacion = copy['operacion'];
-      if (operacion is Map) {
-        final opCopy = Map<String, dynamic>.from(operacion);
+      final op = copy['operacion'];
+      if (op is Map) {
+        final opCopy = Map<String, dynamic>.from(op);
         for (final key in keysToRemove) {
           opCopy.remove(key);
         }
