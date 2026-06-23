@@ -39,35 +39,60 @@ String normalizeAuthorizationName(String value) {
 class OfflineAuthorizationRepository {
   OfflineAuthorizationRepository({
     DatabaseHelper? databaseHelper,
-    Database? database,
+    Database? userDatabase,
+    Database? sharedDatabase,
   }) : _databaseHelper = databaseHelper ?? DatabaseHelper(),
-       _database = database;
+       _userDatabase = userDatabase,
+       _sharedDatabase = sharedDatabase;
 
   final DatabaseHelper _databaseHelper;
-  final Database? _database;
+  final Database? _userDatabase;
+  final Database? _sharedDatabase;
 
-  Future<Database> get _resolvedDatabase async =>
-      _database ?? _databaseHelper.database;
+  Future<Database> get _userDb async =>
+      _userDatabase ?? _databaseHelper.database;
 
-  Future<Set<int>> getAuthorizedProcessIds(String dni) async {
-    final db = await _resolvedDatabase;
+  Future<Database> get _sharedDb async =>
+      _sharedDatabase ?? _databaseHelper.sharedCatalogDatabase;
+
+  Future<int?> _getOperadorId(String dni) async {
+    final db = await _userDb;
     final rows = await db.query(
-      'UsuarioProceso',
-      columns: ['proceso_id'],
+      'Usuario',
+      columns: ['operador_id'],
       where: 'codigo_dni = ?',
       whereArgs: [dni],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['operador_id'] as int?;
+  }
+
+  Future<Set<int>> getAuthorizedProcessIds(String dni) async {
+    final operadorId = await _getOperadorId(dni);
+    if (operadorId == null) return {};
+
+    final db = await _sharedDb;
+    final rows = await db.query(
+      'usuario_procesos',
+      columns: ['proceso_id'],
+      where: 'usuarios_id = ?',
+      whereArgs: [operadorId],
     );
 
     return rows.map((row) => row['proceso_id']).whereType<int>().toSet();
   }
 
   Future<bool> hasNormalizedProcessAuth(String dni) async {
-    final db = await _resolvedDatabase;
+    final operadorId = await _getOperadorId(dni);
+    if (operadorId == null) return false;
+
+    final db = await _sharedDb;
     final rows = await db.query(
-      'UsuarioProceso',
+      'usuario_procesos',
       columns: ['proceso_id'],
-      where: 'codigo_dni = ?',
-      whereArgs: [dni],
+      where: 'usuarios_id = ?',
+      whereArgs: [operadorId],
       limit: 1,
     );
 
@@ -75,33 +100,23 @@ class OfflineAuthorizationRepository {
   }
 
   Future<List<AuthorizedProcess>> getAuthorizedProcesses(String dni) async {
-    final userDb = await _databaseHelper.database;
-    final sharedDb = await _databaseHelper.sharedCatalogDatabase;
+    final operadorId = await _getOperadorId(dni);
+    if (operadorId == null) return [];
 
-    final rows = await userDb.query(
-      'UsuarioProceso',
-      columns: ['proceso_id'],
-      where: 'codigo_dni = ?',
-      whereArgs: [dni],
+    final db = await _sharedDb;
+    final rows = await db.rawQuery(
+      'SELECT up.proceso_id, p.nombre '
+      'FROM usuario_procesos up '
+      'JOIN procesos p ON up.proceso_id = p.id '
+      'WHERE up.usuarios_id = ? '
+      'ORDER BY p.id ASC',
+      [operadorId],
     );
 
-    final processIds = rows.map((r) => r['proceso_id']).whereType<int>().toList();
-    if (processIds.isEmpty) return [];
-
-    final placeholders = processIds.map((_) => '?').join(',');
-    final sharedRows = await sharedDb.rawQuery(
-      'SELECT id, nombre FROM procesos WHERE id IN ($placeholders) ORDER BY id ASC',
-      processIds,
-    );
-
-    final idToName = {
-      for (final r in sharedRows)
-        r['id'] as int: r['nombre']?.toString() ?? '',
-    };
-
-    return processIds
-        .map((id) => AuthorizedProcess(id: id, name: idToName[id] ?? ''))
-        .toList();
+    return rows.map((r) => AuthorizedProcess(
+      id: r['proceso_id'] as int,
+      name: r['nombre']?.toString() ?? '',
+    )).toList();
   }
 
   Future<int?> findAuthorizedProcessIdByName(
@@ -130,7 +145,7 @@ class OfflineAuthorizationRepository {
       return processIds.contains(processId);
     }
 
-    final db = await _resolvedDatabase;
+    final db = await _userDb;
     final users = await db.query(
       'Usuario',
       columns: ['operaciones_autorizadas'],
@@ -160,12 +175,14 @@ class OfflineAuthorizationRepository {
     required String dni,
     required int processId,
   }) async {
-    final db = await _resolvedDatabase;
+    final operadorId = await _getOperadorId(dni);
+    if (operadorId == null) return {};
+    final db = await _sharedDb;
     final rows = await db.query(
-      'UsuarioEquipo',
+      'usuario_equipos',
       columns: ['equipo_id'],
-      where: 'codigo_dni = ? AND proceso_id = ?',
-      whereArgs: [dni, processId],
+      where: 'usuarios_id = ? AND proceso_id = ?',
+      whereArgs: [operadorId, processId],
     );
 
     return rows.map((row) => row['equipo_id']).whereType<int>().toSet();

@@ -76,7 +76,7 @@ class UserService {
     final dbHelper = databaseHelper ?? DatabaseHelper();
     await dbHelper.setCurrentUserDni(dni);
     final profile = await getUserProfile(token);
-    await dbHelper.saveUserProfileSnapshot(profile, password: password);
+    await dbHelper.syncAuthorizationData(profile, password: password);
     return profile;
   }
 

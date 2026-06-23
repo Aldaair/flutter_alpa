@@ -33,13 +33,21 @@ import 'package:i_miner/services/get%20nube/llamadas/api_service_niveles.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_alas.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_labores.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_dim_turnos.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_cargos.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_directorio.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_equipos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_procesos.dart';
 
 class ActualizacionService {
   final BuildContext context;
   final String token;
+  final String dni;
 
-  ActualizacionService({required this.context, required this.token});
+  ActualizacionService({
+    required this.context,
+    required this.token,
+    required this.dni,
+  });
 
   // Mapeo de funciones de actualización
   late final Map<String, Future<void> Function()> _requests;
@@ -77,6 +85,10 @@ class ActualizacionService {
       "Labores": fetchLabores,
       "Dim Turnos": fetchDimTurnos,
       "Procesos": fetchProcesos,
+      "Autorizaciones": refreshOfflineAuthorizationSnapshot,
+      "Cargos": fetchCargos,
+      "Usuarios": fetchUsuarios,
+      "Equipos por usuario": fetchUsuarioEquipos,
     };
   }
 
@@ -518,7 +530,7 @@ class ActualizacionService {
   Future<void> refreshOfflineAuthorizationSnapshot() async {
     try {
       await UserService().syncOfflineProfileSnapshot(
-        dni: '',
+        dni: dni,
         token: token,
         databaseHelper: DatabaseHelper(),
       );
@@ -716,6 +728,47 @@ class ActualizacionService {
       }
     } catch (e) {
       print("❌ Error al actualizar procesos: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchCargos() async {
+    final apiService = ApiServiceCargos();
+
+    try {
+      final cargos = await apiService.fetchCargos(token);
+
+      print("✅ Cargos guardados en SQLite:");
+
+      for (final cargo in cargos) {
+        print("Cargo: ${cargo.nombre} | ID: ${cargo.cargoId}");
+      }
+    } catch (e) {
+      print("❌ Error al actualizar cargos: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchUsuarios() async {
+    final apiService = ApiServiceUsuarioDirectorio();
+
+    try {
+      await apiService.fetchAll(token);
+      print("✅ Usuarios guardados en shared DB");
+    } catch (e) {
+      print("❌ Error al actualizar usuarios: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchUsuarioEquipos() async {
+    final apiService = ApiServiceUsuarioEquipos();
+
+    try {
+      await apiService.fetchAll(token);
+      print("✅ Equipos por usuario guardados en shared DB");
+    } catch (e) {
+      print("❌ Error al actualizar equipos por usuario: $e");
       throw e;
     }
   }

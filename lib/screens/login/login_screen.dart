@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/screens/Dash/reporte_sreen.dart';
 import 'package:i_miner/services/api_service.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_directorio.dart';
 import 'package:i_miner/services/mis_labores_service.dart';
 import 'package:i_miner/services/user_service.dart';
 
@@ -24,16 +25,37 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String errorMsg = '';
 
-  Future<void> handleLogin() async {
-    setState(() {
-      isLoading = true;
-    });
+  Future<bool> _checkUserInSharedDb(String dni) async {
+    try {
+      final sharedDb = await DatabaseHelper().sharedCatalogDatabase;
+      final rows = await sharedDb.query(
+        'usuario_directorio',
+        columns: ['codigo_dni'],
+        where: 'codigo_dni = ?',
+        whereArgs: [dni],
+        limit: 1,
+      );
+      return rows.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
 
+  Future<void> handleLogin() async {
+    setState(() => isLoading = true);
     final dni = dniController.text;
     final pass = passController.text;
+    errorMsg = '';
 
     try {
-      /// 1️⃣ LOGIN ONLINE
+      final enShared = await _checkUserInSharedDb(dni);
+
+      if (!enShared) {
+        _showUserNotFoundDialog(dni, pass);
+        return;
+      }
+
+      // Usuario existe en shared DB → flujo normal
       try {
         final token = await ApiService().login(dni, pass);
         await UserService().syncOfflineProfileSnapshot(
@@ -45,13 +67,13 @@ class _LoginScreenState extends State<LoginScreen> {
           fecha: DateFormat('yyyy-MM-dd').format(DateTime.now()),
         );
 
+        if (!context.mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => DashboardScreen(token: token, dni: dni),
           ),
         );
-
         return;
       } on UserProfileContractException catch (e, stack) {
         errorMsg = 'LOGIN ONLINE CONTRACT ERROR:\n$e\n\n$stack';
@@ -63,15 +85,18 @@ class _LoginScreenState extends State<LoginScreen> {
         print(errorMsg);
       }
 
-      /// 2️⃣ LOGIN OFFLINE
+      // Offline fallback
       try {
         await DatabaseHelper().setCurrentUserDni(dni);
-
         if (await DatabaseHelper().loginOffline(dni, pass)) {
+          if (!context.mounted) return;
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => DashboardScreen(token: "offline", dni: dni),
+              builder: (context) => DashboardScreen(
+                token: "offline",
+                dni: dni,
+              ),
             ),
           );
           return;
@@ -81,12 +106,13 @@ class _LoginScreenState extends State<LoginScreen> {
         print(errorMsg);
       }
 
-      /// 3️⃣ SI TODO FALLA
-      _showLoginError(errorMsg);
+      _showLoginError(
+        errorMsg.isNotEmpty
+            ? errorMsg
+            : "Contraseña incorrecta. Verifique sus credenciales.",
+      );
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
   }
 
@@ -119,6 +145,57 @@ class _LoginScreenState extends State<LoginScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Cerrar"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _downloadUsers(String dni, String pass) async {
+    setState(() => isLoading = true);
+    try {
+      final token = await ApiService().login(dni, pass);
+      await ApiServiceUsuarioDirectorio().fetchAll(token);
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // cerrar dialogo
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Usuarios descargados correctamente. Intente ingresar de nuevo."),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No se pudo descargar. Verifique conexión e credenciales."),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  void _showUserNotFoundDialog(String dni, String pass) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Usuario no encontrado"),
+        content: const Text(
+          "El usuario no está registrado en el dispositivo. "
+          "Toque 'Actualizar datos' para descargar la información de usuarios desde el servidor.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => _downloadUsers(dni, pass),
+            child: const Text("Actualizar datos"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancelar"),
           ),
         ],
       ),

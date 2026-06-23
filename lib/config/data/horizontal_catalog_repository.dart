@@ -12,6 +12,7 @@ import 'package:i_miner/models/DimLabor.dart';
 import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/models/Equipo.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
+import 'package:i_miner/models/cargo.dart';
 import 'package:i_miner/models/Proceso.dart';
 import 'package:i_miner/models/zona.dart';
 import 'package:sqflite/sqflite.dart';
@@ -175,6 +176,14 @@ class HorizontalCatalogRepository {
       table: 'procesos',
       items: procesos.map((p) => p.toMap()).toList(),
       primaryKeyColumn: 'id',
+    );
+  }
+
+  Future<void> refreshCargos(List<Cargo> cargos) async {
+    await _refreshCatalog(
+      table: 'cargos',
+      items: cargos.map((c) => c.toMap()).toList(),
+      primaryKeyColumn: 'cargo_id',
     );
   }
 

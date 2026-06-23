@@ -28,6 +28,7 @@ import 'package:i_miner/models/PlanProduccion.dart';
 import 'package:i_miner/models/tipo_horometro.dart';
 import 'package:i_miner/models/EquipoHorometroTipo.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class DatabaseHelper {
@@ -36,11 +37,11 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 16;
+  static const int _sharedCatalogDbVersion = 18;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
-  static const int _currentDbVersion = 26;
+  static const int _currentDbVersion = 28;
 
   DatabaseHelper._internal() {
     // Inicialización única para evitar múltiples llamadas
@@ -442,6 +443,30 @@ CREATE TABLE IF NOT EXISTS checklist_items (
   orden INTEGER
 )
 ''');
+
+    // v17 tables
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS usuario_procesos (
+  usuarios_id INTEGER NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  PRIMARY KEY (usuarios_id, proceso_id)
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS cargos (
+  cargo_id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS usuario_equipos (
+  usuarios_id INTEGER NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  equipo_id INTEGER NOT NULL
+)
+''');
   }
 
   Future<void> _onUpgradeSharedCatalogDatabase(
@@ -462,6 +487,8 @@ CREATE TABLE usuario_directorio (
   nombres TEXT NOT NULL,
   apellidos TEXT NOT NULL,
   rol TEXT,
+  cargo_id INTEGER,
+  password TEXT,
   updated_at TEXT NOT NULL
 )
 ''');
@@ -790,6 +817,48 @@ CREATE TABLE IF NOT EXISTS checklist_items (
         }
       }
     }
+
+    if (oldVersion < 17) {
+      if (!await _tablaExiste(db, 'usuario_procesos')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS usuario_procesos (
+  usuarios_id INTEGER NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  PRIMARY KEY (usuarios_id, proceso_id)
+)
+''');
+      }
+      if (!await _tablaExiste(db, 'cargos')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS cargos (
+  cargo_id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL
+)
+''');
+      }
+    }
+
+    if (oldVersion < 18) {
+      if (!await _columnaExiste(db, 'usuario_directorio', 'cargo_id')) {
+        await db.execute(
+          'ALTER TABLE usuario_directorio ADD COLUMN cargo_id INTEGER',
+        );
+      }
+      if (!await _columnaExiste(db, 'usuario_directorio', 'password')) {
+        await db.execute(
+          'ALTER TABLE usuario_directorio ADD COLUMN password TEXT',
+        );
+      }
+      if (!await _tablaExiste(db, 'usuario_equipos')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS usuario_equipos (
+  usuarios_id INTEGER NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  equipo_id INTEGER NOT NULL
+)
+''');
+      }
+    }
   }
 
   // Método de creación de tablas
@@ -799,6 +868,7 @@ CREATE TABLE IF NOT EXISTS checklist_items (
   CREATE TABLE Usuario (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     codigo_dni TEXT NOT NULL UNIQUE,
+    operador_id INTEGER,
     apellidos TEXT NOT NULL,
     nombres TEXT NOT NULL,
     cargo TEXT,
@@ -1354,22 +1424,6 @@ CREATE TABLE Operacion_anfochanger(
   jefe_guardia_id INTEGER,
   identity_version INTEGER,
   syncable INTEGER DEFAULT 0
-)
-''');
-
-    // v23 tables
-    await db.execute('''
-CREATE TABLE IF NOT EXISTS UsuarioProceso (
-  codigo_dni TEXT NOT NULL,
-  proceso_id INTEGER NOT NULL
-)
-''');
-
-    await db.execute('''
-CREATE TABLE IF NOT EXISTS UsuarioEquipo (
-  codigo_dni TEXT NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  equipo_id INTEGER NOT NULL
 )
 ''');
 
@@ -2392,14 +2446,6 @@ CREATE TABLE TipoEquipo (
           );
         }
       }
-      if (!await _tablaExiste(db, 'UsuarioProceso')) {
-        await db.execute('''
-CREATE TABLE UsuarioProceso (
-  codigo_dni TEXT NOT NULL,
-  proceso_id INTEGER NOT NULL
-)
-''');
-      }
       if (!await _tablaExiste(db, 'UsuarioEquipo')) {
         await db.execute('''
 CREATE TABLE UsuarioEquipo (
@@ -2421,6 +2467,14 @@ CREATE TABLE UsuarioEquipo (
 
     if (oldVersion < 26) {
       await _ensureOperationHeaderColumns(db);
+    }
+
+    if (oldVersion < 27) {
+      await db.execute('DROP TABLE IF EXISTS UsuarioProceso');
+    }
+
+    if (oldVersion < 28) {
+      await db.execute('DROP TABLE IF EXISTS UsuarioEquipo');
     }
   }
 
@@ -2697,7 +2751,7 @@ CREATE TABLE UsuarioEquipo (
     }
   }
 
-  Future<void> saveUserProfileSnapshot(
+  Future<void> syncAuthorizationData(
     Map<String, dynamic> userData, {
     String? password,
   }) async {
@@ -2708,6 +2762,10 @@ CREATE TABLE UsuarioEquipo (
     if (password != null && password.isNotEmpty) {
       final hashedPassword = Crypt.sha256(password).toString();
       updates['password'] = hashedPassword;
+    }
+    final operadorId = userData['operador_id'] as int?;
+    if (operadorId != null) {
+      updates['operador_id'] = operadorId;
     }
     await db.update(
       'Usuario',
@@ -2721,54 +2779,138 @@ CREATE TABLE UsuarioEquipo (
 
     final dni = userData['codigo_dni']?.toString();
     if (dni == null || dni.isEmpty) return;
-
-    await db.transaction((txn) async {
-      await txn.delete(
-        'UsuarioProceso',
-        where: 'codigo_dni = ?',
-        whereArgs: [dni],
-      );
+    if (operadorId != null) {
+      final sharedDb = await sharedCatalogDatabase;
       final usuarioProcesos = auth['usuario_procesos'] as List?;
-      if (usuarioProcesos != null) {
-        for (final row in usuarioProcesos) {
-          await txn.insert('UsuarioProceso', {
-            'codigo_dni': dni,
-            'proceso_id': (row as Map)['proceso_id'],
-          });
+      await sharedDb.transaction((txn) async {
+        await txn.delete(
+          'usuario_procesos',
+          where: 'usuarios_id = ?',
+          whereArgs: [operadorId],
+        );
+        if (usuarioProcesos != null) {
+          for (final row in usuarioProcesos) {
+            await txn.insert('usuario_procesos', {
+              'usuarios_id': operadorId,
+              'proceso_id': (row as Map)['proceso_id'],
+            });
+          }
         }
-      }
+      });
+    }
 
-      await txn.delete(
-        'UsuarioEquipo',
-        where: 'codigo_dni = ?',
-        whereArgs: [dni],
-      );
+    if (operadorId != null) {
+      final sharedDb = await sharedCatalogDatabase;
       final usuarioEquipos = auth['usuario_equipos'] as List?;
-      if (usuarioEquipos != null) {
-        for (final row in usuarioEquipos) {
-          await txn.insert('UsuarioEquipo', {
-            'codigo_dni': dni,
-            'proceso_id': (row as Map)['proceso_id'],
-            'equipo_id': row['equipo_id'],
-          });
+      await sharedDb.transaction((txn) async {
+        await txn.delete(
+          'usuario_equipos',
+          where: 'usuarios_id = ?',
+          whereArgs: [operadorId],
+        );
+        if (usuarioEquipos != null) {
+          for (final row in usuarioEquipos) {
+            await txn.insert('usuario_equipos', {
+              'usuarios_id': operadorId,
+              'proceso_id': (row as Map)['proceso_id'],
+              'equipo_id': row['equipo_id'],
+            });
+          }
         }
-      }
-    });
+      });
+    }
   }
 
-  //Login cuando no hay conexion
-  Future<bool> loginOffline(String dni, String password) async {
-    final db = await DatabaseHelper().database;
-    final List<Map<String, dynamic>> result = await db.query(
-      'Usuario',
-      where: 'codigo_dni = ?',
-      whereArgs: [dni],
-    );
+  Future<bool> userExistsLocally(String dni) async {
+    try {
+      final sharedDb = await sharedCatalogDatabase;
+      final count = Sqflite.firstIntValue(
+        await sharedDb.rawQuery(
+          'SELECT COUNT(*) FROM usuario_directorio WHERE codigo_dni = ?',
+          [dni],
+        ),
+      );
+      if (count != null && count > 0) return true;
+    } catch (_) {}
 
-    if (result.isNotEmpty) {
-      final storedPassword = result.first['password'];
-      return Crypt(storedPassword).match(password); // <- Usa `.match()`
-    }
+    try {
+      final db = await DatabaseHelper().database;
+      final result = await db.query(
+        'Usuario',
+        columns: ['codigo_dni'],
+        where: 'codigo_dni = ?',
+        whereArgs: [dni],
+        limit: 1,
+      );
+      if (result.isNotEmpty) return true;
+    } catch (_) {}
+
+    return false;
+  }
+
+  Future<bool> loginOffline(String dni, String password) async {
+    try {
+      final sharedDb = await sharedCatalogDatabase;
+      final rows = await sharedDb.query(
+        'usuario_directorio',
+        columns: ['password'],
+        where: 'codigo_dni = ?',
+        whereArgs: [dni],
+        limit: 1,
+      );
+
+      if (rows.isNotEmpty) {
+        final hash = rows.first['password'] as String?;
+        if (hash != null && hash.isNotEmpty) {
+          if (Crypt(hash).match(password)) {
+            await setCurrentUserDni(dni);
+            final db = await database;
+            final existing = await db.query(
+              'Usuario',
+              where: 'codigo_dni = ?',
+              whereArgs: [dni],
+              limit: 1,
+            );
+            if (existing.isEmpty) {
+              final operadorRow = await sharedDb.query(
+                'usuario_directorio',
+                columns: ['operador_id', 'nombres', 'apellidos', 'rol'],
+                where: 'codigo_dni = ?',
+                whereArgs: [dni],
+                limit: 1,
+              );
+              final dir = operadorRow.isNotEmpty ? operadorRow.first : null;
+              await db.insert('Usuario', {
+                'codigo_dni': dni,
+                'operador_id': dir?['operador_id'],
+                'nombres': dir?['nombres'] ?? '',
+                'apellidos': dir?['apellidos'] ?? '',
+                'rol': dir?['rol'],
+                'password': hash,
+                'createdAt': DateTime.now().toIso8601String(),
+                'updatedAt': DateTime.now().toIso8601String(),
+              });
+            }
+            return true;
+          }
+        }
+        return false;
+      }
+    } catch (_) {}
+
+    try {
+      final db = await DatabaseHelper().database;
+      final result = await db.query(
+        'Usuario',
+        where: 'codigo_dni = ?',
+        whereArgs: [dni],
+      );
+
+      if (result.isNotEmpty) {
+        final storedPassword = result.first['password'] as String? ?? '';
+        return Crypt(storedPassword).match(password);
+      }
+    } catch (_) {}
 
     return false;
   }

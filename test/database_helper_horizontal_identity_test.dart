@@ -72,7 +72,7 @@ void main() {
   });
 
   test(
-    'migrates version 20 schema to 22 with horizontal identity and auth tables',
+    'migrates version 20 schema to latest with horizontal identity and auth tables',
     () async {
       final dbPath = p.join(tempDir.path, 'migration.db');
       await _createVersion20Database(dbPath);
@@ -85,19 +85,6 @@ void main() {
       final horizontalColumns = await db.rawQuery(
         'PRAGMA table_info(Operacion_tal_horizontal)',
       );
-      final procesoColumns = await db.rawQuery(
-        'PRAGMA table_info(ProcesoAutorizado)',
-      );
-      final usuarioProcesoColumns = await db.rawQuery(
-        'PRAGMA table_info(UsuarioProceso)',
-      );
-      final usuarioEquipoColumns = await db.rawQuery(
-        'PRAGMA table_info(UsuarioEquipo)',
-      );
-      final indexes = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'index'",
-      );
-
       expect(_hasColumn(usuarioColumns, 'operador_id'), isTrue);
       expect(_hasColumn(horizontalColumns, 'operador_id'), isTrue);
       expect(_hasColumn(horizontalColumns, 'equipo_id'), isTrue);
@@ -105,15 +92,6 @@ void main() {
       expect(_hasColumn(horizontalColumns, 'jefe_guardia_id'), isTrue);
       expect(_hasColumn(horizontalColumns, 'identity_version'), isTrue);
       expect(_hasColumn(horizontalColumns, 'syncable'), isTrue);
-      expect(_hasColumn(procesoColumns, 'id'), isTrue);
-      expect(_hasColumn(procesoColumns, 'nombre'), isTrue);
-      expect(_hasColumn(usuarioProcesoColumns, 'codigo_dni'), isTrue);
-      expect(_hasColumn(usuarioProcesoColumns, 'proceso_id'), isTrue);
-      expect(_hasColumn(usuarioEquipoColumns, 'codigo_dni'), isTrue);
-      expect(_hasColumn(usuarioEquipoColumns, 'proceso_id'), isTrue);
-      expect(_hasColumn(usuarioEquipoColumns, 'equipo_id'), isTrue);
-      expect(_hasIndex(indexes, 'idx_usuario_proceso_dni_proceso'), isTrue);
-      expect(_hasIndex(indexes, 'idx_usuario_equipo_dni_proceso'), isTrue);
 
       final migratedRow = await db.query('Operacion_tal_horizontal');
       expect(migratedRow.single['identity_version'], 0);
@@ -149,13 +127,12 @@ void main() {
     expect(user!['operador_id'], 44);
   });
 
-  test('saveUserProfileSnapshot replaces normalized auth rows atomically', () async {
+  test('syncAuthorizationData replaces normalized auth rows atomically', () async {
     final dbPath = p.join(tempDir.path, 'auth_snapshot.db');
     DatabaseHelper.setDatabasePathOverride(dbPath);
     await dbHelper.setCurrentUserDni('87654321');
-    final db = await dbHelper.database;
 
-    await dbHelper.saveUserProfileSnapshot({
+    await dbHelper.syncAuthorizationData({
       'codigo_dni': '87654321',
       'operador_id': 44,
       'apellidos': 'Perez',
@@ -186,17 +163,18 @@ void main() {
       },
     }, password: 'secret');
 
-    await db.insert('UsuarioProceso', {
-      'codigo_dni': '87654321',
+    final sharedDb = await dbHelper.sharedCatalogDatabase;
+    await sharedDb.insert('usuario_procesos', {
+      'usuarios_id': 44,
       'proceso_id': 999,
     });
-    await db.insert('UsuarioEquipo', {
-      'codigo_dni': '87654321',
+    await sharedDb.insert('usuario_equipos', {
+      'usuarios_id': 44,
       'proceso_id': 999,
       'equipo_id': 999,
     });
 
-    await dbHelper.saveUserProfileSnapshot({
+    await dbHelper.syncAuthorizationData({
       'codigo_dni': '87654321',
       'operador_id': 44,
       'apellidos': 'Perez',
@@ -222,14 +200,10 @@ void main() {
       },
     });
 
-    expect(await db.query('ProcesoAutorizado', orderBy: 'id ASC'), [
-      {'id': 7, 'nombre': 'Taladro Horizontal'},
-      {'id': 8, 'nombre': 'Dashboard'},
+    expect(await sharedDb.query('usuario_procesos', orderBy: 'proceso_id ASC'), [
+      {'usuarios_id': 44, 'proceso_id': 8},
     ]);
-    expect(await db.query('UsuarioProceso', orderBy: 'proceso_id ASC'), [
-      {'codigo_dni': '87654321', 'proceso_id': 8},
-    ]);
-    expect(await db.query('UsuarioEquipo', orderBy: 'equipo_id ASC'), isEmpty);
+    expect(await sharedDb.query('usuario_equipos', orderBy: 'equipo_id ASC'), isEmpty);
   });
 
   test('offline authorization repository cuts over dashboard fallback', () async {
@@ -237,7 +211,24 @@ void main() {
     DatabaseHelper.setDatabasePathOverride(dbPath);
     await dbHelper.setCurrentUserDni('55555555');
 
-    await dbHelper.saveUserProfileSnapshot({
+    await dbHelper.saveUser({
+      'codigo_dni': '55555555',
+      'operador_id': 99,
+      'apellidos': 'Quispe',
+      'nombres': 'Luis',
+      'cargo': 'Supervisor',
+      'empresa': 'Seminco',
+      'guardia': 'B',
+      'autorizado_equipo': 'legacy-equipment',
+      'area': 'Mina',
+      'clasificacion': 'A1',
+      'correo': 'luis@example.com',
+      'firma': 'firma',
+      'rol': 'user',
+      'operaciones_autorizadas': <String>[],
+    }, 'secret');
+
+    await dbHelper.syncAuthorizationData({
       'codigo_dni': '55555555',
       'operador_id': 99,
       'apellidos': 'Quispe',
@@ -270,7 +261,7 @@ void main() {
       isTrue,
     );
 
-    await dbHelper.saveUserProfileSnapshot({
+    await dbHelper.syncAuthorizationData({
       'codigo_dni': '55555555',
       'operador_id': 99,
       'apellidos': 'Quispe',
@@ -319,7 +310,24 @@ void main() {
     DatabaseHelper.setDatabasePathOverride(dbPath);
     await dbHelper.setCurrentUserDni('66666666');
 
-    await dbHelper.saveUserProfileSnapshot({
+    await dbHelper.saveUser({
+      'codigo_dni': '66666666',
+      'operador_id': 55,
+      'apellidos': 'Rojas',
+      'nombres': 'Mia',
+      'cargo': 'Operador',
+      'empresa': 'Seminco',
+      'guardia': 'C',
+      'autorizado_equipo': '10,11,12',
+      'area': 'Mina',
+      'clasificacion': 'A1',
+      'correo': 'mia@example.com',
+      'firma': 'firma',
+      'rol': 'user',
+      'operaciones_autorizadas': <String>[],
+    }, 'secret');
+
+    await dbHelper.syncAuthorizationData({
       'codigo_dni': '66666666',
       'operador_id': 55,
       'apellidos': 'Rojas',
@@ -579,6 +587,4 @@ bool _hasColumn(List<Map<String, Object?>> columns, String name) {
   return columns.any((column) => column['name'] == name);
 }
 
-bool _hasIndex(List<Map<String, Object?>> indexes, String name) {
-  return indexes.any((index) => index['name'] == name);
-}
+

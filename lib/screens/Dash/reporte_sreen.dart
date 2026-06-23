@@ -660,6 +660,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       "Labores": true,
       "Dim Turnos": true,
       "Procesos": true,
+      "Cargos": true,
+      "Usuarios": true,
+      "Equipos por usuario": true,
     };
 
     // Mostrar diálogo de selección mejorado
@@ -679,6 +682,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final actualizacionService = ActualizacionService(
       context: context,
       token: widget.token,
+      dni: widget.dni,
     );
 
     await actualizacionService.ejecutarActualizacion(opcionesSeleccionadas);
