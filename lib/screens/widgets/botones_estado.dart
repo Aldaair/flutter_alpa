@@ -26,9 +26,8 @@ class BotonesEstado extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isSmallScreen = constraints.maxWidth < 600;
-          
+
           if (isSmallScreen) {
-            // En pantallas pequeñas: mostrar de 2 en 2
             return Column(
               children: [
                 Row(
@@ -51,13 +50,12 @@ class BotonesEstado extends StatelessWidget {
                   children: [
                     Expanded(child: _buildEstadoButton('FUERA DE PLAN', const Color(0xFFF44336), Icons.warning_amber_rounded)),
                     const SizedBox(width: 8),
-                    Expanded(child: Container()), // Espacio vacío para mantener centrado
+                    Expanded(child: Container()),
                   ],
                 ),
               ],
             );
           } else {
-            // En pantallas grandes: mostrar en una sola fila horizontal
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -89,14 +87,8 @@ class BotonesEstado extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 2,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        textStyle: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.3),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -104,11 +96,7 @@ class BotonesEstado extends StatelessWidget {
           Icon(icon, size: 16),
           const SizedBox(width: 6),
           Flexible(
-            child: Text(
-              estado,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: Text(estado, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
           ),
         ],
       ),

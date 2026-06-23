@@ -2,30 +2,30 @@ import 'package:flutter/material.dart';
 
 class BotonesAccionesInferiores extends StatelessWidget {
   final VoidCallback onChecklistPressed;
-  final VoidCallback onChecklistTelemandoPressed;
   final VoidCallback onHorometroPressed;
-  final VoidCallback onCheckprogramaTrabajoPressed;
   final VoidCallback onCerrarRegistrosPressed;
   final VoidCallback onCondicionesEquipoPressed;
   final VoidCallback onPresionLlantasPressed;
   final Color primaryColor;
+  final VoidCallback? onChecklistTelemandoPressed;
+  final VoidCallback? onProgramaTrabajoPressed;
 
   const BotonesAccionesInferiores({
     Key? key,
     required this.onChecklistPressed,
-    required this.onChecklistTelemandoPressed,
-    required this.onCheckprogramaTrabajoPressed,
     required this.onHorometroPressed,
     required this.onCerrarRegistrosPressed,
     required this.onCondicionesEquipoPressed,
     required this.onPresionLlantasPressed,
     required this.primaryColor,
+    this.onChecklistTelemandoPressed,
+    this.onProgramaTrabajoPressed,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity, // Asegura que ocupe todo el ancho disponible
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -41,7 +41,6 @@ class BotonesAccionesInferiores extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // Si el ancho es suficiente para mostrar todos los botones sin scroll
           if (constraints.maxWidth > 600) {
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -56,20 +55,10 @@ class BotonesAccionesInferiores extends StatelessWidget {
                   label: 'Condiciones de equipo',
                   onPressed: onCondicionesEquipoPressed,
                 ),
-                  _buildAccionBoton(
-                    icon: Icons.work,
-                    label: 'Programa de trabajo',
-                    onPressed: onCheckprogramaTrabajoPressed,
-                  ),
                 _buildAccionBoton(
                   icon: Icons.checklist,
                   label: 'CheckList',
                   onPressed: onChecklistPressed,
-                ),
-                _buildAccionBoton(
-                  icon: Icons.checklist,
-                  label: 'CheckList Telemando',
-                  onPressed: onChecklistTelemandoPressed,
                 ),
                 _buildAccionBoton(
                   icon: Icons.tire_repair,
@@ -81,11 +70,21 @@ class BotonesAccionesInferiores extends StatelessWidget {
                   label: 'Cerrar registro',
                   onPressed: onCerrarRegistrosPressed,
                 ),
+                if (onProgramaTrabajoPressed != null)
+                  _buildAccionBoton(
+                    icon: Icons.work,
+                    label: 'Programa de trabajo',
+                    onPressed: onProgramaTrabajoPressed!,
+                  ),
+                if (onChecklistTelemandoPressed != null)
+                  _buildAccionBoton(
+                    icon: Icons.checklist,
+                    label: 'CheckList Telemando',
+                    onPressed: onChecklistTelemandoPressed!,
+                  ),
               ],
             );
-          } 
-          // Si el ancho es menor, mostramos con scroll horizontal
-          else {
+          } else {
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -120,6 +119,22 @@ class BotonesAccionesInferiores extends StatelessWidget {
                     label: 'Presión',
                     onPressed: onPresionLlantasPressed,
                   ),
+                  if (onProgramaTrabajoPressed != null) ...[
+                    const SizedBox(width: 8),
+                    _buildAccionBoton(
+                      icon: Icons.work,
+                      label: 'Programa trabajo',
+                      onPressed: onProgramaTrabajoPressed!,
+                    ),
+                  ],
+                  if (onChecklistTelemandoPressed != null) ...[
+                    const SizedBox(width: 8),
+                    _buildAccionBoton(
+                      icon: Icons.checklist,
+                      label: 'CheckList Telemando',
+                      onPressed: onChecklistTelemandoPressed!,
+                    ),
+                  ],
                 ],
               ),
             );

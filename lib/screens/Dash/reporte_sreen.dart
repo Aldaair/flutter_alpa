@@ -6,15 +6,47 @@ import 'package:i_miner/config/data/offline_authorization_repository.dart';
 import 'package:i_miner/core/network/connection_provider.dart';
 import 'package:i_miner/screens/Dash/actualizacion_dialog.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/operaciones_centralizada.dart';
-import 'package:i_miner/screens/Operaciones/Acarreo/Dumper/lista_perforacion_sreen.dart';
-import 'package:i_miner/screens/Operaciones/Carguio/Scoop/lista_perforacion_sreen.dart';
+import 'package:i_miner/screens/Operaciones/lista_perforacion_screen.dart';
 import 'package:i_miner/screens/Operaciones/Mediciones/select_tipo_explosivo.dart';
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/ServiciosAuxiliaresScreen.dart';
-import 'package:i_miner/screens/Operaciones/Tal%20horizontal/lista_perforacion_sreen.dart';
-import 'package:i_miner/screens/Operaciones/sostenimiento/lista_perforacion_sreen.dart';
 import 'package:i_miner/screens/widgets/ReportButton.dart';
-import 'package:i_miner/screens/Operaciones/Tal%20largo/lista_perforacion_sreen.dart';
 import 'package:i_miner/screens/login/login_screen.dart';
+import 'package:i_miner/screens/widgets/dialogo_confirmar_cierre.dart';
+import 'package:i_miner/screens/widgets/botones_estado.dart';
+import 'package:i_miner/screens/widgets/tabla_operaciones.dart';
+import 'package:i_miner/screens/widgets/show_registro_operacion.dart';
+import 'package:i_miner/screens/widgets/dialogo_condiciones_equipo.dart';
+import 'package:i_miner/screens/widgets/dialogo_formulario_no_operativo.dart';
+import 'package:i_miner/screens/widgets/botones_acciones_inferiores.dart';
+import 'package:i_miner/screens/widgets/dialog_check_imagen.dart';
+
+// Tal largo widgets
+import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_formulario_perforacion.dart'
+    as tl;
+import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/registro_operacion_dialog.dart'
+    as tl;
+
+// Tal horizontal widgets
+import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/dialogo_formulario_perforacion.dart'
+    as th;
+import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/registro_operacion_dialog.dart'
+    as th;
+
+// Sostenimiento widgets
+import 'package:i_miner/screens/Operaciones/sostenimiento/widgets/dialogo_formulario_perforacion.dart'
+    as so;
+import 'package:i_miner/screens/Operaciones/sostenimiento/widgets/registro_operacion_dialog.dart'
+    as so;
+
+import 'package:i_miner/screens/Operaciones/Acarreo/Dumper/widgets/dialogo_formulario_perforacion.dart'
+    as ad;
+import 'package:i_miner/screens/Operaciones/Acarreo/Dumper/widgets/registro_operacion_dialog.dart'
+    as ad;
+
+import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_formulario_perforacion.dart'
+    as cs;
+import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/registro_operacion_dialog.dart'
+    as cs;
 import 'package:i_miner/services/get%20nube/actualizacion_service.dart';
 import 'package:provider/provider.dart';
 import 'package:i_miner/services/get%20nube/registros%20nube/ApiServiceExploracion.dart';
@@ -508,9 +540,132 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TaladroLargoScreen(
+            builder: (context) => OperacionListScreen(
               rolUsuario: '${rol}',
               dniUsuario: '${widget.dni}',
+              config: const OperacionScreenConfig(
+                proceso: 'PERFORACIÓN TALADROS LARGOS',
+                dbSuffix: '',
+                operacionNombreDb: 'TalLargo',
+              ),
+              onShowDialogoRegistro:
+                  (
+                    context,
+                    codigoOperativos,
+                    turno,
+                    estado,
+                    datadialog,
+                    ultimaHora,
+                    existingRecord,
+                  ) => showRegistroOperacionDialog(
+                    context: context,
+                    dialog: tl.RegistroOperacionDialog(
+                      codigoOperativos: codigoOperativos,
+                      turno: turno,
+                      selectedState: estado,
+                      datadialog: datadialog,
+                      ultimaHoraRegistrada: ultimaHora,
+                      existingRecord: existingRecord?.map(
+                        (k, v) => MapEntry(k, v.toString()),
+                      ),
+                      onConfirm: (data) => Navigator.of(context).pop(data),
+                    ),
+                  ),
+              onBuildDialogoPerforacion:
+                  (
+                    context,
+                    operacionId,
+                    estadoId,
+                    datosIniciales,
+                    fecha,
+                    turno,
+                    primaryColor,
+                    onGuardar,
+                  ) => tl.DialogoFormularioPerforacion(
+                    operacionId: operacionId,
+                    estadoId: estadoId,
+                    datosIniciales: datosIniciales,
+                    estado: "OPERATIVO",
+                    fecha: fecha,
+                    turno: turno,
+                    primaryColor: primaryColor,
+                    onGuardar: onGuardar,
+                  ),
+              onBuildDialogoNoOperativo:
+                  (
+                    context,
+                    operacionId,
+                    estadoId,
+                    estado,
+                    primaryColor,
+                    onGuardar,
+                    datosIniciales,
+                  ) => DialogoFormularioNoOperativo(
+                    operacionId: operacionId,
+                    estadoId: estadoId,
+                    estado: estado,
+                    datosIniciales: datosIniciales,
+                    primaryColor: primaryColor,
+                    onGuardar: onGuardar,
+                  ),
+              onBuildConfirmarCierre: (primaryColor, onConfirmar) =>
+                  DialogoConfirmarCierreRegistros(
+                    primaryColor: primaryColor,
+                    onConfirmar: onConfirmar,
+                  ),
+              onBuildCondicionesEquipo:
+                  (operacionId, estado, condicionesData, primaryColor) =>
+                      DialogoCondicionesEquipo(
+                        operacionId: operacionId,
+                        estado: estado,
+                        condicionesData: condicionesData,
+                        primaryColor: primaryColor,
+                        onGuardar: (id, datos) =>
+                            DatabaseHelper().updateCondicionesEquipo(id, datos),
+                      ),
+              onBuildCheckImagen:
+                  (operacionId, estado, controlLlantasData, primaryColor) =>
+                      DialogoCheckImagen(
+                        operacionId: operacionId,
+                        estado: estado,
+                        controlLlantasData: controlLlantasData ?? {},
+                        primaryColor: primaryColor,
+                        onSave: (id, datos) => DatabaseHelper().updateControlLlantas(id, datos),
+                      ),
+              buildBotonesEstado: (onEstadoSeleccionado) =>
+                  BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
+              buildTablaOperaciones:
+                  (
+                    operaciones,
+                    onVerDetalle,
+                    onEditar,
+                    onEliminar,
+                    primaryColor,
+                  ) => TablaOperaciones(
+                    operaciones: operaciones,
+                    onVerDetalle: onVerDetalle,
+                    onEditar: onEditar,
+                    onEliminar: onEliminar,
+                    primaryColor: primaryColor,
+                  ),
+              buildBotonesAcciones:
+                  ({
+                    required onChecklistPressed,
+                    required onHorometroPressed,
+                    required onCerrarRegistrosPressed,
+                    required onCondicionesEquipoPressed,
+                    required onPresionLlantasPressed,
+                    required primaryColor,
+                    onChecklistTelemandoPressed,
+                    onProgramaTrabajoPressed,
+                  }) => BotonesAccionesInferiores(
+                    onChecklistPressed: onChecklistPressed,
+                    onHorometroPressed: onHorometroPressed,
+                    onCerrarRegistrosPressed: onCerrarRegistrosPressed,
+                    onCondicionesEquipoPressed: onCondicionesEquipoPressed,
+                    onPresionLlantasPressed: onPresionLlantasPressed,
+                    primaryColor: primaryColor,
+                  ),
             ),
           ),
         );
@@ -520,9 +675,132 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TaladroHorizontalScreen(
+            builder: (context) => OperacionListScreen(
               rolUsuario: '$rol',
               dniUsuario: '${widget.dni}',
+              config: const OperacionScreenConfig(
+                proceso: 'PERFORACIÓN HORIZONTAL',
+                dbSuffix: 'Horizontal',
+                operacionNombreDb: 'TalHorizontal',
+              ),
+              onShowDialogoRegistro:
+                  (
+                    context,
+                    codigoOperativos,
+                    turno,
+                    estado,
+                    datadialog,
+                    ultimaHora,
+                    existingRecord,
+                  ) => showRegistroOperacionDialog(
+                    context: context,
+                    dialog: th.RegistroOperacionDialog(
+                      codigoOperativos: codigoOperativos,
+                      turno: turno,
+                      selectedState: estado,
+                      datadialog: datadialog,
+                      ultimaHoraRegistrada: ultimaHora,
+                      existingRecord: existingRecord?.map(
+                        (k, v) => MapEntry(k, v.toString()),
+                      ),
+                      onConfirm: (data) => Navigator.of(context).pop(data),
+                    ),
+                  ),
+              onBuildDialogoPerforacion:
+                  (
+                    context,
+                    operacionId,
+                    estadoId,
+                    datosIniciales,
+                    fecha,
+                    turno,
+                    primaryColor,
+                    onGuardar,
+                  ) => th.DialogoFormularioPerforacion(
+                    operacionId: operacionId,
+                    estadoId: estadoId,
+                    datosIniciales: datosIniciales,
+                    estado: "OPERATIVO",
+                    fecha: fecha,
+                    turno: turno,
+                    primaryColor: primaryColor,
+                    onGuardar: onGuardar,
+                  ),
+              onBuildDialogoNoOperativo:
+                  (
+                    context,
+                    operacionId,
+                    estadoId,
+                    estado,
+                    primaryColor,
+                    onGuardar,
+                    datosIniciales,
+                  ) => DialogoFormularioNoOperativo(
+                    operacionId: operacionId,
+                    estadoId: estadoId,
+                    estado: estado,
+                    datosIniciales: datosIniciales,
+                    primaryColor: primaryColor,
+                    onGuardar: onGuardar,
+                  ),
+              onBuildConfirmarCierre: (primaryColor, onConfirmar) =>
+                  DialogoConfirmarCierreRegistros(
+                    primaryColor: primaryColor,
+                    onConfirmar: onConfirmar,
+                  ),
+              onBuildCondicionesEquipo:
+                  (operacionId, estado, condicionesData, primaryColor) =>
+                      DialogoCondicionesEquipo(
+                        operacionId: operacionId,
+                        estado: estado,
+                        condicionesData: condicionesData,
+                        primaryColor: primaryColor,
+                        onGuardar: (id, datos) => DatabaseHelper()
+                            .updateCondicionesEquipoHorizontal(id, datos),
+                      ),
+              onBuildCheckImagen:
+                  (operacionId, estado, controlLlantasData, primaryColor) =>
+                      DialogoCheckImagen(
+                        operacionId: operacionId,
+                        estado: estado,
+                        controlLlantasData: controlLlantasData ?? {},
+                        primaryColor: primaryColor,
+                        onSave: (id, datos) => DatabaseHelper().updateControlLlantas(id, datos),
+                      ),
+              buildBotonesEstado: (onEstadoSeleccionado) =>
+                  BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
+              buildTablaOperaciones:
+                  (
+                    operaciones,
+                    onVerDetalle,
+                    onEditar,
+                    onEliminar,
+                    primaryColor,
+                  ) => TablaOperaciones(
+                    operaciones: operaciones,
+                    onVerDetalle: onVerDetalle,
+                    onEditar: onEditar,
+                    onEliminar: onEliminar,
+                    primaryColor: primaryColor,
+                  ),
+              buildBotonesAcciones:
+                  ({
+                    required onChecklistPressed,
+                    required onHorometroPressed,
+                    required onCerrarRegistrosPressed,
+                    required onCondicionesEquipoPressed,
+                    required onPresionLlantasPressed,
+                    required primaryColor,
+                    onChecklistTelemandoPressed,
+                    onProgramaTrabajoPressed,
+                  }) => BotonesAccionesInferiores(
+                    onChecklistPressed: onChecklistPressed,
+                    onHorometroPressed: onHorometroPressed,
+                    onCerrarRegistrosPressed: onCerrarRegistrosPressed,
+                    onCondicionesEquipoPressed: onCondicionesEquipoPressed,
+                    onPresionLlantasPressed: onPresionLlantasPressed,
+                    primaryColor: primaryColor,
+                  ),
             ),
           ),
         );
@@ -532,9 +810,130 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TaladroEmpernadorScreen(
+            builder: (context) => OperacionListScreen(
               rolUsuario: '$rol',
               dniUsuario: '${widget.dni}',
+              config: const OperacionScreenConfig(
+                proceso: 'SOSTENIMIENTO',
+                dbSuffix: 'Empernador',
+                operacionNombreDb: 'Empernador',
+              ),
+              onShowDialogoRegistro:
+                  (
+                    context,
+                    codigoOperativos,
+                    turno,
+                    estado,
+                    datadialog,
+                    ultimaHora,
+                    existingRecord,
+                  ) => showRegistroOperacionDialog(
+                    context: context,
+                    dialog: so.RegistroOperacionDialog(
+                      codigoOperativos: codigoOperativos,
+                      turno: turno,
+                      selectedState: estado,
+                      datadialog: datadialog,
+                      ultimaHoraRegistrada: ultimaHora,
+                      existingRecord: existingRecord?.map(
+                        (k, v) => MapEntry(k, v.toString()),
+                      ),
+                      onConfirm: (data) => Navigator.of(context).pop(data),
+                    ),
+                  ),
+              onBuildDialogoPerforacion:
+                  (
+                    context,
+                    operacionId,
+                    estadoId,
+                    datosIniciales,
+                    fecha,
+                    turno,
+                    primaryColor,
+                    onGuardar,
+                  ) => so.DialogoFormularioEmpernador(
+                    operacionId: operacionId,
+                    estadoId: estadoId,
+                    datosIniciales: datosIniciales,
+                    estado: "OPERATIVO",
+                    primaryColor: primaryColor,
+                    onGuardar: onGuardar,
+                  ),
+              onBuildDialogoNoOperativo:
+                  (
+                    context,
+                    operacionId,
+                    estadoId,
+                    estado,
+                    primaryColor,
+                    onGuardar,
+                    datosIniciales,
+                  ) => DialogoFormularioNoOperativo(
+                    operacionId: operacionId,
+                    estadoId: estadoId,
+                    estado: estado,
+                    datosIniciales: datosIniciales,
+                    primaryColor: primaryColor,
+                    onGuardar: onGuardar,
+                  ),
+              onBuildConfirmarCierre: (primaryColor, onConfirmar) =>
+                  DialogoConfirmarCierreRegistros(
+                    primaryColor: primaryColor,
+                    onConfirmar: onConfirmar,
+                  ),
+              onBuildCondicionesEquipo:
+                  (operacionId, estado, condicionesData, primaryColor) =>
+                      DialogoCondicionesEquipo(
+                        operacionId: operacionId,
+                        estado: estado,
+                        condicionesData: condicionesData,
+                        primaryColor: primaryColor,
+                        onGuardar: (id, datos) => DatabaseHelper()
+                            .updateCondicionesEquipoEmpernador(id, datos),
+                      ),
+              onBuildCheckImagen:
+                  (operacionId, estado, controlLlantasData, primaryColor) =>
+                      DialogoCheckImagen(
+                        operacionId: operacionId,
+                        estado: estado,
+                        controlLlantasData: controlLlantasData ?? {},
+                        primaryColor: primaryColor,
+                        onSave: (id, datos) => DatabaseHelper().updateControlLlantasEmpernador(id, datos),
+                      ),
+              buildBotonesEstado: (onEstadoSeleccionado) =>
+                  BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
+              buildTablaOperaciones:
+                  (
+                    operaciones,
+                    onVerDetalle,
+                    onEditar,
+                    onEliminar,
+                    primaryColor,
+                  ) => TablaOperaciones(
+                    operaciones: operaciones,
+                    onVerDetalle: onVerDetalle,
+                    onEditar: onEditar,
+                    onEliminar: onEliminar,
+                    primaryColor: primaryColor,
+                  ),
+              buildBotonesAcciones:
+                  ({
+                    required onChecklistPressed,
+                    required onHorometroPressed,
+                    required onCerrarRegistrosPressed,
+                    required onCondicionesEquipoPressed,
+                    required onPresionLlantasPressed,
+                    required primaryColor,
+                    onChecklistTelemandoPressed,
+                    onProgramaTrabajoPressed,
+                  }) => BotonesAccionesInferiores(
+                    onChecklistPressed: onChecklistPressed,
+                    onHorometroPressed: onHorometroPressed,
+                    onCerrarRegistrosPressed: onCerrarRegistrosPressed,
+                    onCondicionesEquipoPressed: onCondicionesEquipoPressed,
+                    onPresionLlantasPressed: onPresionLlantasPressed,
+                    primaryColor: primaryColor,
+                  ),
             ),
           ),
         );
@@ -544,9 +943,132 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TaladroCarguioScreen(
+            builder: (context) => OperacionListScreen(
               rolUsuario: '$rol',
               dniUsuario: '${widget.dni}',
+              config: const OperacionScreenConfig(
+                proceso: 'SCOOP',
+                dbSuffix: 'Scoop',
+                operacionNombreDb: 'Scoop',
+                hasChecklistTelemando: true,
+                hasProgramaTrabajo: true,
+              ),
+              onShowDialogoRegistro:
+                  (
+                    context,
+                    codigoOperativos,
+                    turno,
+                    estado,
+                    datadialog,
+                    ultimaHora,
+                    existingRecord,
+                  ) => showRegistroOperacionDialog(
+                    context: context,
+                    dialog: cs.RegistroOperacionDialog(
+                      codigoOperativos: codigoOperativos,
+                      turno: turno,
+                      selectedState: estado,
+                      datadialog: datadialog,
+                      ultimaHoraRegistrada: ultimaHora,
+                      existingRecord: existingRecord?.map(
+                        (k, v) => MapEntry(k, v.toString()),
+                      ),
+                      onConfirm: (data) => Navigator.of(context).pop(data),
+                    ),
+                  ),
+              onBuildDialogoPerforacion:
+                  (
+                    context,
+                    operacionId,
+                    estadoId,
+                    datosIniciales,
+                    fecha,
+                    turno,
+                    primaryColor,
+                    onGuardar,
+                  ) => cs.DialogoFormularioPerforacion(
+                    operacionId: operacionId,
+                    estadoId: estadoId,
+                    datosIniciales: datosIniciales,
+                    estado: "OPERATIVO",
+                    primaryColor: primaryColor,
+                    onGuardar: onGuardar,
+                  ),
+              onBuildDialogoNoOperativo:
+                  (
+                    context,
+                    operacionId,
+                    estadoId,
+                    estado,
+                    primaryColor,
+                    onGuardar,
+                    datosIniciales,
+                  ) => DialogoFormularioNoOperativo(
+                    operacionId: operacionId,
+                    estadoId: estadoId,
+                    estado: estado,
+                    datosIniciales: datosIniciales,
+                    primaryColor: primaryColor,
+                    onGuardar: onGuardar,
+                  ),
+              onBuildConfirmarCierre: (primaryColor, onConfirmar) =>
+                  DialogoConfirmarCierreRegistros(
+                    primaryColor: primaryColor,
+                    onConfirmar: onConfirmar,
+                  ),
+              onBuildCondicionesEquipo:
+                  (operacionId, estado, condicionesData, primaryColor) =>
+                      DialogoCondicionesEquipo(
+                        operacionId: operacionId,
+                        estado: estado,
+                        condicionesData: condicionesData,
+                        primaryColor: primaryColor,
+                        onGuardar: (id, datos) => DatabaseHelper()
+                            .updateCondicionesEquipoCarguio(id, datos),
+                      ),
+              onBuildCheckImagen:
+                  (operacionId, estado, controlLlantasData, primaryColor) =>
+                      DialogoCheckImagen(
+                        operacionId: operacionId,
+                        estado: estado,
+                        controlLlantasData: controlLlantasData ?? {},
+                        primaryColor: primaryColor,
+                        onSave: (id, datos) => DatabaseHelper().updateControlLlantasCarguio(id, datos),
+                      ),
+              buildBotonesEstado: (onEstadoSeleccionado) =>
+                  BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
+              buildTablaOperaciones:
+                  (
+                    operaciones,
+                    onVerDetalle,
+                    onEditar,
+                    onEliminar,
+                    primaryColor,
+                  ) => TablaOperaciones(
+                    operaciones: operaciones,
+                    onVerDetalle: onVerDetalle,
+                    onEditar: onEditar,
+                    onEliminar: onEliminar,
+                    primaryColor: primaryColor,
+                  ),
+              buildBotonesAcciones:
+                  ({
+                    required onChecklistPressed,
+                    required onHorometroPressed,
+                    required onCerrarRegistrosPressed,
+                    required onCondicionesEquipoPressed,
+                    required onPresionLlantasPressed,
+                    required primaryColor,
+                    onChecklistTelemandoPressed,
+                    onProgramaTrabajoPressed,
+                  }) => BotonesAccionesInferiores(
+                    onChecklistPressed: onChecklistPressed,
+                    onHorometroPressed: onHorometroPressed,
+                    onCerrarRegistrosPressed: onCerrarRegistrosPressed,
+                    onCondicionesEquipoPressed: onCondicionesEquipoPressed,
+                    onPresionLlantasPressed: onPresionLlantasPressed,
+                    primaryColor: primaryColor,
+                  ),
             ),
           ),
         );
@@ -556,9 +1078,132 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => TaladroDumperScreen(
+            builder: (context) => OperacionListScreen(
               rolUsuario: '$rol',
               dniUsuario: '${widget.dni}',
+              config: const OperacionScreenConfig(
+                proceso: 'ACARREO',
+                dbSuffix: 'Dumper',
+                operacionNombreDb: 'Dumper',
+                hasChecklistTelemando: true,
+                hasProgramaTrabajo: true,
+              ),
+              onShowDialogoRegistro:
+                  (
+                    context,
+                    codigoOperativos,
+                    turno,
+                    estado,
+                    datadialog,
+                    ultimaHora,
+                    existingRecord,
+                  ) => showRegistroOperacionDialog(
+                    context: context,
+                    dialog: ad.RegistroOperacionDialog(
+                      codigoOperativos: codigoOperativos,
+                      turno: turno,
+                      selectedState: estado,
+                      datadialog: datadialog,
+                      ultimaHoraRegistrada: ultimaHora,
+                      existingRecord: existingRecord?.map(
+                        (k, v) => MapEntry(k, v.toString()),
+                      ),
+                      onConfirm: (data) => Navigator.of(context).pop(data),
+                    ),
+                  ),
+              onBuildDialogoPerforacion:
+                  (
+                    context,
+                    operacionId,
+                    estadoId,
+                    datosIniciales,
+                    fecha,
+                    turno,
+                    primaryColor,
+                    onGuardar,
+                  ) => ad.DialogoFormularioPerforacion(
+                    operacionId: operacionId,
+                    estadoId: estadoId,
+                    datosIniciales: datosIniciales,
+                    estado: "OPERATIVO",
+                    primaryColor: primaryColor,
+                    onGuardar: onGuardar,
+                  ),
+              onBuildDialogoNoOperativo:
+                  (
+                    context,
+                    operacionId,
+                    estadoId,
+                    estado,
+                    primaryColor,
+                    onGuardar,
+                    datosIniciales,
+                  ) => DialogoFormularioNoOperativo(
+                    operacionId: operacionId,
+                    estadoId: estadoId,
+                    estado: estado,
+                    datosIniciales: datosIniciales,
+                    primaryColor: primaryColor,
+                    onGuardar: onGuardar,
+                  ),
+              onBuildConfirmarCierre: (primaryColor, onConfirmar) =>
+                  DialogoConfirmarCierreRegistros(
+                    primaryColor: primaryColor,
+                    onConfirmar: onConfirmar,
+                  ),
+              onBuildCondicionesEquipo:
+                  (operacionId, estado, condicionesData, primaryColor) =>
+                      DialogoCondicionesEquipo(
+                        operacionId: operacionId,
+                        estado: estado,
+                        condicionesData: condicionesData,
+                        primaryColor: primaryColor,
+                        onGuardar: (id, datos) => DatabaseHelper()
+                            .updateCondicionesEquipoDumper(id, datos),
+                      ),
+              onBuildCheckImagen:
+                  (operacionId, estado, controlLlantasData, primaryColor) =>
+                      DialogoCheckImagen(
+                        operacionId: operacionId,
+                        estado: estado,
+                        controlLlantasData: controlLlantasData ?? {},
+                        primaryColor: primaryColor,
+                        onSave: (id, datos) => DatabaseHelper().updateControlLlantasDumper(id, datos),
+                      ),
+              buildBotonesEstado: (onEstadoSeleccionado) =>
+                  BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
+              buildTablaOperaciones:
+                  (
+                    operaciones,
+                    onVerDetalle,
+                    onEditar,
+                    onEliminar,
+                    primaryColor,
+                  ) => TablaOperaciones(
+                    operaciones: operaciones,
+                    onVerDetalle: onVerDetalle,
+                    onEditar: onEditar,
+                    onEliminar: onEliminar,
+                    primaryColor: primaryColor,
+                  ),
+              buildBotonesAcciones:
+                  ({
+                    required onChecklistPressed,
+                    required onHorometroPressed,
+                    required onCerrarRegistrosPressed,
+                    required onCondicionesEquipoPressed,
+                    required onPresionLlantasPressed,
+                    required primaryColor,
+                    onChecklistTelemandoPressed,
+                    onProgramaTrabajoPressed,
+                  }) => BotonesAccionesInferiores(
+                    onChecklistPressed: onChecklistPressed,
+                    onHorometroPressed: onHorometroPressed,
+                    onCerrarRegistrosPressed: onCerrarRegistrosPressed,
+                    onCondicionesEquipoPressed: onCondicionesEquipoPressed,
+                    onPresionLlantasPressed: onPresionLlantasPressed,
+                    primaryColor: primaryColor,
+                  ),
             ),
           ),
         );

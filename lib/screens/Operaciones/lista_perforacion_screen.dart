@@ -1,36 +1,167 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/AnfoChanger/widgets/dialog_check_imagen.dart';
 import 'package:i_miner/screens/widgets/dialogo_checklist.dart';
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/AnfoChanger/widgets/dialogo_condiciones_equipo.dart';
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/AnfoChanger/widgets/dialogo_confirmar_cierre.dart';
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/AnfoChanger/widgets/dialogo_formulario_perforacion.dart';
 import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/AnfoChanger/widgets/dialogo_no_operativo_formulario_perforacion.dart';
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/AnfoChanger/widgets/show_registro_operacion.dart';
 import 'package:i_miner/screens/widgets/operator_selector_card.dart';
-
 import 'package:i_miner/screens/widgets/operacion_card.dart';
 import 'package:i_miner/screens/widgets/operacion_card_config.dart';
 import 'package:i_miner/core/checklist_helper.dart';
-import 'widgets/botones_estado.dart';
-import 'widgets/tabla_operaciones.dart';
-import 'widgets/botones_acciones_inferiores.dart'; // Asegúrate de importar el nuevo archivo
 
-class TaladroAnfoChangerScreen extends StatefulWidget {
-  final String? rolUsuario;
-  final String? dniUsuario;
+// ======== CONFIG CLASS ========
+class OperacionScreenConfig {
+  final String proceso;
+  final String dbSuffix;
+  final String operacionNombreDb;
+  final bool hasChecklistTelemando;
+  final bool hasProgramaTrabajo;
+  final bool mostrarModelo;
+  final bool usarAutorizacion;
 
-  const TaladroAnfoChangerScreen({Key? key, this.rolUsuario, this.dniUsuario})
-    : super(key: key);
-
-  @override
-  State<TaladroAnfoChangerScreen> createState() =>
-      _TaladroAnfoChangerScreenState();
+  const OperacionScreenConfig({
+    required this.proceso,
+    required this.dbSuffix,
+    required this.operacionNombreDb,
+    this.hasChecklistTelemando = false,
+    this.hasProgramaTrabajo = false,
+    this.mostrarModelo = true,
+    this.usarAutorizacion = true,
+  });
 }
 
-class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
+// ======== CALLBACK TYPEDEFS ========
+typedef DialogoRegistroBuilder =
+    Future<Map<String, dynamic>?> Function(
+      BuildContext context,
+      List<Map<String, String>> codigoOperativos,
+      String turno,
+      String estado,
+      Map<String, List<Map<String, String>>> datadialog,
+      String? ultimaHora,
+      Map<String, dynamic>? existingRecord,
+    );
+
+typedef DialogoPerforacionBuilder =
+    Widget Function(
+      BuildContext context,
+      int operacionId,
+      int estadoId,
+      Map<String, dynamic>? datosIniciales,
+      String fecha,
+      String turno,
+      Color primaryColor,
+      Function(Map<String, dynamic>) onGuardar,
+    );
+
+typedef DialogoNoOperativoBuilder =
+    Widget Function(
+      BuildContext context,
+      int operacionId,
+      int estadoId,
+      String estado,
+      Color primaryColor,
+      Function(Map<String, dynamic>) onGuardar,
+      Map<String, dynamic>? datosIniciales,
+    );
+
+typedef ConfirmarCierreBuilder =
+    Widget Function(Color primaryColor, VoidCallback onConfirmar);
+
+typedef CondicionesEquipoBuilder =
+    Widget Function(
+      int operacionId,
+      String estado,
+      Map<String, dynamic>? condicionesData,
+      Color primaryColor,
+    );
+
+typedef CheckImagenBuilder =
+    Widget Function(
+      int operacionId,
+      String estado,
+      Map<String, dynamic>? controlLlantasData,
+      Color primaryColor,
+    );
+
+typedef BotonesEstadoBuilder =
+    Widget Function(Function(String) onEstadoSeleccionado);
+
+typedef TablaOperacionesBuilder =
+    Widget Function(
+      List<Map<String, dynamic>> operaciones,
+      Function(Map<String, dynamic>) onVerDetalle,
+      Function(Map<String, dynamic>) onEditar,
+      Function(Map<String, dynamic>) onEliminar,
+      Color primaryColor,
+    );
+
+typedef BotonesAccionesBuilder =
+    Widget Function({
+      required VoidCallback onChecklistPressed,
+      required VoidCallback onHorometroPressed,
+      required VoidCallback onCerrarRegistrosPressed,
+      required VoidCallback onCondicionesEquipoPressed,
+      required VoidCallback onPresionLlantasPressed,
+      required Color primaryColor,
+      VoidCallback? onChecklistTelemandoPressed,
+      VoidCallback? onProgramaTrabajoPressed,
+    });
+
+// ======== GENERIC WIDGET ========
+class OperacionListScreen extends StatefulWidget {
+  final String? rolUsuario;
+  final String? dniUsuario;
+  final OperacionScreenConfig config;
+
+  final DialogoRegistroBuilder onShowDialogoRegistro;
+  final DialogoPerforacionBuilder onBuildDialogoPerforacion;
+  final DialogoNoOperativoBuilder onBuildDialogoNoOperativo;
+  final ConfirmarCierreBuilder onBuildConfirmarCierre;
+  final CondicionesEquipoBuilder onBuildCondicionesEquipo;
+  final CheckImagenBuilder onBuildCheckImagen;
+
+  final BotonesEstadoBuilder buildBotonesEstado;
+  final TablaOperacionesBuilder buildTablaOperaciones;
+  final BotonesAccionesBuilder buildBotonesAcciones;
+
+  final void Function(
+    int operacionId,
+    String estado,
+    Color primaryColor,
+    BuildContext context,
+  )?
+  onChecklistTelemando;
+  final void Function(
+    int operacionId,
+    String estado,
+    Color primaryColor,
+    BuildContext context,
+  )?
+  onProgramaTrabajo;
+
+  const OperacionListScreen({
+    Key? key,
+    this.rolUsuario,
+    this.dniUsuario,
+    required this.config,
+    required this.onShowDialogoRegistro,
+    required this.onBuildDialogoPerforacion,
+    required this.onBuildDialogoNoOperativo,
+    required this.onBuildConfirmarCierre,
+    required this.onBuildCondicionesEquipo,
+    required this.onBuildCheckImagen,
+    required this.buildBotonesEstado,
+    required this.buildTablaOperaciones,
+    required this.buildBotonesAcciones,
+    this.onChecklistTelemando,
+    this.onProgramaTrabajo,
+  }) : super(key: key);
+
+  @override
+  State<OperacionListScreen> createState() => _OperacionListScreenState();
+}
+
+class _OperacionListScreenState extends State<OperacionListScreen> {
   final Color primaryColor = const Color(0xFF1B5E6B);
 
   String fechaActual = DateFormat('yyyy-MM-dd').format(DateTime.now());
@@ -41,10 +172,8 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
   List<Map<String, dynamic>> masterOperators = [];
   int? selectedOperatorId;
 
-  // Datos de ejemplo para mostrar la tabla
   List<Map<String, dynamic>> operacionesTabla = [];
 
-  // Mapa de colores para cada estado
   final Map<String, Color> coloresEstado = {
     'OPERATIVO': const Color(0xFF4CAF50),
     'DEMORA': const Color(0xFFFF9800),
@@ -70,13 +199,21 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
 
   bool get _isMaster => widget.rolUsuario == 'Master';
 
+  DatabaseHelper get _db => DatabaseHelper();
+  String get _s => widget.config.dbSuffix;
+  String get _n => widget.config.operacionNombreDb;
+
   Future<void> _initializeScreen() async {
-    if (_isMaster) await _loadMasterOperators();
+    if (_isMaster) {
+      await _loadMasterOperators();
+    }
     await _fetchOperacionData();
   }
 
   Future<int?> _resolveCurrentOperatorId(DatabaseHelper dbHelper) async {
-    if (widget.dniUsuario == null) return null;
+    if (widget.dniUsuario == null) {
+      return null;
+    }
     final usuario = await dbHelper.getUserByDni(widget.dniUsuario!);
     return usuario?['operador_id'] as int?;
   }
@@ -85,7 +222,9 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     final dbHelper = DatabaseHelper();
     final operators = await dbHelper.getKnownOperators();
     final currentOperatorId = await _resolveCurrentOperatorId(dbHelper);
+
     if (!mounted) return;
+
     setState(() {
       masterOperators = operators;
       selectedOperatorId =
@@ -108,11 +247,476 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
   String _getTurnoBasedOnTime() {
     final currentHour = DateTime.now().hour;
     if (currentHour >= 7 && currentHour < 19) {
-      return 'DÍA'; // Turno Día
+      return 'DÍA';
     } else {
-      return 'NOCHE'; // Turno Noche
+      return 'NOCHE';
     }
   }
+
+  // ======== DB DISPATCH METHODS ========
+
+  Future<List<Map<String, dynamic>>> _fetchOperacionesDb(
+    String turno,
+    String fecha, {
+    int? operadorId,
+  }) async {
+    switch (_n) {
+      case 'TalLargo':
+        if (operadorId != null) {
+          return _db.getOperacionTalLargoByTurnoAndFecha(
+            turno,
+            fecha,
+            operadorId: operadorId,
+          );
+        }
+        return _db.getOperacionTalLargoByTurnoAndFechaMaster(turno, fecha);
+      case 'TalHorizontal':
+        if (operadorId != null) {
+          return _db.getOperacionTalHorizontalByTurnoAndFecha(
+            turno,
+            fecha,
+            operadorId: operadorId,
+          );
+        }
+        return _db.getOperacionTalHorizontalByTurnoAndFechaMaster(turno, fecha);
+      case 'Dumper':
+        if (operadorId != null) {
+          return _db.getOperacionDumperByTurnoAndFecha(
+            turno,
+            fecha,
+            operadorId: operadorId,
+          );
+        }
+        return _db.getOperacionDumperByTurnoAndFechaMaster(turno, fecha);
+      case 'Carguio':
+        if (operadorId != null) {
+          return _db.getOperacionCarguioByTurnoAndFecha(
+            turno,
+            fecha,
+            operadorId: operadorId,
+          );
+        }
+        return _db.getOperacionCarguioByTurnoAndFechaMaster(turno, fecha);
+      case 'Scissor':
+        if (operadorId != null) {
+          return _db.getOperacionScissorByTurnoAndFecha(
+            turno,
+            fecha,
+            operadorId: operadorId,
+          );
+        }
+        return _db.getOperacionScissorByTurnoAndFechaMaster(turno, fecha);
+      case 'Anfochanger':
+        if (operadorId != null) {
+          return _db.getOperacionAnfochangerByTurnoAndFecha(
+            turno,
+            fecha,
+            operadorId: operadorId,
+          );
+        }
+        return _db.getOperacionAnfochangerByTurnoAndFechaMaster(turno, fecha);
+      case 'Empernador':
+        if (operadorId != null) {
+          return _db.getOperacionEmpernadorByTurnoAndFecha(
+            turno,
+            fecha,
+            operadorId: operadorId,
+          );
+        }
+        return _db.getOperacionEmpernadorByTurnoAndFechaMaster(turno, fecha);
+      case 'RompeBaco':
+        if (operadorId != null) {
+          return _db.getOperacionRompeBacoByTurnoAndFecha(
+            turno,
+            fecha,
+            operadorId: operadorId,
+          );
+        }
+        return _db.getOperacionRompeBacoByTurnoAndFechaMaster(turno, fecha);
+      case 'Scalamin':
+        if (operadorId != null) {
+          return _db.getOperacionScalaminByTurnoAndFecha(
+            turno,
+            fecha,
+            operadorId: operadorId,
+          );
+        }
+        return _db.getOperacionScalaminByTurnoAndFechaMaster(turno, fecha);
+      default:
+        throw Exception('Unknown operacionNombreDb: $_n');
+    }
+  }
+
+  Future<void> _insertOperacionDb(
+    Map<String, dynamic> data,
+    List<Map<String, dynamic>> checkListJson,
+  ) async {
+    switch (_n) {
+      case 'TalLargo':
+        await _db.insertOperacionTalLargo(
+          data['fecha'],
+          data['turno'],
+          data['seccion'] ?? '',
+          data['operador'],
+          data['jefeGuardia'],
+          data['equipo'],
+          data['codigo'],
+          data['modelo'],
+          equipoId: data['equipo_id'] as int?,
+          actorDni: data['actor_dni'] as String?,
+          actorOperadorId: data['actor_operador_id'] as int?,
+          operadorId: data['operador_id'] as int?,
+          turnoId: data['turno_id'] as int?,
+          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador_nombre'] as String?,
+          jefeGuardiaId: data['jefe_guardia_id'] as int?,
+          checkListJson: checkListJson,
+        );
+      case 'TalHorizontal':
+        await _db.insertOperacionTalHorizontal(
+          data['fecha'],
+          data['turno'],
+          data['seccion'] ?? '',
+          data['operador'],
+          data['jefeGuardia'],
+          data['equipo'],
+          data['codigo'],
+          data['modelo'],
+          equipoId: data['equipo_id'] as int?,
+          actorDni: data['actor_dni'] as String?,
+          actorOperadorId: data['actor_operador_id'] as int?,
+          operadorId: data['operador_id'] as int?,
+          turnoId: data['turno_id'] as int?,
+          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador_nombre'] as String?,
+          jefeGuardiaId: data['jefe_guardia_id'] as int?,
+          checkListJson: checkListJson,
+        );
+      case 'Dumper':
+        await _db.insertOperacionDumper(
+          data['fecha'],
+          data['turno'],
+          data['seccion'] ?? '',
+          data['operador'],
+          data['jefe_guardia'],
+          data['equipo'],
+          data['n_equipo'],
+          data['capacidad'] ?? '',
+          data['tipo_equipo'] ?? '',
+          equipoId: data['equipo_id'] as int?,
+          actorDni: data['actor_dni'] as String?,
+          actorOperadorId: data['actor_operador_id'] as int?,
+          operadorId: data['operador_id'] as int?,
+          turnoId: data['turno_id'] as int?,
+          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador_nombre'] as String?,
+          jefeGuardiaId: data['jefe_guardia_id'] as int?,
+          checkListJson: checkListJson,
+        );
+      case 'Carguio':
+        await _db.insertOperacionCarguio(
+          data['fecha'],
+          data['turno'],
+          data['seccion'] ?? '',
+          data['operador'],
+          data['jefe_guardia'],
+          data['equipo'],
+          data['n_equipo'],
+          data['capacidad'] ?? '',
+          data['tipo_equipo'] ?? '',
+          equipoId: data['equipo_id'] as int?,
+          actorDni: data['actor_dni'] as String?,
+          actorOperadorId: data['actor_operador_id'] as int?,
+          operadorId: data['operador_id'] as int?,
+          turnoId: data['turno_id'] as int?,
+          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador_nombre'] as String?,
+          jefeGuardiaId: data['jefe_guardia_id'] as int?,
+          checkListJson: checkListJson,
+        );
+      case 'Empernador':
+        await _db.insertOperacionEmpernador(
+          data['fecha'],
+          data['turno'],
+          data['seccion'] ?? '',
+          data['operador'],
+          data['jefeGuardia'],
+          data['equipo'],
+          data['codigo'],
+          data['modelo'] ?? '',
+          equipoId: data['equipo_id'] as int?,
+          actorDni: data['actor_dni'] as String?,
+          actorOperadorId: data['actor_operador_id'] as int?,
+          operadorId: data['operador_id'] as int?,
+          turnoId: data['turno_id'] as int?,
+          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador_nombre'] as String?,
+          jefeGuardiaId: data['jefe_guardia_id'] as int?,
+          checkListJson: checkListJson,
+        );
+      case 'RompeBaco':
+        await _db.insertOperacionRompeBaco(
+          data['fecha'],
+          data['turno'],
+          data['operador'],
+          data['jefeGuardia'],
+          data['equipo'],
+          data['codigo'],
+          equipoId: data['equipo_id'] as int?,
+          actorDni: data['actor_dni'] as String?,
+          actorOperadorId: data['actor_operador_id'] as int?,
+          operadorId: data['operador_id'] as int?,
+          turnoId: data['turno_id'] as int?,
+          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador_nombre'] as String?,
+          jefeGuardiaId: data['jefe_guardia_id'] as int?,
+          checkListJson: checkListJson,
+        );
+      case 'Scalamin':
+        await _db.insertOperacionScalamin(
+          data['fecha'],
+          data['turno'],
+          data['operador'],
+          data['jefeGuardia'],
+          data['equipo'],
+          data['codigo'],
+          equipoId: data['equipo_id'] as int?,
+          actorDni: data['actor_dni'] as String?,
+          actorOperadorId: data['actor_operador_id'] as int?,
+          operadorId: data['operador_id'] as int?,
+          turnoId: data['turno_id'] as int?,
+          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador_nombre'] as String?,
+          jefeGuardiaId: data['jefe_guardia_id'] as int?,
+          checkListJson: checkListJson,
+        );
+      case 'Scissor':
+        await _db.insertOperacionScissor(
+          data['fecha'],
+          data['turno'],
+          data['operador'],
+          data['jefeGuardia'],
+          data['equipo'],
+          data['codigo'],
+          equipoId: data['equipo_id'] as int?,
+          actorDni: data['actor_dni'] as String?,
+          actorOperadorId: data['actor_operador_id'] as int?,
+          operadorId: data['operador_id'] as int?,
+          turnoId: data['turno_id'] as int?,
+          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador_nombre'] as String?,
+          jefeGuardiaId: data['jefe_guardia_id'] as int?,
+          checkListJson: checkListJson,
+        );
+      case 'Anfochanger':
+        await _db.insertOperacionAnfochanger(
+          data['fecha'],
+          data['turno'],
+          data['operador'],
+          data['jefeGuardia'],
+          data['equipo'],
+          data['codigo'],
+          equipoId: data['equipo_id'] as int?,
+          actorDni: data['actor_dni'] as String?,
+          actorOperadorId: data['actor_operador_id'] as int?,
+          operadorId: data['operador_id'] as int?,
+          turnoId: data['turno_id'] as int?,
+          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador_nombre'] as String?,
+          jefeGuardiaId: data['jefe_guardia_id'] as int?,
+          checkListJson: checkListJson,
+        );
+      default:
+        throw Exception('Unknown operacionNombreDb for insert: $_n');
+    }
+  }
+
+  Future<int> _eliminarOperacionFisico(int id) async {
+    switch (_n) {
+      case 'TalLargo':
+        return await _db.eliminarOperacionTalLargoFisico(id);
+      case 'TalHorizontal':
+        return await _db.eliminarOperacionTalHorizontalFisico(id);
+      case 'Dumper':
+        return await _db.eliminarOperacionTalDumperFisico(id);
+      case 'Carguio':
+        return await _db.eliminarOperacionTalCarguioFisico(id);
+      case 'Scissor':
+        return await _db.eliminarOperacionTalScissorFisico(id);
+      case 'Anfochanger':
+        return await _db.eliminarOperacionTalAnfochangerFisico(id);
+      case 'Empernador':
+        return await _db.eliminarOperacionTalEmpernadorFisico(id);
+      case 'RompeBaco':
+        return await _db.eliminarOperacionTalRompeBacoFisico(id);
+      case 'Scalamin':
+        return await _db.eliminarOperacionTalScalaminFisico(id);
+      default:
+        throw Exception('Unknown operacionNombreDb: $_n');
+    }
+  }
+
+  Future<bool> _updateEstadoDispatch(
+    int opId,
+    int estId, {
+    int? numero,
+    String? estado,
+    String? codigo,
+    String? horaInicio,
+    String? horaFinal,
+    Map<String, dynamic>? operacion,
+  }) {
+    final op = operacion?.map((k, v) => MapEntry(k, v.toString()));
+    switch (_s) {
+      case 'Horizontal':
+        return _db.updateEstadoHorizontal(
+          opId,
+          estId,
+          numero: numero,
+          estado: estado,
+          codigo: codigo,
+          horaInicio: horaInicio,
+          horaFinal: horaFinal,
+          operacion: op,
+        );
+      case 'Dumper':
+        return _db.updateEstadoDumper(
+          opId,
+          estId,
+          numero: numero,
+          estado: estado,
+          codigo: codigo,
+          horaInicio: horaInicio,
+          horaFinal: horaFinal,
+          operacion: op,
+        );
+      case 'Carguio':
+        return _db.updateEstadoCarguio(
+          opId,
+          estId,
+          numero: numero,
+          estado: estado,
+          codigo: codigo,
+          horaInicio: horaInicio,
+          horaFinal: horaFinal,
+          operacion: op,
+        );
+      case 'Scissor':
+        return _db.updateEstadoScissor(
+          opId,
+          estId,
+          numero: numero,
+          estado: estado,
+          codigo: codigo,
+          horaInicio: horaInicio,
+          horaFinal: horaFinal,
+          operacion: op,
+        );
+      case 'Anfochanger':
+        return _db.updateEstadoAnfochanger(
+          opId,
+          estId,
+          numero: numero,
+          estado: estado,
+          codigo: codigo,
+          horaInicio: horaInicio,
+          horaFinal: horaFinal,
+          operacion: op,
+        );
+      case 'Empernador':
+        return _db.updateEstadoEmpernador(
+          opId,
+          estId,
+          numero: numero,
+          estado: estado,
+          codigo: codigo,
+          horaInicio: horaInicio,
+          horaFinal: horaFinal,
+          operacion: op,
+        );
+      case 'RompeBaco':
+        return _db.updateEstadoRompeBaco(
+          opId,
+          estId,
+          numero: numero,
+          estado: estado,
+          codigo: codigo,
+          horaInicio: horaInicio,
+          horaFinal: horaFinal,
+          operacion: op,
+        );
+      case 'Scalamin':
+        return _db.updateEstadoScalamin(
+          opId,
+          estId,
+          numero: numero,
+          estado: estado,
+          codigo: codigo,
+          horaInicio: horaInicio,
+          horaFinal: horaFinal,
+          operacion: op,
+        );
+      default:
+        return _db.updateEstado(
+          opId,
+          estId,
+          numero: numero,
+          estado: estado,
+          codigo: codigo,
+          horaInicio: horaInicio,
+          horaFinal: horaFinal,
+          operacion: operacion,
+        );
+    }
+  }
+
+  Future<bool> _updateHoraFinalDispatch(int opId, int estId, String horaFinal) {
+    switch (_s) {
+      case 'Horizontal':
+        return _db.updateHoraFinalHorizontal(opId, estId, horaFinal);
+      case 'Dumper':
+        return _db.updateHoraFinalDumper(opId, estId, horaFinal);
+      case 'Carguio':
+        return _db.updateHoraFinalCarguio(opId, estId, horaFinal);
+      case 'Scissor':
+        return _db.updateHoraFinalScissor(opId, estId, horaFinal);
+      case 'Anfochanger':
+        return _db.updateHoraFinalAnfochanger(opId, estId, horaFinal);
+      case 'Empernador':
+        return _db.updateHoraFinalEmpernador(opId, estId, horaFinal);
+      case 'RompeBaco':
+        return _db.updateHoraFinalRompeBaco(opId, estId, horaFinal);
+      case 'Scalamin':
+        return _db.updateHoraFinalScalamin(opId, estId, horaFinal);
+      default:
+        return _db.updateHoraFinal(opId, estId, horaFinal);
+    }
+  }
+
+  Future<bool> _deleteEstadoDispatch(int opId, int estId) {
+    switch (_s) {
+      case 'Horizontal':
+        return _db.deleteEstadoHorizontal(opId, estId);
+      case 'Dumper':
+        return _db.deleteEstadoDumper(opId, estId);
+      case 'Carguio':
+        return _db.deleteEstadoCarguio(opId, estId);
+      case 'Scissor':
+        return _db.deleteEstadoScissor(opId, estId);
+      case 'Anfochanger':
+        return _db.deleteEstadoAnfochanger(opId, estId);
+      case 'Empernador':
+        return _db.deleteEstadoEmpernador(opId, estId);
+      case 'RompeBaco':
+        return _db.deleteEstadoRompeBaco(opId, estId);
+      case 'Scalamin':
+        return _db.deleteEstadoScalamin(opId, estId);
+      default:
+        return _db.deleteEstado(opId, estId);
+    }
+  }
+
+  // ======== FETCH OPERACION DATA ========
 
   Future<void> _fetchOperacionData() async {
     if (selectedTurno == null) {
@@ -121,25 +725,21 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     }
 
     DatabaseHelper dbHelper = DatabaseHelper();
-
     List<Map<String, dynamic>> data;
 
     if (_isMaster) {
       if (selectedOperatorId != null) {
-        data = await dbHelper.getOperacionAnfochangerByTurnoAndFecha(
+        data = await _fetchOperacionesDb(
           selectedTurno!,
           fechaActual,
           operadorId: selectedOperatorId,
         );
       } else {
-        data = await dbHelper.getOperacionAnfochangerByTurnoAndFechaMaster(
-          selectedTurno!,
-          fechaActual,
-        );
+        data = await _fetchOperacionesDb(selectedTurno!, fechaActual);
       }
     } else {
       final operadorId = await _resolveCurrentOperatorId(dbHelper);
-      data = await dbHelper.getOperacionAnfochangerByTurnoAndFecha(
+      data = await _fetchOperacionesDb(
         selectedTurno!,
         fechaActual,
         operadorId: operadorId,
@@ -150,7 +750,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
 
     setState(() {
       operaciones = data;
-
       if (data.isNotEmpty) {
         operacionActual = data.first;
         operacionId = data.first['id'];
@@ -158,11 +757,10 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       } else {
         operacionActual = null;
         operacionId = null;
-        operacionesTabla = []; // Limpiar tabla si no hay operación
+        operacionesTabla = [];
       }
     });
 
-    // Cargar estados después de actualizar la UI
     await _cargarEstadosOperacion();
   }
 
@@ -175,13 +773,11 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     }
 
     List<Map<String, dynamic>> estados = await DatabaseHelper()
-        .getEstadosByOperacionIdAnfochanger(operacionId!);
+        .getEstadosByOperacionId(operacionId!);
 
     print("Estados obtenidos del registro: $estados");
 
-    // Ordenar los estados por hora de inicio para mostrarlos correctamente
     estados.sort((a, b) {
-      // Función para convertir a minutos
       int horaToMinutes(String hora) {
         if (hora.isEmpty) return 0;
         try {
@@ -214,6 +810,8 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     });
   }
 
+  // ======== BUILD ========
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -228,14 +826,15 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
                 operators: masterOperators,
                 selectedOperatorId: selectedOperatorId,
                 onChanged: (value) async {
-                  setState(() => selectedOperatorId = value);
+                  setState(() {
+                    selectedOperatorId = value;
+                  });
                   await _fetchOperacionData();
                 },
                 primaryColor: primaryColor,
               ),
               const SizedBox(height: 16),
             ],
-            // Card de nueva operación - tamaño fijo
             OperacionCard(
               fechaActual: fechaActual,
               selectedTurno: selectedTurno,
@@ -255,52 +854,51 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
               },
               onOperacionCreada: _handleNuevaOperacion,
               primaryColor: primaryColor,
-              config: const OperacionCardConfig(
-                proceso: 'ANFOCHANGER',
-                claveCodigo: 'n_equipo',
-                claveJefeGuardia: 'jefe_guardia',
+              config: OperacionCardConfig(
+                proceso: widget.config.proceso,
+                mostrarModelo: widget.config.mostrarModelo,
+                usarAutorizacion: widget.config.usarAutorizacion,
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // Botones de estado - tamaño fijo
-            BotonesEstado(onEstadoSeleccionado: _mostrarDialogoEstado),
+            widget.buildBotonesEstado(_mostrarDialogoEstado),
 
             const SizedBox(height: 8),
 
-            // Tabla de operaciones con altura limitada
             Expanded(
               flex: 1,
               child: Container(
                 constraints: const BoxConstraints(maxHeight: 300),
-                child: TablaOperaciones(
-                  operaciones: operacionesTabla,
-                  onVerDetalle: _verDetalleOperacion,
-                  onEditar: _editarOperacion,
-                  onEliminar: _eliminarRegistroEstado, // Nueva función
-                  primaryColor: primaryColor,
+                child: widget.buildTablaOperaciones(
+                  operacionesTabla,
+                  _verDetalleOperacion,
+                  _editarOperacion,
+                  _eliminarRegistroEstado,
+                  primaryColor,
                 ),
               ),
             ),
 
             const SizedBox(height: 8),
 
-            // Botones inferiores (CheckList, Horómetro, Cerrar registros)
-            // Botones inferiores (CheckList, Horómetro, Cerrar registros, Condiciones equipo, Presión llantas)
-            BotonesAccionesInferiores(
+            widget.buildBotonesAcciones(
               onChecklistPressed: _handleChecklist,
               onHorometroPressed: _handleHorometro,
               onCerrarRegistrosPressed: _handleCerrarRegistros,
               onCondicionesEquipoPressed: _handleCondicionesEquipo,
               onPresionLlantasPressed: _handlePresionLlantas,
               primaryColor: primaryColor,
+              onChecklistTelemandoPressed: widget.config.hasChecklistTelemando
+                  ? _handleChecklistTelemando
+                  : null,
+              onProgramaTrabajoPressed: widget.config.hasProgramaTrabajo
+                  ? _handleProgramaTrabajo
+                  : null,
             ),
 
-            //SEPARACION DE FINAL PARA TABLET
             const SizedBox(height: 50),
-            // SEPARACION DE FINAL ANTES
-            //const SizedBox(height: 4),
           ],
         ),
       ),
@@ -321,10 +919,10 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
             child: const Icon(Icons.horizontal_rule, size: 16),
           ),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Anfocharger',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              widget.config.proceso,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -340,16 +938,17 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         ),
         IconButton(
           icon: const Icon(Icons.delete, size: 20),
-          onPressed: _eliminarRegistro, // <- tu función de eliminar
+          onPressed: _eliminarRegistro,
           tooltip: 'Eliminar',
         ),
       ],
     );
   }
 
+  // ======== DELETE REGISTRO ========
+
   void _eliminarRegistro() {
     if (operacionId == null) {
-      // No hay registro actual
       showDialog(
         context: context,
         builder: (context) => Dialog(
@@ -359,11 +958,10 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             width: MediaQuery.of(context).size.width * 0.75,
-            constraints: BoxConstraints(maxWidth: 400),
+            constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
@@ -384,13 +982,11 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Body
                 const Text(
                   'No hay registro seleccionado para eliminar.',
                   style: TextStyle(fontSize: 14),
                 ),
                 const SizedBox(height: 16),
-                // Footer
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -414,7 +1010,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       return;
     }
 
-    // Hay registro, mostramos confirmación
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -422,11 +1017,10 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         child: Container(
           padding: const EdgeInsets.all(16),
           width: MediaQuery.of(context).size.width * 0.75,
-          constraints: BoxConstraints(maxWidth: 400),
+          constraints: const BoxConstraints(maxWidth: 400),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -447,13 +1041,11 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Body
               const Text(
                 '¿Deseas eliminar este registro?',
                 style: TextStyle(fontSize: 14),
               ),
               const SizedBox(height: 16),
-              // Footer
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -470,10 +1062,11 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () async {
-                      Navigator.pop(context); // cerramos el diálogo primero
+                      Navigator.pop(context);
 
-                      int filasAfectadas = await DatabaseHelper()
-                          .eliminarOperacionTalAnfochangerFisico(operacionId!);
+                      int filasAfectadas = await _eliminarOperacionFisico(
+                        operacionId!,
+                      );
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -513,8 +1106,9 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     );
   }
 
+  // ======== DIALOGO ESTADO ========
+
   void _mostrarDialogoEstado(String estado) async {
-    // Verificar que haya una operación seleccionada
     if (operacionActual == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -526,43 +1120,38 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       return;
     }
 
-    // Obtener TODOS los estados para calcular la última hora
     List<Map<String, dynamic>> todosLosEstados = await DatabaseHelper()
-        .getEstadosByOperacionIdAnfochanger(operacionActual!['id']);
+        .getEstadosByOperacionId(operacionActual!['id']);
 
-    // Ordenar por hora para encontrar el último
+    print("📥 ESTADOS CRUDOS (BD):");
+    for (var e in todosLosEstados) {
+      print(
+        "ID:${e['id']} | N°:${e['numero']} | Hora:${e['hora_inicio']} | Estado:${e['estado']}",
+      );
+    }
+
     todosLosEstados.sort((a, b) {
-      int horaToMinutes(String hora) {
-        if (hora.isEmpty) return 0;
-        try {
-          if (hora.contains(' ')) hora = hora.split(' ')[1];
-          List<String> parts = hora.split(':');
-          return int.parse(parts[0]) * 60 + int.parse(parts[1]);
-        } catch (e) {
-          return 0;
-        }
-      }
-
-      int minutosA = horaToMinutes(a['hora_inicio'] ?? '');
-      int minutosB = horaToMinutes(b['hora_inicio'] ?? '');
-      return minutosA.compareTo(minutosB);
+      int numA = a['numero'] ?? 0;
+      int numB = b['numero'] ?? 0;
+      return numA.compareTo(numB);
     });
 
-    // Obtener la última hora registrada (si existe)
+    print("✅ ORDENADOS POR NUMERO:");
+    for (var e in todosLosEstados) {
+      print("N°${e['numero']} | Hora:${e['hora_inicio']}");
+    }
+
     String? ultimaHora;
     if (todosLosEstados.isNotEmpty) {
       var ultimoEstado = todosLosEstados.last;
       ultimaHora = ultimoEstado['hora_inicio'];
-
-      // Formatear para mostrar solo la hora si viene con fecha
       if (ultimaHora?.contains(' ') == true) {
         ultimaHora = ultimaHora!.split(' ')[1];
       }
+      print("🟢 ÚLTIMA HORA CORRECTA: $ultimaHora");
     }
 
-    // Obtener los códigos operativos para este estado
     List<Map<String, String>> codigosOperativos = [];
-
     if (operaciones.isNotEmpty) {
       codigosOperativos = operacionesTabla
           .where((op) => op['estado'] == estado)
@@ -579,15 +1168,18 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
           .toList();
     }
 
-    // Mostrar el diálogo de registro con la última hora
-    final result = await showRegistroOperacionDialog(
-      context: context,
-      codigoOperativos: codigosOperativos,
-      turno: operacionActual!['turno'] ?? selectedTurno ?? 'DÍA',
-      selectedState: estado,
-      datadialog: datadialog,
-      ultimaHoraRegistrada: ultimaHora, // Nueva variable
-      existingRecord: null,
+    print("📤 ENVIANDO AL DIALOG:");
+    print("Turno: ${operacionActual!['turno']}");
+    print("Última hora enviada: $ultimaHora");
+
+    final result = await widget.onShowDialogoRegistro(
+      context,
+      codigosOperativos,
+      operacionActual!['turno'] ?? selectedTurno ?? 'DÍA',
+      estado,
+      datadialog,
+      ultimaHora,
+      null,
     );
 
     if (result != null) {
@@ -595,13 +1187,11 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     }
   }
 
-  void _verDetalleOperacion(Map<String, dynamic> operacion) async {
-    // Verificar que haya una operación seleccionada
-    if (operacionActual == null) {
-      return;
-    }
+  // ======== VER DETALLE ========
 
-    // Obtener los códigos operativos para este estado
+  void _verDetalleOperacion(Map<String, dynamic> operacion) async {
+    if (operacionActual == null) return;
+
     List<Map<String, String>> codigosOperativos = operaciones
         .where((op) => op['estado'] == operacion['estado'])
         .map(
@@ -616,14 +1206,14 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         )
         .toList();
 
-    // Mostrar el diálogo de edición
-    final result = await showRegistroOperacionDialog(
-      context: context,
-      codigoOperativos: codigosOperativos,
-      turno: operacionActual!['turno'] ?? selectedTurno ?? 'DÍA',
-      selectedState: operacion['estado'] ?? 'OPERATIVO',
-      datadialog: datadialog,
-      existingRecord: {
+    final result = await widget.onShowDialogoRegistro(
+      context,
+      codigosOperativos,
+      operacionActual!['turno'] ?? selectedTurno ?? 'DÍA',
+      operacion['estado'] ?? 'OPERATIVO',
+      datadialog,
+      null,
+      {
         'id': operacion['id'].toString(),
         'numero': operacion['numero']?.toString() ?? '0',
         'codigo': operacion['codigo']?.toString() ?? '',
@@ -633,10 +1223,11 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     );
 
     if (result != null) {
-      // Actualizar registro existente
       await _actualizarRegistroEstado(result, operacion);
     }
   }
+
+  // ======== CREAR REGISTRO ESTADO ========
 
   Future<void> _crearRegistroEstado(
     Map<String, dynamic> data,
@@ -645,11 +1236,9 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     try {
       if (operacionActual == null) return;
 
-      // Obtener TODOS los registros (estados) de la operación actual
       List<Map<String, dynamic>> todosLosEstados = await DatabaseHelper()
-          .getEstadosByOperacionIdAnfochanger(operacionActual!['id']);
+          .getEstadosByOperacionId(operacionActual!['id']);
 
-      // Función auxiliar para convertir hora a DateTime completo
       DateTime? parseHoraCompleta(String horaStr) {
         try {
           if (horaStr.contains(' ')) {
@@ -664,17 +1253,14 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         }
       }
 
-      // Ordenar por hora de inicio
       todosLosEstados.sort((a, b) {
         DateTime? horaA = parseHoraCompleta(a['hora_inicio']);
         DateTime? horaB = parseHoraCompleta(b['hora_inicio']);
-
         if (horaA == null) return 1;
         if (horaB == null) return -1;
         return horaA.compareTo(horaB);
       });
 
-      // Encontrar el último estado activo (sin hora_final)
       Map<String, dynamic>? ultimoEstadoActivo;
       for (var i = todosLosEstados.length - 1; i >= 0; i--) {
         if (todosLosEstados[i]['hora_final'] == null ||
@@ -684,16 +1270,14 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         }
       }
 
-      // Si hay un estado activo, lo cerramos
       if (ultimoEstadoActivo != null) {
-        await DatabaseHelper().updateHoraFinalAnfochanger(
+        await _updateHoraFinalDispatch(
           operacionActual!['id'],
           ultimoEstadoActivo['id'],
           data['hora_inicio']!,
         );
       }
 
-      // Calcular el nuevo número para ESTE tipo específico
       List<Map<String, dynamic>> estadosDelMismoTipo = todosLosEstados
           .where((est) => est['estado'] == estado)
           .toList();
@@ -702,39 +1286,38 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
           ? (estadosDelMismoTipo.last['numero'] as int) + 1
           : 1;
 
-      // 🔥 IMPORTANTE: Crear el objeto operacion con ORIGEN y DESTINO
       Map<String, dynamic> operacionData = {
-        // Campos de ORIGEN
-        'origen_nivel': data['origen_nivel'] ?? '',
-        'origen_tipo_labor': data['origen_tipo_labor'] ?? '',
-        'origen_labor': data['origen_labor'] ?? '',
-        'origen_ala': data['origen_ala'] ?? '',
-
-        // Nuevos campos de producción
-        'n_taladros_cargados': data['n_taladros_cargados'] ?? 0,
-        'cantidad_anfo': data['cantidad_anfo'] ?? 0,
-
-        // Observaciones
-        'observaciones': data['observaciones'] ?? '',
+        'labor_id': data['labor_id'],
+        'nivel': data['nivel'] ?? '',
+        'tipo_labor': data['tipo_labor'] ?? '',
+        'labor': data['labor'] ?? '',
+        'ala': data['ala'] ?? '',
+        'n_taladros_produccion': data['n_taladros_produccion'] ?? '',
+        'metros_perforados_produccion':
+            data['metros_perforados_produccion'] ?? '',
+        'n_taladros_rimados': data['n_taladros_rimados'] ?? '',
+        'metros_perforados_rimados': data['metros_perforados_rimados'] ?? '',
+        'n_taladros_alivio': data['n_taladros_alivio'] ?? '',
+        'metros_perforados_alivio': data['metros_perforados_alivio'] ?? '',
+        'n_taladros_repaso': data['n_taladros_repaso'] ?? '',
+        'metros_perforados_repaso': data['metros_perforados_repaso'] ?? '',
+        'long_barras': data['long_barras'] ?? '',
+        'num_barras': data['num_barras'] ?? '',
+        'tipo_perforacion': data['tipo_perforacion'] ?? '',
+        'tipo_perforacion_id': data['tipo_perforacion_id'],
       };
 
-      // Crear nuevo estado con la estructura de origen/destino
-      Map<String, dynamic>? nuevoEstado = await DatabaseHelper()
-          .createEstadoAnfochanger(
-            operacionActual!['id'],
-            estado,
-            data['codigo']!,
-            data['hora_inicio']!,
-            operacion: operacionData, // Pasamos el objeto con origen/destino
-          );
+      Map<String, dynamic>? nuevoEstado = await DatabaseHelper().createEstado(
+        operacionActual!['id'],
+        estado,
+        data['codigo']!,
+        data['hora_inicio']!,
+        operacion: operacionData,
+      );
 
       if (nuevoEstado != null) {
         _mostrarSnackBar("Registro guardado correctamente.", Colors.green);
-
-        // Recargar datos
         await _fetchOperacionData();
-
-        // Mostrar diálogo secundario según el estado
         _mostrarDialogoSecundario(nuevoEstado['id'], estado);
       }
     } catch (e) {
@@ -742,7 +1325,8 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     }
   }
 
-  // También actualizar _actualizarRegistroEstado
+  // ======== ACTUALIZAR REGISTRO ESTADO ========
+
   Future<void> _actualizarRegistroEstado(
     Map<String, dynamic> data,
     Map<String, dynamic> operacionOriginal,
@@ -750,7 +1334,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     try {
       if (operacionActual == null) return;
 
-      // Función auxiliar para convertir hora a DateTime completo
       DateTime? parseHoraCompleta(String horaStr) {
         try {
           if (horaStr.contains(' ')) {
@@ -765,23 +1348,18 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         }
       }
 
-      // Obtener TODOS los registros
       List<Map<String, dynamic>> todosLosEstados = await DatabaseHelper()
-          .getEstadosByOperacionIdAnfochanger(operacionActual!['id']);
+          .getEstadosByOperacionId(operacionActual!['id']);
 
-      // Ordenar por hora de inicio
       todosLosEstados.sort((a, b) {
         DateTime? horaA = parseHoraCompleta(a['hora_inicio']);
         DateTime? horaB = parseHoraCompleta(b['hora_inicio']);
-
         if (horaA == null) return 1;
         if (horaB == null) return -1;
-
         return horaA.compareTo(horaB);
       });
 
-      // Actualizar el registro principal
-      bool actualizado = await DatabaseHelper().updateEstadoAnfochanger(
+      bool actualizado = await _updateEstadoDispatch(
         operacionActual!['id'],
         data['id'],
         numero: data['numero'],
@@ -793,30 +1371,25 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       );
 
       if (actualizado) {
-        // Re-obtener todos los estados después de la actualización
-        todosLosEstados = await DatabaseHelper()
-            .getEstadosByOperacionIdAnfochanger(operacionActual!['id']);
+        todosLosEstados = await DatabaseHelper().getEstadosByOperacionId(
+          operacionActual!['id'],
+        );
 
-        // Ordenar nuevamente por hora de inicio
         todosLosEstados.sort((a, b) {
           DateTime? horaA = parseHoraCompleta(a['hora_inicio']);
           DateTime? horaB = parseHoraCompleta(b['hora_inicio']);
-
           if (horaA == null) return 1;
           if (horaB == null) return -1;
-
           return horaA.compareTo(horaB);
         });
 
-        // Reconstruir la secuencia de horas
         for (int i = 0; i < todosLosEstados.length; i++) {
           var estadoActual = todosLosEstados[i];
 
           if (i < todosLosEstados.length - 1) {
             var siguienteEstado = todosLosEstados[i + 1];
-
             if (estadoActual['hora_final'] != siguienteEstado['hora_inicio']) {
-              await DatabaseHelper().updateHoraFinalAnfochanger(
+              await _updateHoraFinalDispatch(
                 operacionActual!['id'],
                 estadoActual['id'],
                 siguienteEstado['hora_inicio'],
@@ -824,7 +1397,7 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
             }
           } else {
             if (estadoActual['hora_final'] != "") {
-              await DatabaseHelper().updateHoraFinalAnfochanger(
+              await _updateHoraFinalDispatch(
                 operacionActual!['id'],
                 estadoActual['id'],
                 "",
@@ -841,52 +1414,50 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     }
   }
 
-  // Función auxiliar para obtener la lista de operaciones (estados)
   Future<List<Map<String, dynamic>>> _getOperaciones() async {
     if (operacionActual == null) return [];
-    return await DatabaseHelper().getEstadosByOperacionIdAnfochanger(
+    return await DatabaseHelper().getEstadosByOperacionId(
       operacionActual!['id'],
     );
   }
+
+  // ======== DIALOGOS SECUNDARIOS ========
 
   void _mostrarDialogoSecundario(int estadoId, String estado) async {
     if (operacionActual == null) return;
 
     Future.delayed(Duration.zero, () {
       if (estado == "OPERATIVO") {
-        // 📌 CASO 1: ES OPERATIVO → Formulario de Anfochanger
-        _abrirDialogoAnfochanger(estadoId);
+        _abrirDialogoPerforacion(estadoId);
       } else {
-        // 📌 CASO 2: NO ES OPERATIVO → Mi nuevo diálogo específico
         _abrirDialogoNoOperativo(estadoId, estado);
       }
     });
   }
 
-  // Método para OPERATIVO
-  Future<void> _abrirDialogoAnfochanger(int estadoId) async {
-    Map<String, dynamic> datosAnfochanger = await DatabaseHelper()
-        .getOperacionByEstadoIdAnfochanger(operacionActual!['id'], estadoId);
+  Future<void> _abrirDialogoPerforacion(int estadoId) async {
+    Map<String, dynamic> datosPerforacion = await DatabaseHelper()
+        .getOperacionByEstadoId(operacionActual!['id'], estadoId);
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return DialogoFormularioAnfochanger(
-          operacionId: operacionActual!['id'],
-          estadoId: estadoId,
-          datosIniciales: datosAnfochanger,
-          estado: "OPERATIVO",
-          primaryColor: primaryColor,
-          onGuardar: (datosActualizados) async {
-            bool guardado = await DatabaseHelper()
-                .updateOperacionByEstadoIdAnfochanger(
-                  operacionActual!['id'],
-                  estadoId,
-                  datosActualizados,
-                );
-
+        return widget.onBuildDialogoPerforacion(
+          context,
+          operacionActual!['id'],
+          estadoId,
+          datosPerforacion,
+          operacionActual!['fecha']?.toString() ?? fechaActual,
+          operacionActual!['turno']?.toString() ?? selectedTurno ?? '',
+          primaryColor,
+          (datosActualizados) async {
+            bool guardado = await DatabaseHelper().updateOperacionByEstadoId(
+              operacionActual!['id'],
+              estadoId,
+              datosActualizados,
+            );
             if (guardado) {
-              _mostrarSnackBar("Datos de Anfochanger guardados", Colors.green);
+              _mostrarSnackBar("Datos de perforación guardados", Colors.green);
               await _fetchOperacionData();
             } else {
               _mostrarSnackBar("Error al guardar", Colors.red);
@@ -897,31 +1468,30 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     );
   }
 
-  // Método para NO OPERATIVO (DEMORA, MANTENIMIENTO, RESERVA, FUERA DE PLAN)
   void _abrirDialogoNoOperativo(int estadoId, String estado) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return DialogoFormularioNoOpePerforacion(
-          operacionId: operacionActual!['id'],
-          estadoId: estadoId,
-          estado: estado,
-          primaryColor: primaryColor,
-          onGuardar: (datosActualizados) async {
-            bool guardado = await DatabaseHelper()
-                .updateOperacionByEstadoIdAnfochanger(
-                  operacionActual!['id'],
-                  estadoId,
-                  datosActualizados,
-                );
-
+        return widget.onBuildDialogoNoOperativo(
+          context,
+          operacionActual!['id'],
+          estadoId,
+          estado,
+          primaryColor,
+          (datosActualizados) async {
+            bool guardado = await DatabaseHelper().updateOperacionByEstadoId(
+              operacionActual!['id'],
+              estadoId,
+              datosActualizados,
+            );
             if (guardado) {
-              _mostrarSnackBar("Datos de $estado guardados", Colors.green);
+              _mostrarSnackBar("Datos de perforación guardados", Colors.green);
               await _fetchOperacionData();
             } else {
               _mostrarSnackBar("Error al guardar", Colors.red);
             }
           },
+          null,
         );
       },
     );
@@ -937,47 +1507,30 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     );
   }
 
+  // ======== NUEVA OPERACION ========
+
   Future<void> _handleNuevaOperacion(Map<String, dynamic> data) async {
     DatabaseHelper dbHelper = DatabaseHelper();
 
-    /// Obtener checklist del proceso correcto
-    List<Map<String, dynamic>> checklistItems = await dbHelper
-        .getCheckListByProceso('ANFOCHANGER');
+    List<Map<String, dynamic>> checklistItems = await DatabaseHelper()
+        .getCheckListByProceso(widget.config.proceso);
 
     List<Map<String, dynamic>> checkListJson = checklistItems.map((item) {
       return {'id': item['id'], 'decision': 0, 'observacion': ''};
     }).toList();
 
-    /// Insertar operación
-    await dbHelper.insertOperacionAnfochanger(
-      data['fecha'],
-      data['turno'],
-      data['operador'],
-      data['jefe_guardia'],
-      data['equipo'],
-      data['n_equipo'],
-      equipoId: data['equipo_id'] as int?,
-      actorDni: data['actor_dni'] as String?,
-      actorOperadorId: data['actor_operador_id'] as int?,
-      operadorId: data['operador_id'] as int?,
-      turnoId: data['turno_id'] as int?,
-      registradorUsuarioId: data['registrador_usuario_id'] as int?,
-      registradorNombre: data['registrador_nombre'] as String?,
-      jefeGuardiaId: data['jefe_guardia_id'] as int?,
-      checkListJson: checkListJson,
-      //horometrosBase: horometros,
-    );
+    await _insertOperacionDb(data, checkListJson);
 
-    /// Refrescar UI
     await _fetchOperacionData();
   }
+
+  // ======== EDITAR OPERACION ========
 
   void _editarOperacion(Map<String, dynamic> operacion) async {
     if (operacionActual == null) return;
 
     String estado = operacion['estado'] ?? 'OPERATIVO';
 
-    // Mostrar indicador de carga
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -985,7 +1538,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     );
 
     try {
-      // Cerrar indicador de carga ANTES de abrir el diálogo correspondiente
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
@@ -996,7 +1548,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         await _editarOperacionNoOperativo(operacion, estado);
       }
     } catch (e) {
-      // Asegurarse de cerrar el indicador de carga si hay error
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
@@ -1004,34 +1555,30 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     }
   }
 
-  // Método para editar OPERATIVO
   Future<void> _editarOperacionOperativo(Map<String, dynamic> operacion) async {
-    Map<String, dynamic> datosAnfochanger = await DatabaseHelper()
-        .getOperacionByEstadoIdAnfochanger(
-          operacionActual!['id'],
-          operacion['id'],
-        );
+    Map<String, dynamic> datosPerforacion = await DatabaseHelper()
+        .getOperacionByEstadoId(operacionActual!['id'], operacion['id']);
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return DialogoFormularioAnfochanger(
-          operacionId: operacionActual!['id'],
-          estadoId: operacion['id'],
-          datosIniciales: datosAnfochanger,
-          estado: "OPERATIVO",
-          primaryColor: primaryColor,
-          onGuardar: (datosActualizados) async {
-            bool guardado = await DatabaseHelper()
-                .updateOperacionByEstadoIdAnfochanger(
-                  operacionActual!['id'],
-                  operacion['id'],
-                  datosActualizados,
-                );
-
+        return widget.onBuildDialogoPerforacion(
+          context,
+          operacionActual!['id'],
+          operacion['id'],
+          datosPerforacion,
+          operacionActual!['fecha']?.toString() ?? fechaActual,
+          operacionActual!['turno']?.toString() ?? selectedTurno ?? '',
+          primaryColor,
+          (datosActualizados) async {
+            bool guardado = await DatabaseHelper().updateOperacionByEstadoId(
+              operacionActual!['id'],
+              operacion['id'],
+              datosActualizados,
+            );
             if (guardado) {
               _mostrarSnackBar(
-                "Datos de Anfochanger actualizados",
+                "Datos de perforación actualizados",
                 Colors.green,
               );
               await _fetchOperacionData();
@@ -1044,35 +1591,28 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     );
   }
 
-  // Método para editar NO OPERATIVO
   Future<void> _editarOperacionNoOperativo(
     Map<String, dynamic> operacion,
     String estado,
   ) async {
-    // Obtener los datos específicos para este estado no operativo
     Map<String, dynamic> datosNoOperativo = await DatabaseHelper()
-        .getOperacionByEstadoIdAnfochanger(
-          operacionActual!['id'],
-          operacion['id'],
-        );
+        .getOperacionByEstadoId(operacionActual!['id'], operacion['id']);
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return DialogoFormularioNoOpePerforacion(
-          operacionId: operacionActual!['id'],
-          estadoId: operacion['id'],
-          estado: estado,
-          datosIniciales: datosNoOperativo,
-          primaryColor: primaryColor,
-          onGuardar: (datosActualizados) async {
-            bool guardado = await DatabaseHelper()
-                .updateOperacionByEstadoIdAnfochanger(
-                  operacionActual!['id'],
-                  operacion['id'],
-                  datosActualizados,
-                );
-
+        return widget.onBuildDialogoNoOperativo(
+          context,
+          operacionActual!['id'],
+          operacion['id'],
+          estado,
+          primaryColor,
+          (datosActualizados) async {
+            bool guardado = await DatabaseHelper().updateOperacionByEstadoId(
+              operacionActual!['id'],
+              operacion['id'],
+              datosActualizados,
+            );
             if (guardado) {
               _mostrarSnackBar("Datos de $estado actualizados", Colors.green);
               await _fetchOperacionData();
@@ -1080,13 +1620,15 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
               _mostrarSnackBar("Error al actualizar", Colors.red);
             }
           },
+          datosNoOperativo,
         );
       },
     );
   }
 
+  // ======== REFRESCAR ========
+
   void _refrescarDatos() async {
-    // Mostrar indicador de carga
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1098,7 +1640,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     await _fetchOperacionData();
     await _cargarEstadosOperacion();
 
-    // Cerrar indicador de carga
     Navigator.pop(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1114,7 +1655,8 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
     return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
   }
 
-  // Manejadores para los nuevos botones
+  // ======== HANDLERS ========
+
   void _handleChecklist() async {
     if (operaciones.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1127,29 +1669,27 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       return;
     }
 
-    // Usar el ID real de la operación (igual que en _handleCondicionesEquipo)
     var operacionActual = operaciones.first;
-    int operacionId = operacionActual['id']; // asumimos que tienes este campo
+    int operacionId = operacionActual['id'];
     String estado = operacionActual['estado'] ?? 'OPERATIVO';
 
-    // Cargar el checklist existente
     List<Map<String, dynamic>> savedDecisions = await DatabaseHelper()
-        .getCheckListByOperacionIdAnfochanger(operacionId);
+        .getCheckListByOperacionId(operacionId);
     List<Map<String, dynamic>> checklistData =
         await ChecklistHelper.enrichForDisplay(
-          proceso: 'ANFOCHANGER',
+          proceso: widget.config.proceso,
           savedDecisions: savedDecisions,
         );
 
     showDialog(
       context: context,
-      builder: (Buildertontext) {
+      builder: (BuildContext context) {
         return DialogoChecklist(
           operacionId: operacionId,
           estado: estado,
           checklistData: checklistData,
           onSaveChecklist: (id, data) =>
-              DatabaseHelper().updateCheckListAnfochanger(id, data),
+              DatabaseHelper().updateCheckList(id, data),
           primaryColor: primaryColor,
         );
       },
@@ -1168,9 +1708,10 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       return;
     }
 
-    // Usar el ID real de la operación, no el código
     int operacionId = operacionActual!['id'];
     String estado = operacionActual!['estado'] ?? 'OPERATIVO';
+    print("🔍 Operación actual para horómetro:");
+    print(operacionActual);
 
     int? equipoId = operacionActual!['equipo_id'] as int?;
     if (equipoId == null) {
@@ -1184,9 +1725,8 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       return;
     }
 
-    // Cargar los horómetros existentes
     Map<String, dynamic> horometrosData = await DatabaseHelper()
-        .getHorometrosByOperacionIdAnfochanger(operacionId);
+        .getHorometrosByOperacionId(operacionId);
 
     final tipos = await DatabaseHelper().getEquipoHorometroTiposByEquipoId(
       equipoId,
@@ -1210,14 +1750,7 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
           horometrosData: horometrosData,
           primaryColor: primaryColor,
           horometroDefs: horometroDefs,
-          onSave: (id, map) =>
-              DatabaseHelper().updateHorometrosAnfochanger(id, map),
-          headerTitle: 'Horómetros - Anfocharger',
-          headerSubtitle: 'Principal, Eléctrico y Diesel',
-          col0Width: 180,
-          showFinalEqualWarning: false,
-          useZeroForInop: true,
-          useNameInError: true,
+          onSave: (id, map) => DatabaseHelper().updateHorometros(id, map),
         );
       },
     );
@@ -1229,94 +1762,81 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       return;
     }
 
-    final parentContext = context; // ✅ guardar context de la pantalla
+    final parentContext = context;
 
     showDialog(
       context: parentContext,
       builder: (BuildContext dialogContext) {
-        return DialogoConfirmarCierreRegistros(
-          primaryColor: primaryColor,
-          onConfirmar: () async {
-            // cerrar dialog
-            Navigator.pop(dialogContext);
+        return widget.onBuildConfirmarCierre(primaryColor, () async {
+          Navigator.pop(dialogContext);
 
-            // mostrar loader usando context correcto
-            showDialog(
-              context: parentContext,
-              barrierDismissible: false,
-              builder: (context) =>
-                  const Center(child: CircularProgressIndicator()),
+          showDialog(
+            context: parentContext,
+            barrierDismissible: false,
+            builder: (context) =>
+                const Center(child: CircularProgressIndicator()),
+          );
+
+          try {
+            var ultimoEstado = await DatabaseHelper()
+                .getUltimoEstadoByOperacionId(operacionActual!['id']);
+
+            if (ultimoEstado == null) {
+              Navigator.pop(parentContext);
+              _mostrarSnackBar(
+                'No se puede cerrar: No hay estados registrados',
+                Colors.red,
+              );
+              return;
+            }
+
+            String horaReservaInicio = (selectedTurno == 'DÍA')
+                ? '17:30'
+                : '05:30';
+
+            bool actualizado = await _updateHoraFinalDispatch(
+              operacionActual!['id'],
+              ultimoEstado['id'],
+              horaReservaInicio,
             );
 
-            try {
-              var ultimoEstado = await DatabaseHelper()
-                  .getUltimoEstadoByOperacionIdAnfochanger(
-                    operacionActual!['id'],
-                  );
-
-              if (ultimoEstado == null) {
-                Navigator.pop(parentContext);
-                _mostrarSnackBar(
-                  'No se puede cerrar: No hay estados registrados',
-                  Colors.red,
-                );
-                return;
-              }
-
-              String horaReservaInicio = (selectedTurno == 'DÍA')
-                  ? '17:30'
-                  : '05:30';
-
-              bool actualizado = await DatabaseHelper()
-                  .updateHoraFinalAnfochanger(
-                    operacionActual!['id'],
-                    ultimoEstado['id'],
-                    horaReservaInicio,
-                  );
-
-              if (!actualizado) {
-                throw Exception('No se pudo actualizar la hora final');
-              }
-
-              List<Map<String, dynamic>> todosLosEstados =
-                  await DatabaseHelper().getEstadosByOperacionIdAnfochanger(
-                    operacionActual!['id'],
-                  );
-
-              int newNumber = todosLosEstados.isNotEmpty
-                  ? (todosLosEstados.last['numero'] as int) + 1
-                  : 1;
-
-              String horaReservaFinal = (selectedTurno == 'DÍA')
-                  ? '19:00'
-                  : '07:00';
-
-              await DatabaseHelper().createReservaEstadoAnfochanger(
-                operacionActual!['id'],
-                newNumber,
-                horaReservaInicio,
-                horaReservaFinal,
-              );
-
-              await DatabaseHelper().cerrarOperacionAnfochanger(
-                operacionActual!['id'],
-              );
-
-              if (mounted) Navigator.pop(parentContext);
-
-              _mostrarSnackBar(
-                'Registro cerrado exitosamente. Se agregó estado RESERVA',
-                Colors.green,
-              );
-
-              await _fetchOperacionData();
-            } catch (e) {
-              if (mounted) Navigator.pop(parentContext);
-
-              _mostrarSnackBar('Error al cerrar registro: $e', Colors.red);
+            if (!actualizado) {
+              throw Exception('No se pudo actualizar la hora final');
             }
-          },
-        );
+
+            List<Map<String, dynamic>> todosLosEstados = await DatabaseHelper()
+                .getEstadosByOperacionId(operacionActual!['id']);
+
+            int newNumber = todosLosEstados.isNotEmpty
+                ? (todosLosEstados.last['numero'] as int) + 1
+                : 1;
+
+            String horaReservaFinal = (selectedTurno == 'DÍA')
+                ? '19:00'
+                : '07:00';
+
+            await DatabaseHelper().createReservaEstado(
+              operacionActual!['id'],
+              newNumber,
+              horaReservaInicio,
+              horaReservaFinal,
+            );
+
+            await DatabaseHelper().cerrarOperacion(operacionActual!['id']);
+
+            if (mounted) Navigator.pop(parentContext);
+
+            _mostrarSnackBar(
+              'Registro cerrado exitosamente. Se agregó estado RESERVA',
+              Colors.green,
+            );
+
+            await _fetchOperacionData();
+          } catch (e) {
+            if (mounted) Navigator.pop(parentContext);
+            _mostrarSnackBar('Error al cerrar registro: $e', Colors.red);
+          }
+        });
       },
     );
   }
@@ -1333,23 +1853,21 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       return;
     }
 
-    // Usar el ID real de la operación
     var operacionActual = operaciones.first;
-    int operacionId = operacionActual['id']; // asumimos que tienes este campo
+    int operacionId = operacionActual['id'];
     String estado = operacionActual['estado'] ?? 'OPERATIVO';
 
-    // Cargar las condiciones de equipo existentes
     Map<String, dynamic> condicionesData = await DatabaseHelper()
-        .getCondicionesEquipoByOperacionIdAnfochanger(operacionId);
+        .getCondicionesEquipoByOperacionId(operacionId);
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return DialogoCondicionesEquipo(
-          operacionId: operacionId,
-          estado: estado,
-          condicionesData: condicionesData, // ✅ pasamos los datos
-          primaryColor: primaryColor,
+        return widget.onBuildCondicionesEquipo(
+          operacionId,
+          estado,
+          condicionesData,
+          primaryColor,
         );
       },
     );
@@ -1367,37 +1885,69 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       return;
     }
 
-    // Usar el ID real de la operación
     var operacionActual = operaciones.first;
     int operacionId = operacionActual['id'];
     String estado = operacionActual['estado'] ?? 'OPERATIVO';
 
-    // 🔹 Cargar control de llantas desde la BD
     Map<String, dynamic> controlLlantas = await DatabaseHelper()
-        .getControlLlantasByOperacionIdAnfochanger(operacionId);
+        .getControlLlantasByOperacionId(operacionId);
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return DialogoCheckImagen(
-          operacionId: operacionId,
-          estado: estado,
-          controlLlantasData: controlLlantas, // ✅ enviamos el JSON
-          primaryColor: primaryColor,
+        return widget.onBuildCheckImagen(
+          operacionId,
+          estado,
+          controlLlantas,
+          primaryColor,
         );
       },
     );
   }
 
+  void _handleChecklistTelemando() {
+    if (operaciones.isEmpty) {
+      _mostrarSnackBar('No hay operación seleccionada', Colors.orange);
+      return;
+    }
+    if (widget.onChecklistTelemando != null) {
+      widget.onChecklistTelemando!(
+        operacionActual!['id'],
+        operacionActual!['estado'] ?? 'OPERATIVO',
+        primaryColor,
+        context,
+      );
+    } else {
+      _mostrarSnackBar('Checklist Telemando no disponible', Colors.orange);
+    }
+  }
+
+  void _handleProgramaTrabajo() {
+    if (operaciones.isEmpty) {
+      _mostrarSnackBar('No hay operación seleccionada', Colors.orange);
+      return;
+    }
+    if (widget.onProgramaTrabajo != null) {
+      widget.onProgramaTrabajo!(
+        operacionActual!['id'],
+        operacionActual!['estado'] ?? 'OPERATIVO',
+        primaryColor,
+        context,
+      );
+    } else {
+      _mostrarSnackBar('Programa de Trabajo no disponible', Colors.orange);
+    }
+  }
+
+  // ======== ELIMINAR REGISTRO ESTADO ========
+
   Future<void> _eliminarRegistroEstado(Map<String, dynamic> estado) async {
     try {
       if (operacionActual == null) return;
 
-      // Primero, obtener todos los estados para contar los que se eliminarán
       List<Map<String, dynamic>> todosLosEstados = await DatabaseHelper()
-          .getEstadosByOperacionIdAnfochanger(operacionActual!['id']);
+          .getEstadosByOperacionId(operacionActual!['id']);
 
-      // Función para convertir hora a minutos con manejo de nulos
       int horaToMinutes(String? hora) {
         if (hora == null || hora.isEmpty) return 0;
         try {
@@ -1411,11 +1961,9 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         }
       }
 
-      // Obtener hora del estado a eliminar con manejo de nulos
       String? horaEliminar = estado['hora_inicio']?.toString();
       int horaEliminarMinutos = horaToMinutes(horaEliminar);
 
-      // Contar cuántos estados se eliminarán
       int estadosAEliminar = 0;
       List<Map<String, dynamic>> estadosPosteriores = [];
 
@@ -1431,14 +1979,12 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         }
       }
 
-      // Construir mensaje de confirmación
       String mensajeConfirmacion =
           '¿Eliminar ${estado['estado']} #${estado['numero']}';
       if (estadosPosteriores.isNotEmpty) {
         mensajeConfirmacion +=
             '\n\ny TODOS los estados posteriores (${estadosPosteriores.length}):\n';
         for (var e in estadosPosteriores.take(3)) {
-          // Mostrar max 3
           mensajeConfirmacion +=
               '• ${e['estado']} #${e['numero']} (${e['hora_inicio']})\n';
         }
@@ -1449,7 +1995,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
       }
       mensajeConfirmacion += '\nTotal: $estadosAEliminar registro(s)';
 
-      // Confirmar eliminación
       bool? confirmar = await showDialog<bool>(
         context: context,
         builder: (BuildContext context) {
@@ -1464,7 +2009,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
                     'Esta acción eliminará:',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-
                   const SizedBox(height: 16),
                   const Text(
                     'Esta acción no se puede deshacer.',
@@ -1493,7 +2037,6 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
 
       if (confirmar != true) return;
 
-      // Mostrar indicador de carga
       if (!mounted) return;
       showDialog(
         context: context,
@@ -1503,13 +2046,11 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
         },
       );
 
-      // Eliminar el estado y todos los posteriores
-      bool eliminado = await DatabaseHelper().deleteEstadoAnfochanger(
+      bool eliminado = await _deleteEstadoDispatch(
         operacionActual!['id'],
         estado['id'],
       );
 
-      // Cerrar indicador de carga
       if (mounted) Navigator.pop(context);
 
       if (eliminado) {
@@ -1517,10 +2058,7 @@ class _TaladroAnfoChangerScreenState extends State<TaladroAnfoChangerScreen> {
           "✅ Eliminados $estadosAEliminar registro(s) en cascada.",
           Colors.green,
         );
-
-        // Recargar datos
         await _fetchOperacionData();
-
         if (mounted) {
           setState(() {});
         }
