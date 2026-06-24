@@ -11,10 +11,8 @@ class ApiServiceAccesorio {
   Future<List<Accesorio>> fetchAccesorios(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.AccesorioEndpoint}'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.accesorioEndpoint}'),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -25,13 +23,15 @@ class ApiServiceAccesorio {
 
         // Eliminar datos antiguos antes de insertar nuevos
         await _dbHelper.deleteAll('accesorios');
- 
+
         // Guardar en la base de datos local
         await saveAccesoriosToLocalDB(accesorios);
 
         return accesorios;
       } else {
-        throw Exception('Error al obtener los accesorios. Código: ${response.statusCode}');
+        throw Exception(
+          'Error al obtener los accesorios. Código: ${response.statusCode}',
+        );
       }
     } catch (error) {
       throw Exception('Error en la solicitud: $error');

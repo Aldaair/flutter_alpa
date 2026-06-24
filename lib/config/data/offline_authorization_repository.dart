@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -144,30 +142,7 @@ class OfflineAuthorizationRepository {
       return processIds.contains(processId);
     }
 
-    final db = await _sharedDb;
-    final users = await db.query(
-      'usuario_directorio',
-      columns: ['operaciones_autorizadas'],
-      where: 'codigo_dni = ?',
-      whereArgs: [dni],
-      limit: 1,
-    );
-
-    if (users.isEmpty) {
-      return false;
-    }
-
-    final rawValue = users.first['operaciones_autorizadas'];
-    if (rawValue is! String || rawValue.isEmpty) {
-      return false;
-    }
-
-    final decoded = jsonDecode(rawValue);
-    if (decoded is! Map<String, dynamic>) {
-      return false;
-    }
-
-    return decoded[legacyKey] == true;
+    return false;
   }
 
   Future<Set<int>> getAuthorizedEquipoIds({
@@ -180,8 +155,8 @@ class OfflineAuthorizationRepository {
     final rows = await db.query(
       'usuario_equipos',
       columns: ['equipo_id'],
-      where: 'usuarios_id = ? AND proceso_id = ?',
-      whereArgs: [operadorId, processId],
+      where: 'usuarios_id = ?',
+      whereArgs: [operadorId],
     );
 
     return rows.map((row) => row['equipo_id']).whereType<int>().toSet();

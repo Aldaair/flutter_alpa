@@ -13,6 +13,7 @@ import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/models/Equipo.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
 import 'package:i_miner/models/cargo.dart';
+import 'package:i_miner/models/EstadostBD.dart';
 import 'package:i_miner/models/Proceso.dart';
 import 'package:i_miner/models/zona.dart';
 import 'package:sqflite/sqflite.dart';
@@ -185,6 +186,18 @@ class HorizontalCatalogRepository {
       items: cargos.map((c) => c.toMap()).toList(),
       primaryKeyColumn: 'cargo_id',
     );
+  }
+
+  Future<void> refreshEstados(List<EstadostBD> estados) async {
+    final db = await _db;
+    await db.transaction((txn) async {
+      await txn.delete('estados');
+      for (final estado in estados) {
+        final data = estado.toMap();
+        data.remove('id');
+        await txn.insert('estados', data);
+      }
+    });
   }
 
   Future<void> _refreshCatalog({

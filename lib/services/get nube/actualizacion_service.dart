@@ -6,7 +6,6 @@ import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mens
 import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual_metraje.dart';
 import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual_produccion.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceAccesorio.dart';
-import 'package:i_miner/services/get%20nube/llamadas/ApiServiceChecklistTelemando.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceHorometros%20.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceJefeGuardia.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceTipoEquipo.dart';
@@ -36,6 +35,7 @@ import 'package:i_miner/services/get%20nube/llamadas/api_service_dim_turnos.dart
 import 'package:i_miner/services/get%20nube/llamadas/api_service_cargos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_directorio.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_equipos.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_procesos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_procesos.dart';
 
 class ActualizacionService {
@@ -56,24 +56,15 @@ class ActualizacionService {
     _requests = {
       "Estados": fetchEstados,
       "Checklist": fetchCheckList,
-      "Checklist Carguio": fetchChecklistTelemando,
       "Tipos Perforación": fetchTiposPerforacion,
-      //"Secciones": fetchSecciones,
       "Equipos": fetchEquipo,
       "Longitud Barras": fetchLongitudBarras,
       "Pernos": fetchPernos,
       "Mallas": fetchMallas,
       "Horometros": fetchHorometros,
-      //"Plan Mensual": () => fetchPlanMensualConFecha(),
       "Plan Metraje": () => fetchPlanMetrajeTL(),
-      //"Plan Producción": () => fetchPlanProduccionConFecha(),
       "Origen y Destino": () => fetchOrigenDestino(),
-      //"Accesorios": () => fetchAccesorios(),
-      //"Explosivos":() => fetchExplosivos(),
-      //"Explosivos Uni":() => fetchExplosivosUni(),
-      //"Numero de retardos":() => fetchNumeroRetardos(),
       "Jefes Guardia": fetchJefesGuardia,
-      //"Guardias": fetchGuardias,
       "Minas": fetchMinas,
       "Dim Zonas": fetchDimZonas,
       "Areas": fetchAreas,
@@ -89,6 +80,7 @@ class ActualizacionService {
       "Cargos": fetchCargos,
       "Usuarios": fetchUsuarios,
       "Equipos por usuario": fetchUsuarioEquipos,
+      "Usuario procesos": fetchUsuarioProcesos,
     };
   }
 
@@ -391,23 +383,6 @@ class ActualizacionService {
       }
     } catch (e) {
       print("❌ Error al actualizar checklist: $e");
-      throw e;
-    }
-  }
-
-  Future<void> fetchChecklistTelemando() async {
-    final apiService = ApiServiceChecklistTelemando();
-
-    try {
-      final items = await apiService.fetchChecklistTelemando(token);
-
-      print("✅ Checklist Telemando guardado en SQLite:");
-
-      for (var item in items) {
-        print("Item: ${item.nombre}");
-      }
-    } catch (e) {
-      print("❌ Error al actualizar checklist telemando: $e");
       throw e;
     }
   }
@@ -769,6 +744,18 @@ class ActualizacionService {
       print("✅ Equipos por usuario guardados en shared DB");
     } catch (e) {
       print("❌ Error al actualizar equipos por usuario: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchUsuarioProcesos() async {
+    final apiService = ApiServiceUsuarioProcesos();
+
+    try {
+      await apiService.fetchAll(token);
+      print("✅ Usuario procesos guardados en shared DB");
+    } catch (e) {
+      print("❌ Error al actualizar usuario procesos: $e");
       throw e;
     }
   }

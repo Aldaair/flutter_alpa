@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/config/data/offline_authorization_repository.dart';
@@ -149,14 +147,8 @@ Future<Map<String, bool>> loadDashboardAuthorizationState({
       authorizationRepository ?? OfflineAuthorizationRepository();
 
   if (!await repository.hasNormalizedProcessAuth(dni)) {
-    final user = cachedUser ?? await dbHelper.getUserByDni(dni);
-    final legacyAuthorization = _decodeLegacyDashboardAuthorization(
-      user?['operaciones_autorizadas'],
-    );
-
     return {
-      for (final module in _dashboardModuleDefinitions)
-        module.legacyKey: legacyAuthorization[module.legacyKey] == true,
+      for (final module in _dashboardModuleDefinitions) module.legacyKey: false,
     };
   }
 
@@ -171,23 +163,6 @@ Future<Map<String, bool>> loadDashboardAuthorizationState({
         normalizedProcesses.contains,
       ),
   };
-}
-
-Map<String, dynamic> _decodeLegacyDashboardAuthorization(dynamic rawValue) {
-  if (rawValue is! String || rawValue.isEmpty) {
-    return const <String, dynamic>{};
-  }
-
-  try {
-    final decoded = jsonDecode(rawValue);
-    if (decoded is! Map<String, dynamic>) {
-      return const <String, dynamic>{};
-    }
-
-    return decoded;
-  } catch (_) {
-    return const <String, dynamic>{};
-  }
 }
 
 class DashboardScreen extends StatefulWidget {
@@ -207,6 +182,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String nombreUsuario = "Cargando...";
   String rol = "Cargando...";
+  String cargo = "";
   Map<String, dynamic> operacionesAutorizadas = {};
 
   bool estaAutorizadoPara(String operacion) {
@@ -223,6 +199,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final dbHelper = DatabaseHelper();
       final usuario = await dbHelper.getUserByDni(widget.dni);
+      print('Usuario cargado: $usuario');
       if (usuario != null) {
         final authorizedModules = await loadDashboardAuthorizationState(
           dni: widget.dni,
@@ -230,15 +207,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
           cachedUser: usuario,
         );
 
+        String nombreCargo = '';
+        final cargoId = usuario['cargo_id'];
+        if (cargoId != null) {
+          final sharedDb = await dbHelper.sharedCatalogDatabase;
+          final rows = await sharedDb.query(
+            'cargos',
+            columns: ['nombre'],
+            where: 'cargo_id = ?',
+            whereArgs: [cargoId],
+            limit: 1,
+          );
+          if (rows.isNotEmpty) {
+            nombreCargo = rows.first['nombre']?.toString() ?? '';
+          }
+        }
+
         setState(() {
           nombreUsuario = '${usuario['nombres']} ${usuario['apellidos']}';
-          rol = usuario['rol'];
+          rol = usuario['rol']?.toString() ?? '';
+          cargo = nombreCargo;
           operacionesAutorizadas = authorizedModules;
         });
       } else {
         setState(() {
           nombreUsuario = "Usuario no encontrado";
           rol = "sin rol";
+          cargo = "sin cargo";
         });
       }
     } catch (e) {
@@ -246,6 +241,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         nombreUsuario = "Error al cargar usuario";
         rol = "Error al cargar rol";
+        cargo = "Error al cargar cargo";
       });
     }
   }
@@ -287,6 +283,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
           PopupMenuButton<String>(
             onSelected: (value) async {
               if (value == 'actualizar') {
+                final isOnline = context.read<ConnectionProvider>().isOnline;
+                if (!isOnline) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'No hay conexión a internet. Conéctese para actualizar datos.',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
                 await _actualizarDatos(context);
               } else if (value == 'mediciones') {
                 await fetchExploracionesMina2();
@@ -373,9 +383,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            rol == null || rol.trim().isEmpty
-                                ? 'Sin rol asignado'
-                                : rol,
+                            cargo.isEmpty ? 'Sin cargo asignado' : cargo,
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey[600],
@@ -630,7 +638,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         estado: estado,
                         controlLlantasData: controlLlantasData ?? {},
                         primaryColor: primaryColor,
-                        onSave: (id, datos) => DatabaseHelper().updateControlLlantas(id, datos),
+                        onSave: (id, datos) =>
+                            DatabaseHelper().updateControlLlantas(id, datos),
                       ),
               buildBotonesEstado: (onEstadoSeleccionado) =>
                   BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
@@ -765,7 +774,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         estado: estado,
                         controlLlantasData: controlLlantasData ?? {},
                         primaryColor: primaryColor,
-                        onSave: (id, datos) => DatabaseHelper().updateControlLlantas(id, datos),
+                        onSave: (id, datos) =>
+                            DatabaseHelper().updateControlLlantas(id, datos),
                       ),
               buildBotonesEstado: (onEstadoSeleccionado) =>
                   BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
@@ -898,7 +908,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         estado: estado,
                         controlLlantasData: controlLlantasData ?? {},
                         primaryColor: primaryColor,
-                        onSave: (id, datos) => DatabaseHelper().updateControlLlantasEmpernador(id, datos),
+                        onSave: (id, datos) => DatabaseHelper()
+                            .updateControlLlantasEmpernador(id, datos),
                       ),
               buildBotonesEstado: (onEstadoSeleccionado) =>
                   BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
@@ -1033,7 +1044,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         estado: estado,
                         controlLlantasData: controlLlantasData ?? {},
                         primaryColor: primaryColor,
-                        onSave: (id, datos) => DatabaseHelper().updateControlLlantasCarguio(id, datos),
+                        onSave: (id, datos) => DatabaseHelper()
+                            .updateControlLlantasCarguio(id, datos),
                       ),
               buildBotonesEstado: (onEstadoSeleccionado) =>
                   BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
@@ -1168,7 +1180,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         estado: estado,
                         controlLlantasData: controlLlantasData ?? {},
                         primaryColor: primaryColor,
-                        onSave: (id, datos) => DatabaseHelper().updateControlLlantasDumper(id, datos),
+                        onSave: (id, datos) => DatabaseHelper()
+                            .updateControlLlantasDumper(id, datos),
                       ),
               buildBotonesEstado: (onEstadoSeleccionado) =>
                   BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
@@ -1271,49 +1284,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _actualizarDatos(BuildContext context) async {
     // Definir las opciones disponibles
-    final opcionesDisponibles = {
-      "Periodos": true,
-      "Estados": true,
-      "Checklist": true,
-      "Tipos Perforación": true,
-      "Equipos": true,
-      "Zonas": true,
-      "Tipos Equipo": true,
-      "Plan Mensual": true,
-      "Plan Metraje": true,
-      "Plan Producción": true,
-      "Jefes Guardia": true,
-      "Checklist Carguio": true,
-      "Longitud Barras": true,
-      "Pernos": true,
-      "Mallas": true,
-      "Horometros": true,
-      "Origen y Destino": true,
-      "Accesorios": true,
-      "Numero de retardos": true,
-      "Guardias": true,
-      "Autorizaciones": true,
-      "Minas": true,
-      "Dim Zonas": true,
-      "Areas": true,
-      "Fases": true,
-      "Tipos Labor": true,
-      "Estructuras Minerales": true,
-      "Niveles": true,
-      "Alas": true,
-      "Labores": true,
-      "Dim Turnos": true,
-      "Procesos": true,
-      "Cargos": true,
-      "Usuarios": true,
-      "Equipos por usuario": true,
-    };
 
     // Mostrar diálogo de selección mejorado
     final opcionesSeleccionadas = await showDialog<Map<String, bool>>(
       context: context,
       builder: (context) => ActualizacionDialog(
-        opcionesIniciales: opcionesDisponibles,
         primaryColor: navbarColor, // Tu color primario
       ),
     );
@@ -1322,6 +1297,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (opcionesSeleccionadas == null || opcionesSeleccionadas.isEmpty) {
       return;
     }
+    print("token" + widget.token);
     // Crear y ejecutar el servicio de actualización
     final actualizacionService = ActualizacionService(
       context: context,

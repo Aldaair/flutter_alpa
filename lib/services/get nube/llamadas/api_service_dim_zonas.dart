@@ -14,7 +14,7 @@ class ApiServiceDimZonas {
   Future<List<DimZona>> fetchDimZonas(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.ZonasEndpoint}'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.zonasEndpoint}'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -37,9 +37,7 @@ class ApiServiceDimZonas {
         return zonas;
       }
 
-      throw Exception(
-        'Error al cargar zonas. Codigo: ${response.statusCode}',
-      );
+      throw Exception('Error al cargar zonas. Codigo: ${response.statusCode}');
     } catch (error) {
       throw Exception('Error en la solicitud: $error');
     }

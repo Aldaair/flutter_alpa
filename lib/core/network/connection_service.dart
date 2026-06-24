@@ -12,32 +12,41 @@ class ConnectionService {
   final StreamController<ConnectionStatus> _controller =
       StreamController<ConnectionStatus>.broadcast();
 
+  ConnectionStatus _lastStatus = ConnectionStatus.offline;
+
+  ConnectionStatus get lastStatus => _lastStatus;
+
   Stream<ConnectionStatus> get connectionStream => _controller.stream;
 
   void initialize() {
-    // Escuchar cambios de red (wifi, datos, etc.)
     _connectivity.onConnectivityChanged.listen((_) async {
       await _checkInternet();
     });
 
-    // También escuchar cambios reales de internet
     _internetChecker.onStatusChange.listen((status) {
-      if (status == InternetConnectionStatus.connected) {
-        _controller.add(ConnectionStatus.online);
-      } else {
-        _controller.add(ConnectionStatus.offline);
-      }
+      _lastStatus = status == InternetConnectionStatus.connected
+          ? ConnectionStatus.online
+          : ConnectionStatus.offline;
+      _controller.add(_lastStatus);
     });
+
+    _checkInternet();
   }
 
   Future<void> _checkInternet() async {
     bool hasInternet = await _internetChecker.hasConnection;
+    _lastStatus =
+        hasInternet ? ConnectionStatus.online : ConnectionStatus.offline;
+    _controller.add(_lastStatus);
+  }
 
-    if (hasInternet) {
-      _controller.add(ConnectionStatus.online);
-    } else {
-      _controller.add(ConnectionStatus.offline);
-    }
+  /// Verifica conexión en tiempo real y actualiza el estado.
+  Future<bool> checkNow() async {
+    bool hasInternet = await _internetChecker.hasConnection;
+    _lastStatus =
+        hasInternet ? ConnectionStatus.online : ConnectionStatus.offline;
+    _controller.add(_lastStatus);
+    return hasInternet;
   }
 
   void dispose() {

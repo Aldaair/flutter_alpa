@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/core/network/connection_provider.dart';
 import 'package:i_miner/screens/Dash/reporte_sreen.dart';
 import 'package:i_miner/services/api_service.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_directorio.dart';
 import 'package:i_miner/services/mis_labores_service.dart';
 import 'package:i_miner/services/user_service.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -55,14 +57,35 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // Usuario existe en shared DB → flujo normal
+      // Usuario existe en shared DB → login local siempre
       try {
-        final token = await ApiService().login(dni, pass);
+        final loggedIn = await UserService().login(dni, pass);
+        if (!loggedIn) {
+          errorMsg = "Contraseña incorrecta. Verifique sus credenciales.";
+          _showLoginError(errorMsg);
+          return;
+        }
+
         await UserService().syncOfflineProfileSnapshot(
           dni: dni,
-          token: token,
           password: pass,
         );
+
+        // Token: intentar obtenerlo online, si falla usar "offline"
+        String token;
+        try {
+          final connectionProvider = context.read<ConnectionProvider>();
+          final isOnline = await connectionProvider.checkNow();
+          print("Conexión a internet: $isOnline");
+          if (isOnline) {
+            token = await UserService().fetchToken(dni, pass);
+          } else {
+            token = "offline";
+          }
+        } catch (_) {
+          token = "offline";
+        }
+
         await MisLaboresService().prefetchAssignedLaboresForDate(
           fecha: DateFormat('yyyy-MM-dd').format(DateTime.now()),
         );
@@ -75,42 +98,12 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
         return;
-      } on UserProfileContractException catch (e, stack) {
-        errorMsg = 'LOGIN ONLINE CONTRACT ERROR:\n$e\n\n$stack';
+      } catch (e, stack) {
+        errorMsg = "LOGIN:\n$e\n\n$stack";
         print(errorMsg);
         _showLoginError(errorMsg);
         return;
-      } catch (e, stack) {
-        errorMsg = "LOGIN ONLINE:\n$e\n\n$stack";
-        print(errorMsg);
       }
-
-      // Offline fallback
-      try {
-        await DatabaseHelper().setCurrentUserDni(dni);
-        if (await DatabaseHelper().loginOffline(dni, pass)) {
-          if (!context.mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => DashboardScreen(
-                token: "offline",
-                dni: dni,
-              ),
-            ),
-          );
-          return;
-        }
-      } catch (offlineError, stack) {
-        errorMsg += "\n\nOFFLINE:\n$offlineError\n\n$stack";
-        print(errorMsg);
-      }
-
-      _showLoginError(
-        errorMsg.isNotEmpty
-            ? errorMsg
-            : "Contraseña incorrecta. Verifique sus credenciales.",
-      );
     } finally {
       setState(() => isLoading = false);
     }
@@ -161,7 +154,9 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pop(context); // cerrar dialogo
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Usuarios descargados correctamente. Intente ingresar de nuevo."),
+          content: Text(
+            "Usuarios descargados correctamente. Intente ingresar de nuevo.",
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -169,7 +164,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("No se pudo descargar. Verifique conexión e credenciales."),
+          content: Text(
+            "No se pudo descargar. Verifique conexión e credenciales.",
+          ),
           backgroundColor: Colors.red,
         ),
       );

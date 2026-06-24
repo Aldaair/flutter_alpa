@@ -8,12 +8,13 @@ import 'connection_status.dart';
 class ConnectionProvider extends ChangeNotifier {
   final ConnectionService _service = ConnectionService();
 
-  ConnectionStatus _status = ConnectionStatus.offline;
+  ConnectionStatus _status;
 
   ConnectionStatus get status => _status;
 
-  ConnectionProvider() {
+  ConnectionProvider() : _status = ConnectionStatus.offline {
     _service.initialize();
+    _status = _service.lastStatus;
 
     _service.connectionStream.listen((newStatus) async {
       final previousStatus = _status;
@@ -33,4 +34,10 @@ class ConnectionProvider extends ChangeNotifier {
   }
 
   bool get isOnline => _status == ConnectionStatus.online;
+
+  /// Verifica conexión en tiempo real. Útil en momentos críticos (login, sync manual).
+  Future<bool> checkNow() async {
+    final online = await _service.checkNow();
+    return online;
+  }
 }

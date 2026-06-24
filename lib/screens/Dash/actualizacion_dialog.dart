@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 
 class ActualizacionDialog extends StatefulWidget {
-  final Map<String, bool> opcionesIniciales;
   final Color? primaryColor;
 
-  const ActualizacionDialog({
-    Key? key,
-    required this.opcionesIniciales,
-    this.primaryColor,
-  }) : super(key: key);
+  const ActualizacionDialog({super.key, this.primaryColor});
 
   @override
   State<ActualizacionDialog> createState() => _ActualizacionDialogState();
@@ -42,7 +37,6 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Pernos',
       'Mallas',
       'Origen y Destino',
-      'Guardias',
     ],
     'Perforación': ['Tipos Perforación', 'Accesorios', 'Numero de retardos'],
     'Sistema': [
@@ -50,7 +44,8 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Estados',
       'Checklist',
       'Checklist Carguio',
-      'Autorizaciones',
+      'Equipos por usuario',
+      'Usuario procesos',
     ],
     'Catálogos': [
       'Minas',
@@ -64,13 +59,17 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Labores',
       'Dim Turnos',
       'Procesos',
+      'Cargos',
     ],
   };
 
   @override
   void initState() {
     super.initState();
-    opcionesSeleccionadas = Map<String, bool>.from(widget.opcionesIniciales);
+    opcionesSeleccionadas = {
+      for (var opciones in categorias.values)
+        for (var opcion in opciones) opcion: false,
+    };
     primaryColor = widget.primaryColor ?? Colors.blue[700]!;
     _filtrarOpciones();
   }

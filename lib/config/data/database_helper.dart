@@ -33,7 +33,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 19;
+  static const int _sharedCatalogDbVersion = 21;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -238,7 +238,6 @@ CREATE TABLE usuario_directorio (
   clasificacion TEXT,
   correo TEXT,
   firma TEXT,
-  operaciones_autorizadas TEXT,
   cargo_id INTEGER,
   password TEXT,
   createdAt TEXT,
@@ -460,7 +459,6 @@ CREATE TABLE IF NOT EXISTS cargos (
     await db.execute('''
 CREATE TABLE IF NOT EXISTS usuario_equipos (
   usuarios_id INTEGER NOT NULL,
-  proceso_id INTEGER NOT NULL,
   equipo_id INTEGER NOT NULL
 )
 ''');
@@ -486,6 +484,17 @@ CREATE TABLE pernos (
 CREATE TABLE mallas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   tipo_malla TEXT NOT NULL
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS estados (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  estado_principal TEXT NOT NULL,
+  codigo TEXT NOT NULL,
+  tipo_estado TEXT NOT NULL,
+  categoria TEXT NOT NULL,
+  proceso TEXT NOT NULL
 )
 ''');
   }
@@ -874,7 +883,6 @@ CREATE TABLE IF NOT EXISTS cargos (
         await db.execute('''
 CREATE TABLE IF NOT EXISTS usuario_equipos (
   usuarios_id INTEGER NOT NULL,
-  proceso_id INTEGER NOT NULL,
   equipo_id INTEGER NOT NULL
 )
 ''');
@@ -923,7 +931,6 @@ CREATE TABLE mallas (
         'clasificacion',
         'correo',
         'firma',
-        'operaciones_autorizadas',
         'createdAt',
       ]) {
         if (!await _columnaExiste(db, 'usuario_directorio', col)) {
@@ -932,6 +939,31 @@ CREATE TABLE mallas (
           );
         }
       }
+    }
+
+    if (oldVersion < 20) {
+      if (!await _tablaExiste(db, 'estados')) {
+        await db.execute('''
+CREATE TABLE estados (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  estado_principal TEXT NOT NULL,
+  codigo TEXT NOT NULL,
+  tipo_estado TEXT NOT NULL,
+  categoria TEXT NOT NULL,
+  proceso TEXT NOT NULL
+)
+''');
+      }
+    }
+
+    if (oldVersion < 21) {
+      await db.execute('DROP TABLE IF EXISTS usuario_equipos');
+      await db.execute('''
+CREATE TABLE usuario_equipos (
+  usuarios_id INTEGER NOT NULL,
+  equipo_id INTEGER NOT NULL
+)
+''');
     }
   }
 
@@ -2403,7 +2435,7 @@ CREATE TABLE UsuarioEquipo (
       'operador_id': userData['operador_id'],
       'apellidos': userData['apellidos'],
       'nombres': userData['nombres'],
-      'cargo': userData['cargo'],
+      'cargo_id': userData['cargo_id'],
       'empresa': userData['empresa'],
       'guardia': userData['guardia'],
       'autorizado_equipo': userData['autorizado_equipo'],
@@ -2415,9 +2447,6 @@ CREATE TABLE UsuarioEquipo (
       'rol': userData['rol']?.toString() ?? '',
       'createdAt': userData['createdAt'] ?? DateTime.now().toIso8601String(),
       'updated_at': userData['updatedAt'] ?? DateTime.now().toIso8601String(),
-      'operaciones_autorizadas': jsonEncode(
-        userData['operaciones_autorizadas'] ?? {},
-      ),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -2495,7 +2524,6 @@ CREATE TABLE UsuarioEquipo (
           for (final row in usuarioEquipos) {
             await txn.insert('usuario_equipos', {
               'usuarios_id': operadorId,
-              'proceso_id': (row as Map)['proceso_id'],
               'equipo_id': row['equipo_id'],
             });
           }

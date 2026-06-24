@@ -4,35 +4,35 @@ import 'package:http/http.dart' as http;
 import 'package:i_miner/config/api/api_config.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 
-class ApiServiceUsuarioEquipos {
+class ApiServiceUsuarioProcesos {
   Future<void> fetchAll(String token) async {
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}${ApiConfig.usuarioEquiposEndpoint}'),
+      Uri.parse('${ApiConfig.baseUrl}/usuario-procesos'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode != 200) {
       throw Exception(
-        'Error al cargar equipos por usuario. Codigo: ${response.statusCode}',
+        'Error al cargar usuario-procesos. Codigo: ${response.statusCode}',
       );
     }
 
     final decoded = json.decode(response.body);
     if (decoded is! List) {
       throw Exception(
-        'La respuesta de equipos por usuario debe ser una lista JSON.',
+        'La respuesta de usuario-procesos debe ser una lista JSON.',
       );
     }
 
     final db = await DatabaseHelper().sharedCatalogDatabase;
     final batch = db.batch();
 
-    batch.delete('usuario_equipos');
+    batch.delete('usuario_procesos');
     for (final row in decoded) {
       final item = row as Map;
-      batch.insert('usuario_equipos', {
+      batch.insert('usuario_procesos', {
         'usuarios_id': item['usuario_id'],
-        'equipo_id': item['equipo_id'],
+        'proceso_id': item['proceso_id'],
       });
     }
 

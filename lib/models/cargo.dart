@@ -9,6 +9,6 @@ class Cargo {
   }
 
   Map<String, dynamic> toMap() {
-    return {'id': cargoId, 'nombre': nombre};
+    return {'cargo_id': cargoId, 'nombre': nombre};
   }
 }

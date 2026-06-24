@@ -8,10 +8,16 @@ class ApiServicePlanMensual {
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   // Método para obtener los planes mensuales desde la API
-  Future<List<PlanMensual>> fetchPlanesMensuales(String token, int anio, String mes) async {
+  Future<List<PlanMensual>> fetchPlanesMensuales(
+    String token,
+    int anio,
+    String mes,
+  ) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.PlanMensualEndpoint}anio/$anio/mes/$mes'),
+        Uri.parse(
+          '${ApiConfig.baseUrl}${ApiConfig.planMensualEndpoint}anio/$anio/mes/$mes',
+        ),
         headers: {
           'Authorization': 'Bearer $token', // Token en la cabecera
         },
@@ -31,7 +37,9 @@ class ApiServicePlanMensual {
 
         return planes;
       } else {
-        throw Exception('Error al obtener los planes mensuales. Código: ${response.statusCode}');
+        throw Exception(
+          'Error al obtener los planes mensuales. Código: ${response.statusCode}',
+        );
       }
     } catch (error) {
       throw Exception('Error en la solicitud: $error');
@@ -42,7 +50,9 @@ class ApiServicePlanMensual {
   Future<void> savePlanesToLocalDB(List<PlanMensual> planes) async {
     for (var plan in planes) {
       Map<String, dynamic> planData = plan.toMap();
-      planData.remove('id'); // Asegurar que no se inserte el id para evitar conflictos
+      planData.remove(
+        'id',
+      ); // Asegurar que no se inserte el id para evitar conflictos
       await _dbHelper.insert('PlanMensual', planData);
     }
   }

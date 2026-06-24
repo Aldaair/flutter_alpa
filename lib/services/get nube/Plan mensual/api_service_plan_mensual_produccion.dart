@@ -7,13 +7,17 @@ import 'package:i_miner/models/PlanProduccion.dart';
 class ApiServicePlanProduccion {
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  Future<List<PlanProduccion>> fetchPlanesProduccion(String token, int anio, String mes) async {
+  Future<List<PlanProduccion>> fetchPlanesProduccion(
+    String token,
+    int anio,
+    String mes,
+  ) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.PlanProduccionEndpoint}anio/$anio/mes/$mes'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        Uri.parse(
+          '${ApiConfig.baseUrl}${ApiConfig.planProduccionEndpoint}anio/$anio/mes/$mes',
+        ),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -27,7 +31,9 @@ class ApiServicePlanProduccion {
 
         return planes;
       } else {
-        throw Exception('Error al obtener los planes de producción. Código: ${response.statusCode}');
+        throw Exception(
+          'Error al obtener los planes de producción. Código: ${response.statusCode}',
+        );
       }
     } catch (error) {
       throw Exception('Error en la solicitud: $error');

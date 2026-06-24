@@ -7,26 +7,26 @@ class ApiConfig {
   static const String loginEndpoint = '/auth/login';
   static const String estadosEndpoint = '/estado/';
   static const String checklistEndpoint = '/check-list';
-  static const String jefe_guardias = '/usuarios/jefes-guardia';
+  static const String jefeGuardiasEndpoint = '/usuarios/jefes-guardia';
   static const String equipoEndpoint = '/equipo/';
   static const String tipoPerforacionEndpoint = '/tipo-perforaciones/';
 
-  static const String PlanProduccionEndpoint = '/PlanProduccion/';
+  static const String planProduccionEndpoint = '/PlanProduccion/';
   static const String planMetrajeTLEndpoint = '/planes/metraje-tl/';
   static const String periodosEndpoint = '/planes/periodos';
 
-  static const String PlanMensualEndpoint = '/PlanMensual/';
+  static const String planMensualEndpoint = '/PlanMensual/';
   static const String misLaboresEndpoint = '/mis-labores';
   static const String tipoHorometroEndpoint = '/tipo-horometro';
   static const String equipoHorometroTiposEndpoint = '/Equipo/horometro-tipos';
   static const String checklistTelemandoEndpoint = '/checklists-telemando';
-  static const String ZonasEndpoint = '/planes/zonas';
+  static const String zonasEndpoint = '/planes/zonas';
   static const String longitudBarrasEndpoint = '/longitud-barras/';
   static const String pernosEndpoint = '/pernos/';
   static const String mallasEndpoint = '/mallas/';
-  static const String OrigenDestinoEndpoint = '/origen-destino/';
+  static const String origenDestinoEndpoint = '/origen-destino/';
 
-  static const String AccesorioEndpoint = '/Accesorios/';
+  static const String accesorioEndpoint = '/Accesorios/';
   static const String datosExploracionesEndpoint = '/NubeDatosExploraciones';
   static const String datosExploracionesmedionesEndpoint =
       '/NubeDatosExploraciones/Explo-medicion';
@@ -46,17 +46,17 @@ class ApiConfig {
   static const String procesosEndpoint = '/procesos';
   static const String cargosEndpoint = '/cargos';
   static const String usuarioDirectorioEndpoint = '/usuarios';
-  static const String usuarioEquiposEndpoint = '/usuarios-equipos';
+  static const String usuarioEquiposEndpoint = '/usuario-equipos';
 
   // API v2 — operaciones
   static const String operacionesV2Base = '/operaciones-v2';
-  static const String operacionTalLargoEndpoint = '$operacionesV2Base/tal-largo';
+  static const String operacionTalLargoEndpoint =
+      '$operacionesV2Base/tal-largo';
   static const String operacionTalHorizontalEndpoint =
       '$operacionesV2Base/tal-horizontal';
   static const String operacionCarguioEndpoint = '$operacionesV2Base/carguio';
   static const String operacionEmpernadorEndpoint =
       '$operacionesV2Base/empernador';
-  static const String operacionScalaminEndpoint =
-      '$operacionesV2Base/scalamin';
+  static const String operacionScalaminEndpoint = '$operacionesV2Base/scalamin';
   static const String operacionScissorEndpoint = '$operacionesV2Base/scissor';
 }

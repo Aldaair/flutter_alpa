@@ -14,7 +14,7 @@ class ApiServiceZona {
   Future<List<Zona>> fetchZonas(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.ZonasEndpoint}'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.zonasEndpoint}'),
         headers: {'Authorization': 'Bearer $token'},
       );
 

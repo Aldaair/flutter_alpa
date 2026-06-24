@@ -11,10 +11,8 @@ class ApiServiceOrigenDestino {
   Future<List<OrigenDestino>> fetchOrigenDestino(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.OrigenDestinoEndpoint}'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.origenDestinoEndpoint}'),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -33,7 +31,8 @@ class ApiServiceOrigenDestino {
         return lista;
       } else {
         throw Exception(
-            'Error al cargar origen_destino. Código: ${response.statusCode}');
+          'Error al cargar origen_destino. Código: ${response.statusCode}',
+        );
       }
     } catch (error) {
       throw Exception('Error en la solicitud: $error');

@@ -14,7 +14,7 @@ class ApiServiceJefeGuardia {
   Future<List<JefeGuardia>> fetchJefesGuardia(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.jefe_guardias}'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.jefeGuardiasEndpoint}'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
