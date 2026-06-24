@@ -34,8 +34,6 @@ import 'package:i_miner/services/get%20nube/llamadas/api_service_labores.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_dim_turnos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_cargos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_directorio.dart';
-import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_equipos.dart';
-import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_procesos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_procesos.dart';
 
 class ActualizacionService {
@@ -79,8 +77,6 @@ class ActualizacionService {
       "Autorizaciones": refreshOfflineAuthorizationSnapshot,
       "Cargos": fetchCargos,
       "Usuarios": fetchUsuarios,
-      "Equipos por usuario": fetchUsuarioEquipos,
-      "Usuario procesos": fetchUsuarioProcesos,
     };
   }
 
@@ -736,27 +732,4 @@ class ActualizacionService {
     }
   }
 
-  Future<void> fetchUsuarioEquipos() async {
-    final apiService = ApiServiceUsuarioEquipos();
-
-    try {
-      await apiService.fetchAll(token);
-      print("✅ Equipos por usuario guardados en shared DB");
-    } catch (e) {
-      print("❌ Error al actualizar equipos por usuario: $e");
-      throw e;
-    }
-  }
-
-  Future<void> fetchUsuarioProcesos() async {
-    final apiService = ApiServiceUsuarioProcesos();
-
-    try {
-      await apiService.fetchAll(token);
-      print("✅ Usuario procesos guardados en shared DB");
-    } catch (e) {
-      print("❌ Error al actualizar usuario procesos: $e");
-      throw e;
-    }
-  }
 }

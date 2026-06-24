@@ -4,6 +4,7 @@ class OperacionCardConfig {
   final bool mostrarCapacidad;
   final bool mostrarTipoEquipo;
   final bool usarAutorizacion;
+  final bool soloIds;
   final String claveCodigo;
   final String claveJefeGuardia;
 
@@ -13,6 +14,7 @@ class OperacionCardConfig {
     this.mostrarCapacidad = false,
     this.mostrarTipoEquipo = false,
     this.usarAutorizacion = false,
+    this.soloIds = false,
     this.claveCodigo = 'codigo',
     this.claveJefeGuardia = 'jefeGuardia',
   });

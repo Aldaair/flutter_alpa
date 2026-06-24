@@ -119,7 +119,7 @@ class MisLaboresService {
     final user = await _databaseHelper.getUserByDni(currentUserDni);
     return {
       'dni': currentUserDni,
-      'operador_id': user?['operador_id'],
+      'operador_id': user?['id'],
       'user_id': user?['user_id'],
     };
   }

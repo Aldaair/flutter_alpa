@@ -16,7 +16,7 @@ import 'package:i_miner/models/JefeGuardia.dart';
 import 'package:i_miner/models/PlanMetrajeTL.dart';
 import 'package:i_miner/models/zona.dart';
 
-import 'package:crypt/crypt.dart';
+import 'package:bcrypt/bcrypt.dart';
 import 'package:i_miner/models/guardia.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -33,7 +33,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 21;
+  static const int _sharedCatalogDbVersion = 22;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -226,7 +226,7 @@ CREATE TABLE jefe_guardias (
     await db.execute('''
 CREATE TABLE usuario_directorio (
   codigo_dni TEXT PRIMARY KEY,
-  operador_id INTEGER,
+  id INTEGER,
   nombres TEXT NOT NULL,
   apellidos TEXT NOT NULL,
   rol TEXT,
@@ -513,7 +513,7 @@ CREATE TABLE IF NOT EXISTS estados (
         await db.execute('''
 CREATE TABLE usuario_directorio (
   codigo_dni TEXT PRIMARY KEY,
-  operador_id INTEGER,
+  id INTEGER,
   nombres TEXT NOT NULL,
   apellidos TEXT NOT NULL,
   rol TEXT,
@@ -962,6 +962,31 @@ CREATE TABLE estados (
 CREATE TABLE usuario_equipos (
   usuarios_id INTEGER NOT NULL,
   equipo_id INTEGER NOT NULL
+)
+''');
+    }
+
+    if (oldVersion < 22) {
+      await db.execute('DROP TABLE IF EXISTS usuario_directorio');
+      await db.execute('''
+CREATE TABLE usuario_directorio (
+  codigo_dni TEXT PRIMARY KEY,
+  id INTEGER,
+  nombres TEXT NOT NULL,
+  apellidos TEXT NOT NULL,
+  rol TEXT,
+  cargo TEXT,
+  empresa TEXT,
+  guardia TEXT,
+  autorizado_equipo TEXT,
+  area TEXT,
+  clasificacion TEXT,
+  correo TEXT,
+  firma TEXT,
+  cargo_id INTEGER,
+  password TEXT,
+  createdAt TEXT,
+  updated_at TEXT NOT NULL
 )
 ''');
     }
@@ -2424,32 +2449,6 @@ CREATE TABLE UsuarioEquipo (
     return await db.update(table, data, where: 'id = ?', whereArgs: [id]);
   }
 
-  //USUARIOS
-  // **Guardar Usuario en SQLite**
-  Future<void> saveUser(Map<String, dynamic> userData, String password) async {
-    final db = await sharedCatalogDatabase;
-    final hashedPassword = Crypt.sha256(password).toString();
-
-    await db.insert('usuario_directorio', {
-      'codigo_dni': userData['codigo_dni'],
-      'operador_id': userData['operador_id'],
-      'apellidos': userData['apellidos'],
-      'nombres': userData['nombres'],
-      'cargo_id': userData['cargo_id'],
-      'empresa': userData['empresa'],
-      'guardia': userData['guardia'],
-      'autorizado_equipo': userData['autorizado_equipo'],
-      'area': userData['area'],
-      'clasificacion': userData['clasificacion'],
-      'correo': userData['correo'],
-      'password': hashedPassword,
-      'firma': userData['firma'] ?? '',
-      'rol': userData['rol']?.toString() ?? '',
-      'createdAt': userData['createdAt'] ?? DateTime.now().toIso8601String(),
-      'updated_at': userData['updatedAt'] ?? DateTime.now().toIso8601String(),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
   static void setDatabasePathOverride(String? path) {
     _databasePathOverride = path;
   }
@@ -2462,73 +2461,6 @@ CREATE TABLE UsuarioEquipo (
     if (_sharedCatalogDatabase != null) {
       await _sharedCatalogDatabase!.close();
       _sharedCatalogDatabase = null;
-    }
-  }
-
-  Future<void> syncAuthorizationData(
-    Map<String, dynamic> userData, {
-    String? password,
-  }) async {
-    final sharedDb = await sharedCatalogDatabase;
-    final updates = <String, dynamic>{
-      'updated_at': DateTime.now().toIso8601String(),
-    };
-    if (password != null && password.isNotEmpty) {
-      final hashedPassword = Crypt.sha256(password).toString();
-      updates['password'] = hashedPassword;
-    }
-    final operadorId = userData['operador_id'] as int?;
-    if (operadorId != null) {
-      updates['operador_id'] = operadorId;
-    }
-    await sharedDb.update(
-      'usuario_directorio',
-      updates,
-      where: 'codigo_dni = ?',
-      whereArgs: [userData['codigo_dni']],
-    );
-
-    final auth = userData['normalized_authorization'] as Map<String, dynamic>?;
-    if (auth == null) return;
-
-    final dni = userData['codigo_dni']?.toString();
-    if (dni == null || dni.isEmpty) return;
-    if (operadorId != null) {
-      final usuarioProcesos = auth['usuario_procesos'] as List?;
-      await sharedDb.transaction((txn) async {
-        await txn.delete(
-          'usuario_procesos',
-          where: 'usuarios_id = ?',
-          whereArgs: [operadorId],
-        );
-        if (usuarioProcesos != null) {
-          for (final row in usuarioProcesos) {
-            await txn.insert('usuario_procesos', {
-              'usuarios_id': operadorId,
-              'proceso_id': (row as Map)['proceso_id'],
-            });
-          }
-        }
-      });
-    }
-
-    if (operadorId != null) {
-      final usuarioEquipos = auth['usuario_equipos'] as List?;
-      await sharedDb.transaction((txn) async {
-        await txn.delete(
-          'usuario_equipos',
-          where: 'usuarios_id = ?',
-          whereArgs: [operadorId],
-        );
-        if (usuarioEquipos != null) {
-          for (final row in usuarioEquipos) {
-            await txn.insert('usuario_equipos', {
-              'usuarios_id': operadorId,
-              'equipo_id': row['equipo_id'],
-            });
-          }
-        }
-      });
     }
   }
 
@@ -2552,7 +2484,7 @@ CREATE TABLE UsuarioEquipo (
       final sharedDb = await sharedCatalogDatabase;
       final rows = await sharedDb.query(
         'usuario_directorio',
-        columns: ['password', 'nombres', 'apellidos', 'rol', 'operador_id'],
+        columns: ['password', 'nombres', 'apellidos', 'rol', 'id'],
         where: 'codigo_dni = ?',
         whereArgs: [dni],
         limit: 1,
@@ -2561,7 +2493,7 @@ CREATE TABLE UsuarioEquipo (
       if (rows.isNotEmpty) {
         final hash = rows.first['password'] as String?;
         if (hash != null && hash.isNotEmpty) {
-          if (Crypt(hash).match(password)) {
+          if (BCrypt.checkpw(password, hash)) {
             await setCurrentUserDni(dni);
             return true;
           }
@@ -2583,8 +2515,7 @@ CREATE TABLE UsuarioEquipo (
 
     if (result.isNotEmpty) {
       final user = Map<String, dynamic>.from(result.first);
-      // Compatibilidad con campos esperados por screens
-      user['id'] = user['codigo_dni'];
+      user['id'] = user['id'] ?? user['codigo_dni'];
       user['createdAt'] = user['createdAt'] ?? user['updated_at'];
       user['updatedAt'] = user['updated_at'];
       user['password'] = user['password'] ?? '';
@@ -2593,13 +2524,31 @@ CREATE TABLE UsuarioEquipo (
     return null;
   }
 
+  Future<bool> userHasCargo(String dni, List<String> cargosPermitidos) async {
+    final user = await getUserByDni(dni);
+    if (user == null) return false;
+    final cargoId = user['cargo_id'];
+    if (cargoId == null) return false;
+    final db = await sharedCatalogDatabase;
+    final result = await db.query(
+      'cargos',
+      columns: ['nombre'],
+      where: 'cargo_id = ?',
+      whereArgs: [cargoId],
+      limit: 1,
+    );
+    if (result.isEmpty) return false;
+    final nombre =
+        (result.first['nombre'] as String?)?.trim().toUpperCase() ?? '';
+    return cargosPermitidos.any((c) => c.toUpperCase() == nombre);
+  }
+
   Future<List<Map<String, dynamic>>> getKnownOperators() async {
     final db = await sharedCatalogDatabase;
     final users = await db.query('usuario_directorio');
     return users.asMap().entries.map((entry) {
       final u = Map<String, dynamic>.from(entry.value);
-      u['id'] = entry.key + 1;
-      u['operador_id'] = u['operador_id'] ?? u['codigo_dni'];
+      u['id'] = u['id'] ?? entry.key + 1;
       u['nombre_completo'] = '${u['nombres']} ${u['apellidos']}';
       return u;
     }).toList();
@@ -2877,53 +2826,38 @@ CREATE TABLE UsuarioEquipo (
 
   //OPERACION TALADRO LARGO  INICIO --------------------------------------------------------------------------------------------------------------
   Future<int> insertOperacionTalLargo(
-    String fecha,
-    String turno,
-    String seccion,
-    String operador,
-    String jefeGuardia,
-    String equipo,
-    String nEquipo,
-    String modeloEquipo, {
+    String fecha, {
     List<Map<String, dynamic>>? checkListJson,
     List<Map<String, dynamic>>? horometrosBase,
-    String? actorDni,
     int? actorOperadorId,
     int? operadorId,
     int? equipoId,
-    int? zonaId,
     int? jefeGuardiaId,
     int? identityVersion,
     int? syncable,
     int? turnoId,
-    String? frenteOrigen,
     int? registradorUsuarioId,
-    String? registradorNombre,
     int? laborId,
     String? labor,
   }) async {
     final db = await database;
 
-    // 🔥 estructura base (fallback seguro)
     Map<String, dynamic> horometrosJson = {
       'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
       'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
       'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
     };
 
-    // 🔥 si vienen datos de la nube, los usamos
     if (horometrosBase != null && horometrosBase.isNotEmpty) {
       for (var item in horometrosBase) {
         final tipo = item['tipo_horometro'];
         final finalValor = (item['final'] ?? 0).toDouble();
-
         if (horometrosJson.containsKey(tipo)) {
           horometrosJson[tipo]['inicio'] = finalValor;
         }
       }
     }
 
-    // 🔹 resto igual
     Map<String, dynamic> condicionesEquipoJson = {
       'op': false,
       'noOp': false,
@@ -2947,25 +2881,15 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'turno': turno,
-      'seccion': seccion,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'n_equipo': nEquipo,
-      'modelo_equipo': modeloEquipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorDni != null) insertData['actor_dni'] = actorDni;
     if (actorOperadorId != null)
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
-
     if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
     if (identityVersion != null)
       insertData['identity_version'] = identityVersion;
@@ -2973,9 +2897,7 @@ CREATE TABLE UsuarioEquipo (
     _appendHybridOperationMetadata(
       insertData,
       turnoId: turnoId,
-      frenteOrigen: frenteOrigen,
       registradorUsuarioId: registradorUsuarioId,
-      registradorNombre: registradorNombre,
       laborId: laborId,
       labor: labor,
     );
@@ -2995,22 +2917,22 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<Map<String, dynamic>>> getOperacionTalLargoByTurnoAndFechaMaster(
-    String turno,
+    int turnoId,
     String fecha,
   ) async {
     final db = await database;
 
     final List<Map<String, dynamic>> result = await db.query(
       'Operacion_tal_largo',
-      where: 'turno = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turno, fecha, 'activo', 'parciales'],
+      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
+      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
     );
 
     return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionTalLargoByTurnoAndFecha(
-    String turno,
+    int turnoId,
     String fecha, {
     int? operadorId,
   }) async {
@@ -3019,11 +2941,11 @@ CREATE TABLE UsuarioEquipo (
     late final String where;
     late final List<dynamic> whereArgs;
     if (operadorId != null) {
-      where = 'turno = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turno, fecha, operadorId];
+      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
+      whereArgs = [turnoId, fecha, operadorId];
     } else {
-      where = 'turno = ? AND fecha = ?';
-      whereArgs = [turno, fecha];
+      where = 'turno_id = ? AND fecha = ?';
+      whereArgs = [turnoId, fecha];
     }
 
     final List<Map<String, dynamic>> result = await db.query(
@@ -3035,16 +2957,35 @@ CREATE TABLE UsuarioEquipo (
     return result;
   }
 
+  Future<bool> existeOperacionEnTurno({
+    required String tableName,
+    required int turnoId,
+    required String fecha,
+    required int operadorId,
+  }) async {
+    final db = await database;
+    final result = await db.query(
+      tableName,
+      columns: ['id'],
+      where:
+          'turno_id = ? AND fecha = ? AND operador_id = ? AND estado IN (?, ?)',
+      whereArgs: [turnoId, fecha, operadorId, 'activo', 'parciales'],
+      limit: 1,
+    );
+    return result.isNotEmpty;
+  }
+
   // Función para cerrar un estado (actualizar hora_final de un estado específico)
   Future<bool> updateHoraFinal(
     int operacionId,
     int estadoId,
-    String horaFinal,
-  ) async {
+    String horaFinal, {
+    String tableName = 'Operacion_tal_largo',
+  }) async {
     final db = await database;
 
     final result = await db.query(
-      'Operacion_tal_largo',
+      tableName,
       columns: ['registros'],
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3075,7 +3016,7 @@ CREATE TABLE UsuarioEquipo (
     }
 
     int updated = await db.update(
-      'Operacion_tal_largo',
+      tableName,
       {'registros': jsonEncode(registros)},
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3085,21 +3026,19 @@ CREATE TABLE UsuarioEquipo (
     return updated > 0;
   }
 
-  // Función para crear un nuevo estado en una operación existente
   Future<Map<String, dynamic>?> createEstado(
     int operacionId,
     String estado,
     String codigo,
     String horaInicio, {
     String? horaFinal,
-    Map<String, dynamic>?
-    operacion, // Ahora acepta todos los campos de perforación
+    Map<String, dynamic>? operacion,
+    String tableName = 'Operacion_tal_largo',
   }) async {
     final db = await database;
 
-    // 1. Obtener el registro actual
     final result = await db.query(
-      'Operacion_tal_largo',
+      tableName,
       columns: ['registros'],
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3109,51 +3048,16 @@ CREATE TABLE UsuarioEquipo (
       return null;
     }
 
-    // 2. Parsear el JSON de registros existentes
     String registrosJson = result.first['registros'] as String? ?? '[]';
     List<dynamic> registros = jsonDecode(registrosJson);
 
-    // 3. Determinar el próximo número
     int nuevoNumero = 1;
     if (registros.isNotEmpty) {
       int ultimoNumero = registros.last['numero'] ?? 0;
       nuevoNumero = ultimoNumero + 1;
     }
 
-    // 4. Crear el nuevo estado con ID único
     int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    // Estructura completa del objeto operacion con todos los campos
-    Map<String, dynamic> operacionCompleta = {
-      // Campos de ubicación
-      'nivel': operacion?['nivel'] ?? '',
-      'tipo_labor': operacion?['tipo_labor'] ?? '',
-      'labor': operacion?['labor'] ?? '',
-      'ala': operacion?['ala'] ?? '',
-
-      // ✅ NUEVOS CAMPOS: Cada taladro con sus dos propiedades
-      'n_taladros_produccion': operacion?['n_taladros_produccion'] ?? '',
-      'metros_perforados_produccion':
-          operacion?['metros_perforados_produccion'] ?? '',
-      'n_taladros_rimados': operacion?['n_taladros_rimados'] ?? '',
-      'metros_perforados_rimados':
-          operacion?['metros_perforados_rimados'] ?? '',
-      'n_taladros_alivio': operacion?['n_taladros_alivio'] ?? '',
-      'metros_perforados_alivio': operacion?['metros_perforados_alivio'] ?? '',
-      'n_taladros_repaso': operacion?['n_taladros_repaso'] ?? '',
-      'metros_perforados_repaso': operacion?['metros_perforados_repaso'] ?? '',
-
-      // Campos de barras
-      'long_barras': operacion?['long_barras'] ?? '',
-      'num_barras': operacion?['num_barras'] ?? '',
-
-      // Tipo de perforación
-      'tipo_perforacion': operacion?['tipo_perforacion'] ?? '',
-      'tipo_perforacion_id': operacion?['tipo_perforacion_id'],
-
-      // Observaciones
-      'observaciones': operacion?['observaciones'] ?? '',
-    };
 
     Map<String, dynamic> nuevoEstado = {
       'id': nuevoId,
@@ -3162,15 +3066,12 @@ CREATE TABLE UsuarioEquipo (
       'codigo': codigo,
       'hora_inicio': horaInicio,
       'hora_final': horaFinal,
-      'operacion': operacionCompleta,
+      'operacion': {...?operacion},
     };
 
-    // 5. Agregar al array
     registros.add(nuevoEstado);
-
-    // 6. Guardar en la base de datos
     await db.update(
-      'Operacion_tal_largo',
+      tableName,
       {'registros': jsonEncode(registros)},
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3189,12 +3090,12 @@ CREATE TABLE UsuarioEquipo (
     String? horaInicio,
     String? horaFinal,
     Map<String, dynamic>? operacion,
+    String tableName = 'Operacion_tal_largo',
   }) async {
     final db = await database;
 
-    // 1. Obtener el registro actual
     final result = await db.query(
-      'Operacion_tal_largo',
+      tableName,
       columns: ['registros'],
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3233,9 +3134,8 @@ CREATE TABLE UsuarioEquipo (
       return false;
     }
 
-    // 4. Guardar los cambios
     int updated = await db.update(
-      'Operacion_tal_largo',
+      tableName,
       {'registros': jsonEncode(registros)},
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3246,12 +3146,13 @@ CREATE TABLE UsuarioEquipo (
 
   // Función para obtener todos los estados de una operación
   Future<List<Map<String, dynamic>>> getEstadosByOperacionId(
-    int operacionId,
-  ) async {
+    int operacionId, {
+    String tableName = 'Operacion_tal_largo',
+  }) async {
     final db = await database;
 
     final result = await db.query(
-      'Operacion_tal_largo',
+      tableName,
       columns: ['registros'],
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3267,12 +3168,15 @@ CREATE TABLE UsuarioEquipo (
     return registros.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
-  Future<bool> deleteEstado(int operacionId, int estadoId) async {
+  Future<bool> deleteEstado(
+    int operacionId,
+    int estadoId, {
+    String tableName = 'Operacion_tal_largo',
+  }) async {
     final db = await database;
 
-    // 1. Obtener registros
     final result = await db.query(
-      'Operacion_tal_largo',
+      tableName,
       columns: ['registros'],
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3349,9 +3253,8 @@ CREATE TABLE UsuarioEquipo (
       }
     }
 
-    // 9. Guardar
     int updated = await db.update(
-      'Operacion_tal_largo',
+      tableName,
       {'registros': jsonEncode(nuevosRegistros)},
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3585,12 +3488,13 @@ CREATE TABLE UsuarioEquipo (
 
   Future<Map<String, dynamic>> getOperacionByEstadoId(
     int operacionId,
-    int estadoId,
-  ) async {
+    int estadoId, {
+    String tableName = 'Operacion_tal_largo',
+  }) async {
     final db = await database;
 
     final result = await db.query(
-      'Operacion_tal_largo',
+      tableName,
       columns: ['registros'],
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3686,12 +3590,13 @@ CREATE TABLE UsuarioEquipo (
   Future<bool> updateOperacionByEstadoId(
     int operacionId,
     int estadoId,
-    Map<String, dynamic> operacionData,
-  ) async {
+    Map<String, dynamic> operacionData, {
+    String tableName = 'Operacion_tal_largo',
+  }) async {
     final db = await database;
 
     final result = await db.query(
-      'Operacion_tal_largo',
+      tableName,
       columns: ['registros'],
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3735,9 +3640,8 @@ CREATE TABLE UsuarioEquipo (
         updateData['labor'] = labor;
       }
 
-      // Guardar en la base de datos
       int updated = await db.update(
-        'Operacion_tal_largo',
+        tableName,
         updateData,
         where: 'id = ?',
         whereArgs: [operacionId],
@@ -3751,28 +3655,31 @@ CREATE TABLE UsuarioEquipo (
     }
   }
 
-  Future<void> cerrarOperacion(int operacionId) async {
+  Future<void> cerrarOperacion(
+    int operacionId, {
+    String tableName = 'Operacion_tal_largo',
+  }) async {
     final Database db = await DatabaseHelper().database;
 
     await db.update(
-      'Operacion_tal_largo',
-      {'estado': 'cerrado'}, // Nuevo estado
+      tableName,
+      {'estado': 'cerrado'},
       where: 'id = ?',
-      whereArgs: [operacionId], // Parámetro para evitar SQL Injection
+      whereArgs: [operacionId],
     );
   }
 
-  // Crear estado RESERVA (código 401)
   Future<Map<String, dynamic>?> createReservaEstado(
     int operacionId,
     int numero,
     String horaInicio,
-    String horaFinal,
-  ) async {
+    String horaFinal, {
+    String tableName = 'Operacion_tal_largo',
+  }) async {
     final db = await database;
 
     final result = await db.query(
-      'Operacion_tal_largo',
+      tableName,
       columns: ['registros'],
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3783,41 +3690,22 @@ CREATE TABLE UsuarioEquipo (
     String registrosJson = result.first['registros'] as String? ?? '[]';
     List<dynamic> registros = jsonDecode(registrosJson);
 
-    // Crear nuevo estado RESERVA
     int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
 
     Map<String, dynamic> nuevoEstado = {
       'id': nuevoId,
       'numero': numero,
       'estado': 'RESERVA',
-      'codigo': '401', // Código para RESERVA
+      'codigo': '401',
       'hora_inicio': horaInicio,
       'hora_final': horaFinal,
-      'operacion': {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'n_taladros_produccion': '',
-        'metros_perforados_produccion': '',
-        'n_taladros_rimados': '',
-        'metros_perforados_rimados': '',
-        'n_taladros_alivio': '',
-        'metros_perforados_alivio': '',
-        'n_taladros_repaso': '',
-        'metros_perforados_repaso': '',
-        'long_barras': '',
-        'num_barras': '',
-        'tipo_perforacion': '',
-        'tipo_perforacion_id': null,
-        'observaciones': '',
-      },
+      'operacion': <String, dynamic>{},
     };
 
     registros.add(nuevoEstado);
 
     await db.update(
-      'Operacion_tal_largo',
+      tableName,
       {'registros': jsonEncode(registros)},
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3827,12 +3715,13 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<Map<String, dynamic>?> getUltimoEstadoByOperacionId(
-    int operacionId,
-  ) async {
+    int operacionId, {
+    String tableName = 'Operacion_tal_largo',
+  }) async {
     final db = await database;
 
     final result = await db.query(
-      'Operacion_tal_largo',
+      tableName,
       columns: ['registros'],
       where: 'id = ?',
       whereArgs: [operacionId],
@@ -3964,22 +3853,22 @@ CREATE TABLE UsuarioEquipo (
 
   Future<List<Map<String, dynamic>>>
   getOperacionTalHorizontalByTurnoAndFechaMaster(
-    String turno,
+    int turnoId,
     String fecha,
   ) async {
     final db = await database;
 
     final List<Map<String, dynamic>> result = await db.query(
       'Operacion_tal_horizontal',
-      where: 'turno = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turno, fecha, 'activo', 'parciales'],
+      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
+      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
     );
 
     return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionTalHorizontalByTurnoAndFecha(
-    String turno,
+    int turnoId,
     String fecha, {
     int? operadorId,
   }) async {
@@ -3988,11 +3877,11 @@ CREATE TABLE UsuarioEquipo (
     late final String where;
     late final List<dynamic> whereArgs;
     if (operadorId != null) {
-      where = 'turno = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turno, fecha, operadorId];
+      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
+      whereArgs = [turnoId, fecha, operadorId];
     } else {
-      where = 'turno = ? AND fecha = ?';
-      whereArgs = [turno, fecha];
+      where = 'turno_id = ? AND fecha = ?';
+      whereArgs = [turnoId, fecha];
     }
 
     final List<Map<String, dynamic>> result = await db.query(
@@ -4008,23 +3897,10 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Map<String, dynamic>>> getEstadosByOperacionIdHorizontal(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_tal_horizontal',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getEstadosByOperacionId(
+      operacionId,
+      tableName: 'Operacion_tal_horizontal',
     );
-
-    if (result.isEmpty) {
-      return [];
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    return registros.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   Future<int> eliminarOperacionTalHorizontalFisico(int id) async {
@@ -4044,48 +3920,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_tal_horizontal',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateHoraFinal(
+      operacionId,
+      estadoId,
+      horaFinal,
+      tableName: 'Operacion_tal_horizontal',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    bool encontrado = false;
-    String tipoEstado = "";
-
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'].toString() == estadoId.toString()) {
-        tipoEstado = registros[i]['estado']; // Guardar el tipo para log
-        registros[i]['hora_final'] = horaFinal;
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      print("⚠ Estado no encontrado en JSON");
-      return false;
-    }
-
-    int updated = await db.update(
-      'Operacion_tal_horizontal',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("✔ Hora final actualizada para estado $tipoEstado: $horaFinal");
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>?> createEstadoHorizontal(
@@ -4097,72 +3937,15 @@ CREATE TABLE UsuarioEquipo (
     Map<String, dynamic>?
     operacion, // Ahora acepta todos los campos de perforación
   }) async {
-    final db = await database;
-
-    // 1. Obtener el registro actual
-    final result = await db.query(
-      'Operacion_tal_horizontal',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createEstado(
+      operacionId,
+      estado,
+      codigo,
+      horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion,
+      tableName: 'Operacion_tal_horizontal',
     );
-
-    if (result.isEmpty) {
-      return null;
-    }
-
-    // 2. Parsear el JSON de registros existentes
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Determinar el próximo número
-    int nuevoNumero = 1;
-    if (registros.isNotEmpty) {
-      int ultimoNumero = registros.last['numero'] ?? 0;
-      nuevoNumero = ultimoNumero + 1;
-    }
-
-    // 4. Crear el nuevo estado con ID único
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    // Estructura completa del objeto operacion con todos los campos
-    Map<String, dynamic> operacionCompleta = {
-      'nivel': operacion?['nivel'] ?? '',
-      'tipo_labor': operacion?['tipo_labor'] ?? '',
-      'labor': operacion?['labor'] ?? '',
-      'ala': operacion?['ala'] ?? '',
-      'tal_prod': operacion?['tal_prod'] ?? '',
-      'tal_rimados': operacion?['tal_rimados'] ?? '',
-      'tal_alivio': operacion?['tal_alivio'] ?? '',
-      'tal_repaso': operacion?['tal_repaso'] ?? '',
-      'long_barras': operacion?['long_barras'] ?? '',
-      'num_barras': operacion?['num_barras'] ?? '',
-      'tipo_perforacion': operacion?['tipo_perforacion'] ?? '',
-      'observaciones': operacion?['observaciones'] ?? '',
-    };
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': nuevoNumero,
-      'estado': estado,
-      'codigo': codigo,
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': operacionCompleta,
-    };
-
-    // 5. Agregar al array
-    registros.add(nuevoEstado);
-
-    // 6. Guardar en la base de datos
-    await db.update(
-      'Operacion_tal_horizontal',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<bool> updateEstadoHorizontal(
@@ -4175,139 +3958,28 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, String>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener el registro actual
-    final result = await db.query(
-      'Operacion_tal_horizontal',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateEstado(
+      operacionId,
+      estadoId,
+      numero: numero,
+      estado: estado,
+      codigo: codigo,
+      horaInicio: horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion?.map((k, v) => MapEntry(k, v.toString())),
+      tableName: 'Operacion_tal_horizontal',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    // 2. Parsear el JSON de registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Buscar y actualizar el estado específico
-    bool encontrado = false;
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'] == estadoId) {
-        // Actualizar solo los campos proporcionados
-        if (numero != null) registros[i]['numero'] = numero;
-        if (estado != null) registros[i]['estado'] = estado;
-        if (codigo != null) registros[i]['codigo'] = codigo;
-        if (horaInicio != null) registros[i]['hora_inicio'] = horaInicio;
-        if (horaFinal != null) registros[i]['hora_final'] = horaFinal;
-        if (operacion != null) {
-          registros[i]['operacion'] = {
-            ...registros[i]['operacion'] as Map,
-            ...operacion,
-          };
-        }
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      return false;
-    }
-
-    // 4. Guardar los cambios
-    int updated = await db.update(
-      'Operacion_tal_horizontal',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>> getOperacionByEstadoIdHorizontal(
     int operacionId,
     int estadoId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_tal_horizontal',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_tal_horizontal',
     );
-
-    if (result.isEmpty) {
-      // Si no hay datos, devolver estructura por defecto
-      return {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'tal_prod': '',
-        'tal_rimados': '',
-        'tal_alivio': '',
-        'tal_repaso': '',
-        'long_barras': '',
-        'num_barras': '',
-        'tipo_perforacion': '',
-        'observaciones': '',
-      };
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      // Buscar el estado específico por su ID
-      var estadoEncontrado = registros.firstWhere(
-        (estado) => estado['id'] == estadoId,
-        orElse: () => null,
-      );
-
-      if (estadoEncontrado != null &&
-          estadoEncontrado.containsKey('operacion')) {
-        return estadoEncontrado['operacion'] as Map<String, dynamic>;
-      } else {
-        // Si no se encuentra o no tiene operacion, devolver estructura por defecto
-        return {
-          'nivel': '',
-          'tipo_labor': '',
-          'labor': '',
-          'ala': '',
-          'tal_prod': '',
-          'tal_rimados': '',
-          'tal_alivio': '',
-          'tal_repaso': '',
-          'long_barras': '',
-          'num_barras': '',
-          'tipo_perforacion': '',
-          'observaciones': '',
-        };
-      }
-    } catch (e) {
-      print('Error decodificando registros: $e');
-      return {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'tal_prod': '',
-        'tal_rimados': '',
-        'tal_alivio': '',
-        'tal_repaso': '',
-        'long_barras': '',
-        'num_barras': '',
-        'tipo_perforacion': '',
-        'observaciones': '',
-      };
-    }
   }
 
   Future<bool> updateOperacionByEstadoIdHorizontal(
@@ -4315,67 +3987,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     Map<String, dynamic> operacionData,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_tal_horizontal',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      operacionData,
+      tableName: 'Operacion_tal_horizontal',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-      bool encontrado = false;
-
-      // Buscar y actualizar el estado específico
-      for (var i = 0; i < registros.length; i++) {
-        if (registros[i]['id'] == estadoId) {
-          // Mantener todos los datos del estado, solo actualizar el campo 'operacion'
-          registros[i]['operacion'] = operacionData;
-          encontrado = true;
-          break;
-        }
-      }
-
-      if (!encontrado) {
-        print('⚠ Estado no encontrado en JSON');
-        return false;
-      }
-
-      final updateData = <String, dynamic>{'registros': jsonEncode(registros)};
-      if (operacionData['labor_id'] != null) {
-        updateData['labor_id'] = operacionData['labor_id'];
-      }
-      final frenteOrigen = operacionData['frente_origen']?.toString();
-      if (frenteOrigen != null && frenteOrigen.isNotEmpty) {
-        updateData['frente_origen'] = frenteOrigen;
-      }
-      final labor = operacionData['labor']?.toString();
-      if (labor != null && labor.isNotEmpty) {
-        updateData['labor'] = labor;
-      }
-
-      // Guardar en la base de datos
-      int updated = await db.update(
-        'Operacion_tal_horizontal',
-        updateData,
-        where: 'id = ?',
-        whereArgs: [operacionId],
-      );
-
-      print('✔ Datos de perforación actualizados para estado $estadoId');
-      return updated > 0;
-    } catch (e) {
-      print('Error actualizando datos de perforación: $e');
-      return false;
-    }
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdHorizontal(
@@ -4447,30 +4064,10 @@ CREATE TABLE UsuarioEquipo (
   Future<Map<String, dynamic>?> getUltimoEstadoByOperacionIdHorizontal(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_tal_horizontal',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getUltimoEstadoByOperacionId(
+      operacionId,
+      tableName: 'Operacion_tal_horizontal',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      if (registros.isEmpty) return null;
-
-      // ✅ SIMPLE: el último insertado es el último real
-      return Map<String, dynamic>.from(registros.last);
-    } catch (e) {
-      print('Error obteniendo último estado: $e');
-      return null;
-    }
   }
 
   Future<Map<String, dynamic>?> createReservaEstadoHorizontal(
@@ -4479,67 +4076,17 @@ CREATE TABLE UsuarioEquipo (
     String horaInicio,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_tal_horizontal',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createReservaEstado(
+      operacionId,
+      numero,
+      horaInicio,
+      horaFinal,
+      tableName: 'Operacion_tal_horizontal',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // Crear nuevo estado RESERVA
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': numero,
-      'estado': 'DEMORA',
-      'codigo': '303', // Código para RESERVA
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'tal_prod': '',
-        'tal_rimados': '',
-        'tal_alivio': '',
-        'tal_repaso': '',
-        'long_barras': '',
-        'num_barras': '',
-        'tipo_perforacion': '',
-        'observaciones': '',
-      },
-    };
-
-    registros.add(nuevoEstado);
-
-    await db.update(
-      'Operacion_tal_horizontal',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<void> cerrarOperacionHorizontal(int operacionId) async {
-    final Database db = await DatabaseHelper().database;
-
-    await db.update(
-      'Operacion_tal_horizontal',
-      {'estado': 'cerrado'}, // Nuevo estado
-      where: 'id = ?',
-      whereArgs: [operacionId], // Parámetro para evitar SQL Injection
-    );
+    return cerrarOperacion(operacionId, tableName: 'Operacion_tal_horizontal');
   }
 
   Future<Map<String, dynamic>> getCondicionesEquipoByOperacionIdHorizontal(
@@ -4625,98 +4172,11 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<bool> deleteEstadoHorizontal(int operacionId, int estadoId) async {
-    final db = await database;
-
-    // 1. Obtener registros
-    final result = await db.query(
-      'Operacion_tal_horizontal',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return deleteEstado(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_tal_horizontal',
     );
-
-    if (result.isEmpty) return false;
-
-    // 2. Parsear JSON
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    if (registros.isEmpty) return false;
-
-    // 3. Convertir todo a Map seguro
-    List<Map<String, dynamic>> lista = registros
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-
-    // 4. Ordenar por numero (orden real)
-    lista.sort((a, b) {
-      return (a['numero'] ?? 0).compareTo(b['numero'] ?? 0);
-    });
-
-    // 5. Buscar el estado a eliminar
-    Map<String, dynamic>? estadoAEliminar;
-    for (var e in lista) {
-      if (e['id'] == estadoId) {
-        estadoAEliminar = e;
-        break;
-      }
-    }
-
-    if (estadoAEliminar == null) return false;
-
-    int numeroEliminar = estadoAEliminar['numero'] ?? 0;
-
-    // 6. Filtrar (eliminar en cascada desde ese numero)
-    List<Map<String, dynamic>> nuevosRegistros = [];
-    List<Map<String, dynamic>> eliminados = [];
-
-    for (var e in lista) {
-      int numero = e['numero'] ?? 0;
-
-      if (numero < numeroEliminar) {
-        nuevosRegistros.add(e);
-      } else {
-        eliminados.add({
-          'id': e['id'],
-          'estado': e['estado'],
-          'numero': numero,
-          'hora_inicio': e['hora_inicio'],
-        });
-      }
-    }
-
-    // Debug
-    print("🗑️ Eliminados: ${eliminados.length}");
-    for (var e in eliminados) {
-      print("   - ${e['estado']} #${e['numero']} (${e['hora_inicio']})");
-    }
-
-    // 7. Renumerar secuencialmente
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      nuevosRegistros[i]['numero'] = i + 1;
-    }
-
-    // 8. Reconstruir horas finales (solo encadenar)
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      if (i < nuevosRegistros.length - 1) {
-        nuevosRegistros[i]['hora_final'] =
-            nuevosRegistros[i + 1]['hora_inicio'] ?? '';
-      } else {
-        nuevosRegistros[i]['hora_final'] = "";
-      }
-    }
-
-    // 9. Guardar
-    int updated = await db.update(
-      'Operacion_tal_horizontal',
-      {'registros': jsonEncode(nuevosRegistros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("📊 Final: ${nuevosRegistros.length} registros");
-
-    return updated > 0;
   }
 
   Future<bool> updateControlLlantasHorizontal(
@@ -4893,23 +4353,20 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<Map<String, dynamic>>>
-  getOperacionEmpernadorByTurnoAndFechaMaster(
-    String turno,
-    String fecha,
-  ) async {
+  getOperacionEmpernadorByTurnoAndFechaMaster(int turnoId, String fecha) async {
     final db = await database;
 
     final List<Map<String, dynamic>> result = await db.query(
       'Operacion_empernador',
-      where: 'turno = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turno, fecha, 'activo', 'parciales'],
+      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
+      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
     );
 
     return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionEmpernadorByTurnoAndFecha(
-    String turno,
+    int turnoId,
     String fecha, {
     int? operadorId,
   }) async {
@@ -4918,11 +4375,11 @@ CREATE TABLE UsuarioEquipo (
     late final String where;
     late final List<dynamic> whereArgs;
     if (operadorId != null) {
-      where = 'turno = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turno, fecha, operadorId];
+      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
+      whereArgs = [turnoId, fecha, operadorId];
     } else {
-      where = 'turno = ? AND fecha = ?';
-      whereArgs = [turno, fecha];
+      where = 'turno_id = ? AND fecha = ?';
+      whereArgs = [turnoId, fecha];
     }
 
     final List<Map<String, dynamic>> result = await db.query(
@@ -4938,23 +4395,10 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Map<String, dynamic>>> getEstadosByOperacionIdEmpernador(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_empernador',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getEstadosByOperacionId(
+      operacionId,
+      tableName: 'Operacion_empernador',
     );
-
-    if (result.isEmpty) {
-      return [];
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    return registros.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   Future<int> eliminarOperacionTalEmpernadorFisico(int id) async {
@@ -4974,48 +4418,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_empernador',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateHoraFinal(
+      operacionId,
+      estadoId,
+      horaFinal,
+      tableName: 'Operacion_empernador',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    bool encontrado = false;
-    String tipoEstado = "";
-
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'].toString() == estadoId.toString()) {
-        tipoEstado = registros[i]['estado']; // Guardar el tipo para log
-        registros[i]['hora_final'] = horaFinal;
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      print("⚠ Estado no encontrado en JSON");
-      return false;
-    }
-
-    int updated = await db.update(
-      'Operacion_empernador',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("✔ Hora final actualizada para estado $tipoEstado: $horaFinal");
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>?> createEstadoEmpernador(
@@ -5027,71 +4435,15 @@ CREATE TABLE UsuarioEquipo (
     Map<String, dynamic>?
     operacion, // Ahora acepta todos los campos de perforación
   }) async {
-    final db = await database;
-
-    // 1. Obtener el registro actual
-    final result = await db.query(
-      'Operacion_empernador',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createEstado(
+      operacionId,
+      estado,
+      codigo,
+      horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion,
+      tableName: 'Operacion_empernador',
     );
-
-    if (result.isEmpty) {
-      return null;
-    }
-
-    // 2. Parsear el JSON de registros existentes
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Determinar el próximo número
-    int nuevoNumero = 1;
-    if (registros.isNotEmpty) {
-      int ultimoNumero = registros.last['numero'] ?? 0;
-      nuevoNumero = ultimoNumero + 1;
-    }
-
-    // 4. Crear el nuevo estado con ID único
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    // Estructura completa del objeto operacion con todos los campos
-    Map<String, dynamic> operacionCompleta = {
-      'nivel': operacion?['nivel'] ?? '',
-      'tipo_labor': operacion?['tipo_labor'] ?? '',
-      'labor': operacion?['labor'] ?? '',
-      'ala': operacion?['ala'] ?? '',
-      'tipo_pernos': operacion?['tipo_pernos'] ?? '',
-      'log_pernos': operacion?['log_pernos'] ?? '',
-      'n_pernos_instalados': operacion?['n_pernos_instalados'] ?? '',
-      'tipo_malla': operacion?['tipo_malla'] ?? '',
-      'mt52_malla': operacion?['mt52_malla'] ?? '',
-      'sistematico_puntual': operacion?['sistematico_puntual'] ?? '',
-      'observaciones': operacion?['observaciones'] ?? '',
-    };
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': nuevoNumero,
-      'estado': estado,
-      'codigo': codigo,
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': operacionCompleta,
-    };
-
-    // 5. Agregar al array
-    registros.add(nuevoEstado);
-
-    // 6. Guardar en la base de datos
-    await db.update(
-      'Operacion_empernador',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<bool> updateEstadoEmpernador(
@@ -5104,136 +4456,28 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, String>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener el registro actual
-    final result = await db.query(
-      'Operacion_empernador',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateEstado(
+      operacionId,
+      estadoId,
+      numero: numero,
+      estado: estado,
+      codigo: codigo,
+      horaInicio: horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion?.map((k, v) => MapEntry(k, v.toString())),
+      tableName: 'Operacion_empernador',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    // 2. Parsear el JSON de registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Buscar y actualizar el estado específico
-    bool encontrado = false;
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'] == estadoId) {
-        // Actualizar solo los campos proporcionados
-        if (numero != null) registros[i]['numero'] = numero;
-        if (estado != null) registros[i]['estado'] = estado;
-        if (codigo != null) registros[i]['codigo'] = codigo;
-        if (horaInicio != null) registros[i]['hora_inicio'] = horaInicio;
-        if (horaFinal != null) registros[i]['hora_final'] = horaFinal;
-        if (operacion != null) {
-          registros[i]['operacion'] = {
-            ...registros[i]['operacion'] as Map,
-            ...operacion,
-          };
-        }
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      return false;
-    }
-
-    // 4. Guardar los cambios
-    int updated = await db.update(
-      'Operacion_empernador',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>> getOperacionByEstadoIdEmpernador(
     int operacionId,
     int estadoId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_empernador',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_empernador',
     );
-
-    if (result.isEmpty) {
-      // Si no hay datos, devolver estructura por defecto
-      return {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'tipo_pernos': '',
-        'log_pernos': '',
-        'n_pernos_instalados': '',
-        'tipo_malla': '',
-        'mt52_malla': '',
-        'sistematico_puntual': '',
-        'observaciones': '',
-      };
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      // Buscar el estado específico por su ID
-      var estadoEncontrado = registros.firstWhere(
-        (estado) => estado['id'] == estadoId,
-        orElse: () => null,
-      );
-
-      if (estadoEncontrado != null &&
-          estadoEncontrado.containsKey('operacion')) {
-        return estadoEncontrado['operacion'] as Map<String, dynamic>;
-      } else {
-        // Si no se encuentra o no tiene operacion, devolver estructura por defecto
-        return {
-          'nivel': '',
-          'tipo_labor': '',
-          'labor': '',
-          'ala': '',
-          'tipo_pernos': '',
-          'log_pernos': '',
-          'n_pernos_instalados': '',
-          'tipo_malla': '',
-          'mt52_malla': '',
-          'sistematico_puntual': '',
-          'observaciones': '',
-        };
-      }
-    } catch (e) {
-      print('Error decodificando registros: $e');
-      return {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'tipo_pernos': '',
-        'log_pernos': '',
-        'n_pernos_instalados': '',
-        'tipo_malla': '',
-        'mt52_malla': '',
-        'sistematico_puntual': '',
-        'observaciones': '',
-      };
-    }
   }
 
   Future<bool> updateOperacionByEstadoIdEmpernador(
@@ -5241,54 +4485,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     Map<String, dynamic> operacionData,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_empernador',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      operacionData,
+      tableName: 'Operacion_empernador',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-      bool encontrado = false;
-
-      // Buscar y actualizar el estado específico
-      for (var i = 0; i < registros.length; i++) {
-        if (registros[i]['id'] == estadoId) {
-          // Mantener todos los datos del estado, solo actualizar el campo 'operacion'
-          registros[i]['operacion'] = operacionData;
-          encontrado = true;
-          break;
-        }
-      }
-
-      if (!encontrado) {
-        print('⚠ Estado no encontrado en JSON');
-        return false;
-      }
-
-      // Guardar en la base de datos
-      int updated = await db.update(
-        'Operacion_empernador',
-        {'registros': jsonEncode(registros)},
-        where: 'id = ?',
-        whereArgs: [operacionId],
-      );
-
-      print('✔ Datos de perforación actualizados para estado $estadoId');
-      return updated > 0;
-    } catch (e) {
-      print('Error actualizando datos de perforación: $e');
-      return false;
-    }
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdEmpernador(
@@ -5362,30 +4564,10 @@ CREATE TABLE UsuarioEquipo (
   Future<Map<String, dynamic>?> getUltimoEstadoByOperacionIdEmpernador(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_empernador',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getUltimoEstadoByOperacionId(
+      operacionId,
+      tableName: 'Operacion_empernador',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      if (registros.isEmpty) return null;
-
-      // ✅ SIMPLE: el último insertado es el último real
-      return Map<String, dynamic>.from(registros.last);
-    } catch (e) {
-      print('Error obteniendo último estado: $e');
-      return null;
-    }
   }
 
   Future<Map<String, dynamic>?> createReservaEstadoEmpernador(
@@ -5394,66 +4576,17 @@ CREATE TABLE UsuarioEquipo (
     String horaInicio,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_empernador',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createReservaEstado(
+      operacionId,
+      numero,
+      horaInicio,
+      horaFinal,
+      tableName: 'Operacion_empernador',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // Crear nuevo estado RESERVA
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': numero,
-      'estado': 'RESERVA',
-      'codigo': '401', // Código para RESERVA
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'tipo_pernos': '',
-        'log_pernos': '',
-        'n_pernos_instalados': '',
-        'tipo_malla': '',
-        'mt52_malla': '',
-        'sistematico_puntual': '',
-        'observaciones': '',
-      },
-    };
-
-    registros.add(nuevoEstado);
-
-    await db.update(
-      'Operacion_empernador',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<void> cerrarOperacionEmpernador(int operacionId) async {
-    final Database db = await DatabaseHelper().database;
-
-    await db.update(
-      'Operacion_empernador',
-      {'estado': 'cerrado'}, // Nuevo estado
-      where: 'id = ?',
-      whereArgs: [operacionId], // Parámetro para evitar SQL Injection
-    );
+    return cerrarOperacion(operacionId, tableName: 'Operacion_empernador');
   }
 
   Future<Map<String, dynamic>> getCondicionesEquipoByOperacionIdEmpernador(
@@ -5539,98 +4672,11 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<bool> deleteEstadoEmpernador(int operacionId, int estadoId) async {
-    final db = await database;
-
-    // 1. Obtener registros
-    final result = await db.query(
-      'Operacion_empernador',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return deleteEstado(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_empernador',
     );
-
-    if (result.isEmpty) return false;
-
-    // 2. Parsear JSON
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    if (registros.isEmpty) return false;
-
-    // 3. Convertir todo a Map seguro
-    List<Map<String, dynamic>> lista = registros
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-
-    // 4. Ordenar por numero (orden real)
-    lista.sort((a, b) {
-      return (a['numero'] ?? 0).compareTo(b['numero'] ?? 0);
-    });
-
-    // 5. Buscar el estado a eliminar
-    Map<String, dynamic>? estadoAEliminar;
-    for (var e in lista) {
-      if (e['id'] == estadoId) {
-        estadoAEliminar = e;
-        break;
-      }
-    }
-
-    if (estadoAEliminar == null) return false;
-
-    int numeroEliminar = estadoAEliminar['numero'] ?? 0;
-
-    // 6. Filtrar (eliminar en cascada desde ese numero)
-    List<Map<String, dynamic>> nuevosRegistros = [];
-    List<Map<String, dynamic>> eliminados = [];
-
-    for (var e in lista) {
-      int numero = e['numero'] ?? 0;
-
-      if (numero < numeroEliminar) {
-        nuevosRegistros.add(e);
-      } else {
-        eliminados.add({
-          'id': e['id'],
-          'estado': e['estado'],
-          'numero': numero,
-          'hora_inicio': e['hora_inicio'],
-        });
-      }
-    }
-
-    // Debug
-    print("🗑️ Eliminados: ${eliminados.length}");
-    for (var e in eliminados) {
-      print("   - ${e['estado']} #${e['numero']} (${e['hora_inicio']})");
-    }
-
-    // 7. Renumerar secuencialmente
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      nuevosRegistros[i]['numero'] = i + 1;
-    }
-
-    // 8. Reconstruir horas finales (solo encadenar)
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      if (i < nuevosRegistros.length - 1) {
-        nuevosRegistros[i]['hora_final'] =
-            nuevosRegistros[i + 1]['hora_inicio'] ?? '';
-      } else {
-        nuevosRegistros[i]['hora_final'] = "";
-      }
-    }
-
-    // 9. Guardar
-    int updated = await db.update(
-      'Operacion_empernador',
-      {'registros': jsonEncode(nuevosRegistros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("📊 Final: ${nuevosRegistros.length} registros");
-
-    return updated > 0;
   }
 
   Future<bool> updateControlLlantasEmpernador(
@@ -5815,22 +4861,22 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<Map<String, dynamic>>> getOperacionCarguioByTurnoAndFechaMaster(
-    String turno,
+    int turnoId,
     String fecha,
   ) async {
     final db = await database;
 
     final List<Map<String, dynamic>> result = await db.query(
       'Operacion_carguio',
-      where: 'turno = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turno, fecha, 'activo', 'parciales'],
+      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
+      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
     );
 
     return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionCarguioByTurnoAndFecha(
-    String turno,
+    int turnoId,
     String fecha, {
     int? operadorId,
   }) async {
@@ -5839,11 +4885,11 @@ CREATE TABLE UsuarioEquipo (
     late final String where;
     late final List<dynamic> whereArgs;
     if (operadorId != null) {
-      where = 'turno = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turno, fecha, operadorId];
+      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
+      whereArgs = [turnoId, fecha, operadorId];
     } else {
-      where = 'turno = ? AND fecha = ?';
-      whereArgs = [turno, fecha];
+      where = 'turno_id = ? AND fecha = ?';
+      whereArgs = [turnoId, fecha];
     }
 
     final List<Map<String, dynamic>> result = await db.query(
@@ -5859,23 +4905,7 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Map<String, dynamic>>> getEstadosByOperacionIdCarguio(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_carguio',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      return [];
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    return registros.map((e) => Map<String, dynamic>.from(e)).toList();
+    return getEstadosByOperacionId(operacionId, tableName: 'Operacion_carguio');
   }
 
   Future<int> eliminarOperacionTalCarguioFisico(int id) async {
@@ -5895,48 +4925,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_carguio',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateHoraFinal(
+      operacionId,
+      estadoId,
+      horaFinal,
+      tableName: 'Operacion_carguio',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    bool encontrado = false;
-    String tipoEstado = "";
-
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'].toString() == estadoId.toString()) {
-        tipoEstado = registros[i]['estado']; // Guardar el tipo para log
-        registros[i]['hora_final'] = horaFinal;
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      print("⚠ Estado no encontrado en JSON");
-      return false;
-    }
-
-    int updated = await db.update(
-      'Operacion_carguio',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("✔ Hora final actualizada para estado $tipoEstado: $horaFinal");
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>?> createEstadoCarguio(
@@ -5947,69 +4941,15 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, dynamic>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener registros actuales
-    final result = await db.query(
-      'Operacion_carguio',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createEstado(
+      operacionId,
+      estado,
+      codigo,
+      horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion,
+      tableName: 'Operacion_carguio',
     );
-
-    if (result.isEmpty) {
-      return null;
-    }
-
-    // 2. Parsear registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Calcular número
-    int nuevoNumero = 1;
-    if (registros.isNotEmpty) {
-      int ultimoNumero = registros.last['numero'] ?? 0;
-      nuevoNumero = ultimoNumero + 1;
-    }
-
-    // 4. ID único
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    /// NUEVA estructura de operación para CARGUÍO
-    Map<String, dynamic> operacionCompleta = {
-      'nivel_inicio': operacion?['nivel_inicio'] ?? '',
-      'tipo_labor_inicio': operacion?['tipo_labor_inicio'] ?? '',
-      'labor_inicio': operacion?['labor_inicio'] ?? '',
-      'ala_inicio': operacion?['ala_inicio'] ?? '',
-
-      'ubicacion_destino': operacion?['ubicacion_destino'] ?? '',
-
-      'n_cucharas': operacion?['n_cucharas'] ?? 0,
-      'observaciones': operacion?['observaciones'] ?? '',
-    };
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': nuevoNumero,
-      'estado': estado,
-      'codigo': codigo,
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': operacionCompleta,
-    };
-
-    // 5. Agregar al array
-    registros.add(nuevoEstado);
-
-    // 6. Guardar
-    await db.update(
-      'Operacion_carguio',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<bool> updateEstadoCarguio(
@@ -6022,122 +4962,28 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, String>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener el registro actual
-    final result = await db.query(
-      'Operacion_carguio',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateEstado(
+      operacionId,
+      estadoId,
+      numero: numero,
+      estado: estado,
+      codigo: codigo,
+      horaInicio: horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion?.map((k, v) => MapEntry(k, v.toString())),
+      tableName: 'Operacion_carguio',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    // 2. Parsear el JSON de registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Buscar y actualizar el estado específico
-    bool encontrado = false;
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'] == estadoId) {
-        // Actualizar solo los campos proporcionados
-        if (numero != null) registros[i]['numero'] = numero;
-        if (estado != null) registros[i]['estado'] = estado;
-        if (codigo != null) registros[i]['codigo'] = codigo;
-        if (horaInicio != null) registros[i]['hora_inicio'] = horaInicio;
-        if (horaFinal != null) registros[i]['hora_final'] = horaFinal;
-        if (operacion != null) {
-          registros[i]['operacion'] = {
-            ...registros[i]['operacion'] as Map,
-            ...operacion,
-          };
-        }
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      return false;
-    }
-
-    // 4. Guardar los cambios
-    int updated = await db.update(
-      'Operacion_carguio',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>> getOperacionByEstadoIdCarguio(
     int operacionId,
     int estadoId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_carguio',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_carguio',
     );
-
-    if (result.isEmpty) {
-      return {
-        'nivel_inicio': '',
-        'tipo_labor_inicio': '',
-        'labor_inicio': '',
-        'ala_inicio': '',
-        'ubicacion_destino': '',
-        'n_cucharas': 0,
-        'observaciones': '',
-      };
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      var estadoEncontrado = registros.firstWhere(
-        (estado) => estado['id'] == estadoId,
-        orElse: () => null,
-      );
-
-      if (estadoEncontrado != null &&
-          estadoEncontrado.containsKey('operacion')) {
-        return estadoEncontrado['operacion'] as Map<String, dynamic>;
-      } else {
-        return {
-          'nivel_inicio': '',
-          'tipo_labor_inicio': '',
-          'labor_inicio': '',
-          'ala_inicio': '',
-          'ubicacion_destino': '',
-          'n_cucharas': 0,
-          'observaciones': '',
-        };
-      }
-    } catch (e) {
-      print('Error decodificando registros: $e');
-
-      return {
-        'nivel_inicio': '',
-        'tipo_labor_inicio': '',
-        'labor_inicio': '',
-        'ala_inicio': '',
-        'ubicacion_destino': '',
-        'n_cucharas': 0,
-        'observaciones': '',
-      };
-    }
   }
 
   Future<bool> updateOperacionByEstadoIdCarguio(
@@ -6145,54 +4991,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     Map<String, dynamic> operacionData,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_carguio',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      operacionData,
+      tableName: 'Operacion_carguio',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-      bool encontrado = false;
-
-      // Buscar y actualizar el estado específico
-      for (var i = 0; i < registros.length; i++) {
-        if (registros[i]['id'] == estadoId) {
-          // Mantener todos los datos del estado, solo actualizar el campo 'operacion'
-          registros[i]['operacion'] = operacionData;
-          encontrado = true;
-          break;
-        }
-      }
-
-      if (!encontrado) {
-        print('⚠ Estado no encontrado en JSON');
-        return false;
-      }
-
-      // Guardar en la base de datos
-      int updated = await db.update(
-        'Operacion_carguio',
-        {'registros': jsonEncode(registros)},
-        where: 'id = ?',
-        whereArgs: [operacionId],
-      );
-
-      print('✔ Datos de perforación actualizados para estado $estadoId');
-      return updated > 0;
-    } catch (e) {
-      print('Error actualizando datos de perforación: $e');
-      return false;
-    }
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdCarguio(
@@ -6267,30 +5071,10 @@ CREATE TABLE UsuarioEquipo (
   Future<Map<String, dynamic>?> getUltimoEstadoByOperacionIdCarguio(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_carguio',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getUltimoEstadoByOperacionId(
+      operacionId,
+      tableName: 'Operacion_carguio',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      if (registros.isEmpty) return null;
-
-      // ✅ SIMPLE: el último insertado es el último real
-      return Map<String, dynamic>.from(registros.last);
-    } catch (e) {
-      print('Error obteniendo último estado: $e');
-      return null;
-    }
   }
 
   Future<Map<String, dynamic>?> createReservaEstadoCarguio(
@@ -6299,61 +5083,17 @@ CREATE TABLE UsuarioEquipo (
     String horaInicio,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_carguio',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createReservaEstado(
+      operacionId,
+      numero,
+      horaInicio,
+      horaFinal,
+      tableName: 'Operacion_carguio',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': numero,
-      'estado': 'RESERVA',
-      'codigo': '401',
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': {
-        'nivel_inicio': '',
-        'tipo_labor_inicio': '',
-        'labor_inicio': '',
-        'ala_inicio': '',
-        'ubicacion_destino': '',
-        'n_cucharas': 0,
-        'observaciones': '',
-      },
-    };
-
-    registros.add(nuevoEstado);
-
-    await db.update(
-      'Operacion_carguio',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<void> cerrarOperacionCarguio(int operacionId) async {
-    final Database db = await DatabaseHelper().database;
-
-    await db.update(
-      'Operacion_carguio',
-      {'estado': 'cerrado'}, // Nuevo estado
-      where: 'id = ?',
-      whereArgs: [operacionId], // Parámetro para evitar SQL Injection
-    );
+    return cerrarOperacion(operacionId, tableName: 'Operacion_carguio');
   }
 
   Future<Map<String, dynamic>> getCondicionesEquipoByOperacionIdCarguio(
@@ -6439,98 +5179,7 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<bool> deleteEstadoCarguio(int operacionId, int estadoId) async {
-    final db = await database;
-
-    // 1. Obtener registros
-    final result = await db.query(
-      'Operacion_carguio',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) return false;
-
-    // 2. Parsear JSON
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    if (registros.isEmpty) return false;
-
-    // 3. Convertir todo a Map seguro
-    List<Map<String, dynamic>> lista = registros
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-
-    // 4. Ordenar por numero (orden real)
-    lista.sort((a, b) {
-      return (a['numero'] ?? 0).compareTo(b['numero'] ?? 0);
-    });
-
-    // 5. Buscar el estado a eliminar
-    Map<String, dynamic>? estadoAEliminar;
-    for (var e in lista) {
-      if (e['id'] == estadoId) {
-        estadoAEliminar = e;
-        break;
-      }
-    }
-
-    if (estadoAEliminar == null) return false;
-
-    int numeroEliminar = estadoAEliminar['numero'] ?? 0;
-
-    // 6. Filtrar (eliminar en cascada desde ese numero)
-    List<Map<String, dynamic>> nuevosRegistros = [];
-    List<Map<String, dynamic>> eliminados = [];
-
-    for (var e in lista) {
-      int numero = e['numero'] ?? 0;
-
-      if (numero < numeroEliminar) {
-        nuevosRegistros.add(e);
-      } else {
-        eliminados.add({
-          'id': e['id'],
-          'estado': e['estado'],
-          'numero': numero,
-          'hora_inicio': e['hora_inicio'],
-        });
-      }
-    }
-
-    // Debug
-    print("🗑️ Eliminados: ${eliminados.length}");
-    for (var e in eliminados) {
-      print("   - ${e['estado']} #${e['numero']} (${e['hora_inicio']})");
-    }
-
-    // 7. Renumerar secuencialmente
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      nuevosRegistros[i]['numero'] = i + 1;
-    }
-
-    // 8. Reconstruir horas finales (solo encadenar)
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      if (i < nuevosRegistros.length - 1) {
-        nuevosRegistros[i]['hora_final'] =
-            nuevosRegistros[i + 1]['hora_inicio'] ?? '';
-      } else {
-        nuevosRegistros[i]['hora_final'] = "";
-      }
-    }
-
-    // 9. Guardar
-    int updated = await db.update(
-      'Operacion_carguio',
-      {'registros': jsonEncode(nuevosRegistros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("📊 Final: ${nuevosRegistros.length} registros");
-
-    return updated > 0;
+    return deleteEstado(operacionId, estadoId, tableName: 'Operacion_carguio');
   }
 
   Future<bool> updateControlLlantasCarguio(
@@ -6813,22 +5462,22 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<Map<String, dynamic>>> getOperacionDumperByTurnoAndFechaMaster(
-    String turno,
+    int turnoId,
     String fecha,
   ) async {
     final db = await database;
 
     final List<Map<String, dynamic>> result = await db.query(
       'Operacion_Dumper',
-      where: 'turno = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turno, fecha, 'activo', 'parciales'],
+      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
+      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
     );
 
     return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionDumperByTurnoAndFecha(
-    String turno,
+    int turnoId,
     String fecha, {
     int? operadorId,
   }) async {
@@ -6837,11 +5486,11 @@ CREATE TABLE UsuarioEquipo (
     late final String where;
     late final List<dynamic> whereArgs;
     if (operadorId != null) {
-      where = 'turno = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turno, fecha, operadorId];
+      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
+      whereArgs = [turnoId, fecha, operadorId];
     } else {
-      where = 'turno = ? AND fecha = ?';
-      whereArgs = [turno, fecha];
+      where = 'turno_id = ? AND fecha = ?';
+      whereArgs = [turnoId, fecha];
     }
 
     final List<Map<String, dynamic>> result = await db.query(
@@ -6857,23 +5506,7 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Map<String, dynamic>>> getEstadosByOperacionIdDumper(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Dumper',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      return [];
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    return registros.map((e) => Map<String, dynamic>.from(e)).toList();
+    return getEstadosByOperacionId(operacionId, tableName: 'Operacion_dumper');
   }
 
   Future<int> eliminarOperacionTalDumperFisico(int id) async {
@@ -6893,48 +5526,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Dumper',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateHoraFinal(
+      operacionId,
+      estadoId,
+      horaFinal,
+      tableName: 'Operacion_dumper',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    bool encontrado = false;
-    String tipoEstado = "";
-
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'].toString() == estadoId.toString()) {
-        tipoEstado = registros[i]['estado']; // Guardar el tipo para log
-        registros[i]['hora_final'] = horaFinal;
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      print("⚠ Estado no encontrado en JSON");
-      return false;
-    }
-
-    int updated = await db.update(
-      'Operacion_Dumper',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("✔ Hora final actualizada para estado $tipoEstado: $horaFinal");
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>?> createEstadoDumper(
@@ -6945,77 +5542,15 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, dynamic>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener registros actuales
-    final result = await db.query(
-      'Operacion_Dumper',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createEstado(
+      operacionId,
+      estado,
+      codigo,
+      horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion,
+      tableName: 'Operacion_dumper',
     );
-
-    if (result.isEmpty) {
-      return null;
-    }
-
-    // 2. Parsear registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Calcular número
-    int nuevoNumero = 1;
-    if (registros.isNotEmpty) {
-      int ultimoNumero = registros.last['numero'] ?? 0;
-      nuevoNumero = ultimoNumero + 1;
-    }
-
-    // 4. ID único
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    /// NUEVA estructura de operación para CARGUÍO
-    Map<String, dynamic> operacionCompleta = {
-      // INICIO
-      'nivel_inicio': operacion?['nivel_inicio'] ?? '',
-      'tipo_labor_inicio': operacion?['tipo_labor_inicio'] ?? '',
-      'labor_inicio': operacion?['labor_inicio'] ?? '',
-      'ala_inicio': operacion?['ala_inicio'] ?? '',
-
-      // FIN
-      'nivel_fin': operacion?['nivel_fin'] ?? '',
-      'tipo_labor_fin': operacion?['tipo_labor_fin'] ?? '',
-      'labor_fin': operacion?['labor_fin'] ?? '',
-      'ala_fin': operacion?['ala_fin'] ?? '',
-
-      // NUEVO CAMPO
-      'n_viajes': operacion?['n_viajes'] ?? 0,
-
-      // OBSERVACIONES
-      'observaciones': operacion?['observaciones'] ?? '',
-    };
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': nuevoNumero,
-      'estado': estado,
-      'codigo': codigo,
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': operacionCompleta,
-    };
-
-    // 5. Agregar al array
-    registros.add(nuevoEstado);
-
-    // 6. Guardar
-    await db.update(
-      'Operacion_Dumper',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<bool> updateEstadoDumper(
@@ -7028,149 +5563,28 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, String>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener el registro actual
-    final result = await db.query(
-      'Operacion_Dumper',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateEstado(
+      operacionId,
+      estadoId,
+      numero: numero,
+      estado: estado,
+      codigo: codigo,
+      horaInicio: horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion?.map((k, v) => MapEntry(k, v.toString())),
+      tableName: 'Operacion_dumper',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    // 2. Parsear el JSON de registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Buscar y actualizar el estado específico
-    bool encontrado = false;
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'] == estadoId) {
-        // Actualizar solo los campos proporcionados
-        if (numero != null) registros[i]['numero'] = numero;
-        if (estado != null) registros[i]['estado'] = estado;
-        if (codigo != null) registros[i]['codigo'] = codigo;
-        if (horaInicio != null) registros[i]['hora_inicio'] = horaInicio;
-        if (horaFinal != null) registros[i]['hora_final'] = horaFinal;
-        if (operacion != null) {
-          registros[i]['operacion'] = {
-            ...registros[i]['operacion'] as Map,
-            ...operacion,
-          };
-        }
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      return false;
-    }
-
-    // 4. Guardar los cambios
-    int updated = await db.update(
-      'Operacion_Dumper',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>> getOperacionByEstadoIdDumper(
     int operacionId,
     int estadoId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Dumper',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_dumper',
     );
-
-    if (result.isEmpty) {
-      return {
-        // INICIO
-        'nivel_inicio': '',
-        'tipo_labor_inicio': '',
-        'labor_inicio': '',
-        'ala_inicio': '',
-
-        // FIN
-        'nivel_fin': '',
-        'tipo_labor_fin': '',
-        'labor_fin': '',
-        'ala_fin': '',
-
-        // NUEVO
-        'n_viajes': 0,
-
-        'observaciones': '',
-      };
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      var estadoEncontrado = registros.firstWhere(
-        (estado) => estado['id'] == estadoId,
-        orElse: () => null,
-      );
-
-      if (estadoEncontrado != null &&
-          estadoEncontrado.containsKey('operacion')) {
-        return estadoEncontrado['operacion'] as Map<String, dynamic>;
-      } else {
-        return {
-          // INICIO
-          'nivel_inicio': '',
-          'tipo_labor_inicio': '',
-          'labor_inicio': '',
-          'ala_inicio': '',
-
-          // FIN
-          'nivel_fin': '',
-          'tipo_labor_fin': '',
-          'labor_fin': '',
-          'ala_fin': '',
-
-          // NUEVO
-          'n_viajes': 0,
-
-          'observaciones': '',
-        };
-      }
-    } catch (e) {
-      print('Error decodificando registros: $e');
-
-      return {
-        // INICIO
-        'nivel_inicio': '',
-        'tipo_labor_inicio': '',
-        'labor_inicio': '',
-        'ala_inicio': '',
-
-        // FIN
-        'nivel_fin': '',
-        'tipo_labor_fin': '',
-        'labor_fin': '',
-        'ala_fin': '',
-
-        // NUEVO
-        'n_viajes': 0,
-
-        'observaciones': '',
-      };
-    }
   }
 
   Future<bool> updateOperacionByEstadoIdDumper(
@@ -7178,54 +5592,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     Map<String, dynamic> operacionData,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Dumper',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      operacionData,
+      tableName: 'Operacion_dumper',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-      bool encontrado = false;
-
-      // Buscar y actualizar el estado específico
-      for (var i = 0; i < registros.length; i++) {
-        if (registros[i]['id'] == estadoId) {
-          // Mantener todos los datos del estado, solo actualizar el campo 'operacion'
-          registros[i]['operacion'] = operacionData;
-          encontrado = true;
-          break;
-        }
-      }
-
-      if (!encontrado) {
-        print('⚠ Estado no encontrado en JSON');
-        return false;
-      }
-
-      // Guardar en la base de datos
-      int updated = await db.update(
-        'Operacion_Dumper',
-        {'registros': jsonEncode(registros)},
-        where: 'id = ?',
-        whereArgs: [operacionId],
-      );
-
-      print('✔ Datos de perforación actualizados para estado $estadoId');
-      return updated > 0;
-    } catch (e) {
-      print('Error actualizando datos de perforación: $e');
-      return false;
-    }
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdDumper(
@@ -7300,30 +5672,10 @@ CREATE TABLE UsuarioEquipo (
   Future<Map<String, dynamic>?> getUltimoEstadoByOperacionIdDumper(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Dumper',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getUltimoEstadoByOperacionId(
+      operacionId,
+      tableName: 'Operacion_dumper',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      if (registros.isEmpty) return null;
-
-      // ✅ SIMPLE: el último insertado es el último real
-      return Map<String, dynamic>.from(registros.last);
-    } catch (e) {
-      print('Error obteniendo último estado: $e');
-      return null;
-    }
   }
 
   Future<Map<String, dynamic>?> createReservaEstadoDumper(
@@ -7332,70 +5684,17 @@ CREATE TABLE UsuarioEquipo (
     String horaInicio,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Dumper',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createReservaEstado(
+      operacionId,
+      numero,
+      horaInicio,
+      horaFinal,
+      tableName: 'Operacion_dumper',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': numero,
-      'estado': 'RESERVA',
-      'codigo': '401',
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': {
-        // INICIO
-        'nivel_inicio': '',
-        'tipo_labor_inicio': '',
-        'labor_inicio': '',
-        'ala_inicio': '',
-
-        // FIN
-        'nivel_fin': '',
-        'tipo_labor_fin': '',
-        'labor_fin': '',
-        'ala_fin': '',
-
-        // NUEVO
-        'n_viajes': 0,
-
-        'observaciones': '',
-      },
-    };
-
-    registros.add(nuevoEstado);
-
-    await db.update(
-      'Operacion_Dumper',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<void> cerrarOperacionDumper(int operacionId) async {
-    final Database db = await DatabaseHelper().database;
-
-    await db.update(
-      'Operacion_Dumper',
-      {'estado': 'cerrado'}, // Nuevo estado
-      where: 'id = ?',
-      whereArgs: [operacionId], // Parámetro para evitar SQL Injection
-    );
+    return cerrarOperacion(operacionId, tableName: 'Operacion_dumper');
   }
 
   Future<Map<String, dynamic>> getCondicionesEquipoByOperacionIdDumper(
@@ -7481,98 +5780,7 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<bool> deleteEstadoDumper(int operacionId, int estadoId) async {
-    final db = await database;
-
-    // 1. Obtener registros
-    final result = await db.query(
-      'Operacion_Dumper',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) return false;
-
-    // 2. Parsear JSON
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    if (registros.isEmpty) return false;
-
-    // 3. Convertir todo a Map seguro
-    List<Map<String, dynamic>> lista = registros
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-
-    // 4. Ordenar por numero (orden real)
-    lista.sort((a, b) {
-      return (a['numero'] ?? 0).compareTo(b['numero'] ?? 0);
-    });
-
-    // 5. Buscar el estado a eliminar
-    Map<String, dynamic>? estadoAEliminar;
-    for (var e in lista) {
-      if (e['id'] == estadoId) {
-        estadoAEliminar = e;
-        break;
-      }
-    }
-
-    if (estadoAEliminar == null) return false;
-
-    int numeroEliminar = estadoAEliminar['numero'] ?? 0;
-
-    // 6. Filtrar (eliminar en cascada desde ese numero)
-    List<Map<String, dynamic>> nuevosRegistros = [];
-    List<Map<String, dynamic>> eliminados = [];
-
-    for (var e in lista) {
-      int numero = e['numero'] ?? 0;
-
-      if (numero < numeroEliminar) {
-        nuevosRegistros.add(e);
-      } else {
-        eliminados.add({
-          'id': e['id'],
-          'estado': e['estado'],
-          'numero': numero,
-          'hora_inicio': e['hora_inicio'],
-        });
-      }
-    }
-
-    // Debug
-    print("🗑️ Eliminados: ${eliminados.length}");
-    for (var e in eliminados) {
-      print("   - ${e['estado']} #${e['numero']} (${e['hora_inicio']})");
-    }
-
-    // 7. Renumerar secuencialmente
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      nuevosRegistros[i]['numero'] = i + 1;
-    }
-
-    // 8. Reconstruir horas finales (solo encadenar)
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      if (i < nuevosRegistros.length - 1) {
-        nuevosRegistros[i]['hora_final'] =
-            nuevosRegistros[i + 1]['hora_inicio'] ?? '';
-      } else {
-        nuevosRegistros[i]['hora_final'] = "";
-      }
-    }
-
-    // 9. Guardar
-    int updated = await db.update(
-      'Operacion_Dumper',
-      {'registros': jsonEncode(nuevosRegistros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("📊 Final: ${nuevosRegistros.length} registros");
-
-    return updated > 0;
+    return deleteEstado(operacionId, estadoId, tableName: 'Operacion_dumper');
   }
 
   Future<bool> updateControlLlantasDumper(
@@ -7869,22 +6077,22 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<Map<String, dynamic>>> getOperacionRompeBacoByTurnoAndFechaMaster(
-    String turno,
+    int turnoId,
     String fecha,
   ) async {
     final db = await database;
 
     final List<Map<String, dynamic>> result = await db.query(
       'Operacion_rompebanco',
-      where: 'turno = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turno, fecha, 'activo', 'parciales'],
+      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
+      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
     );
 
     return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionRompeBacoByTurnoAndFecha(
-    String turno,
+    int turnoId,
     String fecha, {
     int? operadorId,
   }) async {
@@ -7893,11 +6101,11 @@ CREATE TABLE UsuarioEquipo (
     late final String where;
     late final List<dynamic> whereArgs;
     if (operadorId != null) {
-      where = 'turno = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turno, fecha, operadorId];
+      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
+      whereArgs = [turnoId, fecha, operadorId];
     } else {
-      where = 'turno = ? AND fecha = ?';
-      whereArgs = [turno, fecha];
+      where = 'turno_id = ? AND fecha = ?';
+      whereArgs = [turnoId, fecha];
     }
 
     final List<Map<String, dynamic>> result = await db.query(
@@ -7913,23 +6121,10 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Map<String, dynamic>>> getEstadosByOperacionIdRompeBaco(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_rompebanco',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getEstadosByOperacionId(
+      operacionId,
+      tableName: 'Operacion_rompe_baco',
     );
-
-    if (result.isEmpty) {
-      return [];
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    return registros.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   Future<int> eliminarOperacionTalRompeBacoFisico(int id) async {
@@ -7949,48 +6144,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_rompebanco',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateHoraFinal(
+      operacionId,
+      estadoId,
+      horaFinal,
+      tableName: 'Operacion_rompe_baco',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    bool encontrado = false;
-    String tipoEstado = "";
-
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'].toString() == estadoId.toString()) {
-        tipoEstado = registros[i]['estado']; // Guardar el tipo para log
-        registros[i]['hora_final'] = horaFinal;
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      print("⚠ Estado no encontrado en JSON");
-      return false;
-    }
-
-    int updated = await db.update(
-      'Operacion_rompebanco',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("✔ Hora final actualizada para estado $tipoEstado: $horaFinal");
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>?> createEstadoRompeBaco(
@@ -8001,65 +6160,15 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, dynamic>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener registros actuales
-    final result = await db.query(
-      'Operacion_rompebanco',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createEstado(
+      operacionId,
+      estado,
+      codigo,
+      horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion,
+      tableName: 'Operacion_rompe_baco',
     );
-
-    if (result.isEmpty) {
-      return null;
-    }
-
-    // 2. Parsear registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Calcular número
-    int nuevoNumero = 1;
-    if (registros.isNotEmpty) {
-      int ultimoNumero = registros.last['numero'] ?? 0;
-      nuevoNumero = ultimoNumero + 1;
-    }
-
-    // 4. ID único
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    /// NUEVA estructura de operación
-    Map<String, dynamic> operacionSimple = {
-      'nivel': operacion?['nivel'] ?? '',
-      'tipo_labor': operacion?['tipo_labor'] ?? '',
-      'labor': operacion?['labor'] ?? '',
-      'ala': operacion?['ala'] ?? '',
-      'observaciones': operacion?['observaciones'] ?? '',
-    };
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': nuevoNumero,
-      'estado': estado,
-      'codigo': codigo,
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': operacionSimple,
-    };
-
-    // 5. Agregar al array
-    registros.add(nuevoEstado);
-
-    // 6. Guardar
-    await db.update(
-      'Operacion_rompebanco',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<bool> updateEstadoRompeBaco(
@@ -8072,116 +6181,28 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, String>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener el registro actual
-    final result = await db.query(
-      'Operacion_rompebanco',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateEstado(
+      operacionId,
+      estadoId,
+      numero: numero,
+      estado: estado,
+      codigo: codigo,
+      horaInicio: horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion?.map((k, v) => MapEntry(k, v.toString())),
+      tableName: 'Operacion_rompe_baco',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    // 2. Parsear el JSON de registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Buscar y actualizar el estado específico
-    bool encontrado = false;
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'] == estadoId) {
-        // Actualizar solo los campos proporcionados
-        if (numero != null) registros[i]['numero'] = numero;
-        if (estado != null) registros[i]['estado'] = estado;
-        if (codigo != null) registros[i]['codigo'] = codigo;
-        if (horaInicio != null) registros[i]['hora_inicio'] = horaInicio;
-        if (horaFinal != null) registros[i]['hora_final'] = horaFinal;
-        if (operacion != null) {
-          registros[i]['operacion'] = {
-            ...registros[i]['operacion'] as Map,
-            ...operacion,
-          };
-        }
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      return false;
-    }
-
-    // 4. Guardar los cambios
-    int updated = await db.update(
-      'Operacion_rompebanco',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>> getOperacionByEstadoIdRompeBaco(
     int operacionId,
     int estadoId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_rompebanco',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_rompe_baco',
     );
-
-    if (result.isEmpty) {
-      return {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'observaciones': '',
-      };
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      var estadoEncontrado = registros.firstWhere(
-        (estado) => estado['id'] == estadoId,
-        orElse: () => null,
-      );
-
-      if (estadoEncontrado != null &&
-          estadoEncontrado.containsKey('operacion')) {
-        return Map<String, dynamic>.from(estadoEncontrado['operacion']);
-      } else {
-        return {
-          'nivel': '',
-          'tipo_labor': '',
-          'labor': '',
-          'ala': '',
-          'observaciones': '',
-        };
-      }
-    } catch (e) {
-      print('Error decodificando registros: $e');
-
-      return {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'observaciones': '',
-      };
-    }
   }
 
   Future<bool> updateOperacionByEstadoIdRompeBaco(
@@ -8189,54 +6210,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     Map<String, dynamic> operacionData,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_rompebanco',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      operacionData,
+      tableName: 'Operacion_rompe_baco',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-      bool encontrado = false;
-
-      // Buscar y actualizar el estado específico
-      for (var i = 0; i < registros.length; i++) {
-        if (registros[i]['id'] == estadoId) {
-          // Mantener todos los datos del estado, solo actualizar el campo 'operacion'
-          registros[i]['operacion'] = operacionData;
-          encontrado = true;
-          break;
-        }
-      }
-
-      if (!encontrado) {
-        print('⚠ Estado no encontrado en JSON');
-        return false;
-      }
-
-      // Guardar en la base de datos
-      int updated = await db.update(
-        'Operacion_rompebanco',
-        {'registros': jsonEncode(registros)},
-        where: 'id = ?',
-        whereArgs: [operacionId],
-      );
-
-      print('✔ Datos de perforación actualizados para estado $estadoId');
-      return updated > 0;
-    } catch (e) {
-      print('Error actualizando datos de perforación: $e');
-      return false;
-    }
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdRompeBaco(
@@ -8313,30 +6292,10 @@ CREATE TABLE UsuarioEquipo (
   Future<Map<String, dynamic>?> getUltimoEstadoByOperacionIdRompeBaco(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_rompebanco',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getUltimoEstadoByOperacionId(
+      operacionId,
+      tableName: 'Operacion_rompe_baco',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      if (registros.isEmpty) return null;
-
-      // ✅ SIMPLE: el último insertado es el último real
-      return Map<String, dynamic>.from(registros.last);
-    } catch (e) {
-      print('Error obteniendo último estado: $e');
-      return null;
-    }
   }
 
   Future<Map<String, dynamic>?> createReservaEstadoRompeBaco(
@@ -8345,65 +6304,17 @@ CREATE TABLE UsuarioEquipo (
     String horaInicio,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_rompebanco',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createReservaEstado(
+      operacionId,
+      numero,
+      horaInicio,
+      horaFinal,
+      tableName: 'Operacion_rompe_baco',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    List<dynamic> registros = [];
-    try {
-      registros = jsonDecode(registrosJson);
-    } catch (e) {
-      registros = [];
-    }
-
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': numero,
-      'estado': 'RESERVA',
-      'codigo': '401',
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'observaciones': '',
-      },
-    };
-
-    registros.add(nuevoEstado);
-
-    await db.update(
-      'Operacion_rompebanco',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<void> cerrarOperacionRompeBaco(int operacionId) async {
-    final Database db = await DatabaseHelper().database;
-
-    await db.update(
-      'Operacion_rompebanco',
-      {'estado': 'cerrado'}, // Nuevo estado
-      where: 'id = ?',
-      whereArgs: [operacionId], // Parámetro para evitar SQL Injection
-    );
+    return cerrarOperacion(operacionId, tableName: 'Operacion_rompe_baco');
   }
 
   Future<Map<String, dynamic>> getCondicionesEquipoByOperacionIdRompeBaco(
@@ -8489,98 +6400,11 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<bool> deleteEstadoRompeBaco(int operacionId, int estadoId) async {
-    final db = await database;
-
-    // 1. Obtener registros
-    final result = await db.query(
-      'Operacion_rompebanco',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return deleteEstado(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_rompe_baco',
     );
-
-    if (result.isEmpty) return false;
-
-    // 2. Parsear JSON
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    if (registros.isEmpty) return false;
-
-    // 3. Convertir todo a Map seguro
-    List<Map<String, dynamic>> lista = registros
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-
-    // 4. Ordenar por numero (orden real)
-    lista.sort((a, b) {
-      return (a['numero'] ?? 0).compareTo(b['numero'] ?? 0);
-    });
-
-    // 5. Buscar el estado a eliminar
-    Map<String, dynamic>? estadoAEliminar;
-    for (var e in lista) {
-      if (e['id'] == estadoId) {
-        estadoAEliminar = e;
-        break;
-      }
-    }
-
-    if (estadoAEliminar == null) return false;
-
-    int numeroEliminar = estadoAEliminar['numero'] ?? 0;
-
-    // 6. Filtrar (eliminar en cascada desde ese numero)
-    List<Map<String, dynamic>> nuevosRegistros = [];
-    List<Map<String, dynamic>> eliminados = [];
-
-    for (var e in lista) {
-      int numero = e['numero'] ?? 0;
-
-      if (numero < numeroEliminar) {
-        nuevosRegistros.add(e);
-      } else {
-        eliminados.add({
-          'id': e['id'],
-          'estado': e['estado'],
-          'numero': numero,
-          'hora_inicio': e['hora_inicio'],
-        });
-      }
-    }
-
-    // Debug
-    print("🗑️ Eliminados: ${eliminados.length}");
-    for (var e in eliminados) {
-      print("   - ${e['estado']} #${e['numero']} (${e['hora_inicio']})");
-    }
-
-    // 7. Renumerar secuencialmente
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      nuevosRegistros[i]['numero'] = i + 1;
-    }
-
-    // 8. Reconstruir horas finales (solo encadenar)
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      if (i < nuevosRegistros.length - 1) {
-        nuevosRegistros[i]['hora_final'] =
-            nuevosRegistros[i + 1]['hora_inicio'] ?? '';
-      } else {
-        nuevosRegistros[i]['hora_final'] = "";
-      }
-    }
-
-    // 9. Guardar
-    int updated = await db.update(
-      'Operacion_rompebanco',
-      {'registros': jsonEncode(nuevosRegistros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("📊 Final: ${nuevosRegistros.length} registros");
-
-    return updated > 0;
   }
 
   Future<bool> updateControlLlantasRompeBaco(
@@ -8751,22 +6575,22 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<Map<String, dynamic>>> getOperacionScalaminByTurnoAndFechaMaster(
-    String turno,
+    int turnoId,
     String fecha,
   ) async {
     final db = await database;
 
     final List<Map<String, dynamic>> result = await db.query(
       'Operacion_Scalamin',
-      where: 'turno = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turno, fecha, 'activo', 'parciales'],
+      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
+      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
     );
 
     return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionScalaminByTurnoAndFecha(
-    String turno,
+    int turnoId,
     String fecha, {
     int? operadorId,
   }) async {
@@ -8775,11 +6599,11 @@ CREATE TABLE UsuarioEquipo (
     late final String where;
     late final List<dynamic> whereArgs;
     if (operadorId != null) {
-      where = 'turno = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turno, fecha, operadorId];
+      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
+      whereArgs = [turnoId, fecha, operadorId];
     } else {
-      where = 'turno = ? AND fecha = ?';
-      whereArgs = [turno, fecha];
+      where = 'turno_id = ? AND fecha = ?';
+      whereArgs = [turnoId, fecha];
     }
 
     final List<Map<String, dynamic>> result = await db.query(
@@ -8795,23 +6619,10 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Map<String, dynamic>>> getEstadosByOperacionIdScalamin(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Scalamin',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getEstadosByOperacionId(
+      operacionId,
+      tableName: 'Operacion_scalamin',
     );
-
-    if (result.isEmpty) {
-      return [];
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    return registros.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   Future<int> eliminarOperacionTalScalaminFisico(int id) async {
@@ -8831,48 +6642,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Scalamin',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateHoraFinal(
+      operacionId,
+      estadoId,
+      horaFinal,
+      tableName: 'Operacion_scalamin',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    bool encontrado = false;
-    String tipoEstado = "";
-
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'].toString() == estadoId.toString()) {
-        tipoEstado = registros[i]['estado']; // Guardar el tipo para log
-        registros[i]['hora_final'] = horaFinal;
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      print("⚠ Estado no encontrado en JSON");
-      return false;
-    }
-
-    int updated = await db.update(
-      'Operacion_Scalamin',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("✔ Hora final actualizada para estado $tipoEstado: $horaFinal");
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>?> createEstadoScalamin(
@@ -8883,65 +6658,15 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, dynamic>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener registros actuales
-    final result = await db.query(
-      'Operacion_Scalamin',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createEstado(
+      operacionId,
+      estado,
+      codigo,
+      horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion,
+      tableName: 'Operacion_scalamin',
     );
-
-    if (result.isEmpty) {
-      return null;
-    }
-
-    // 2. Parsear registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Calcular número
-    int nuevoNumero = 1;
-    if (registros.isNotEmpty) {
-      int ultimoNumero = registros.last['numero'] ?? 0;
-      nuevoNumero = ultimoNumero + 1;
-    }
-
-    // 4. ID único
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    /// NUEVA estructura de operación
-    Map<String, dynamic> operacionSimple = {
-      'nivel': operacion?['nivel'] ?? '',
-      'tipo_labor': operacion?['tipo_labor'] ?? '',
-      'labor': operacion?['labor'] ?? '',
-      'ala': operacion?['ala'] ?? '',
-      'observaciones': operacion?['observaciones'] ?? '',
-    };
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': nuevoNumero,
-      'estado': estado,
-      'codigo': codigo,
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': operacionSimple,
-    };
-
-    // 5. Agregar al array
-    registros.add(nuevoEstado);
-
-    // 6. Guardar
-    await db.update(
-      'Operacion_Scalamin',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<bool> updateEstadoScalamin(
@@ -8954,116 +6679,28 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, String>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener el registro actual
-    final result = await db.query(
-      'Operacion_Scalamin',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateEstado(
+      operacionId,
+      estadoId,
+      numero: numero,
+      estado: estado,
+      codigo: codigo,
+      horaInicio: horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion?.map((k, v) => MapEntry(k, v.toString())),
+      tableName: 'Operacion_scalamin',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    // 2. Parsear el JSON de registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Buscar y actualizar el estado específico
-    bool encontrado = false;
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'] == estadoId) {
-        // Actualizar solo los campos proporcionados
-        if (numero != null) registros[i]['numero'] = numero;
-        if (estado != null) registros[i]['estado'] = estado;
-        if (codigo != null) registros[i]['codigo'] = codigo;
-        if (horaInicio != null) registros[i]['hora_inicio'] = horaInicio;
-        if (horaFinal != null) registros[i]['hora_final'] = horaFinal;
-        if (operacion != null) {
-          registros[i]['operacion'] = {
-            ...registros[i]['operacion'] as Map,
-            ...operacion,
-          };
-        }
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      return false;
-    }
-
-    // 4. Guardar los cambios
-    int updated = await db.update(
-      'Operacion_Scalamin',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>> getOperacionByEstadoIdScalamin(
     int operacionId,
     int estadoId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Scalamin',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_scalamin',
     );
-
-    if (result.isEmpty) {
-      return {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'observaciones': '',
-      };
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      var estadoEncontrado = registros.firstWhere(
-        (estado) => estado['id'] == estadoId,
-        orElse: () => null,
-      );
-
-      if (estadoEncontrado != null &&
-          estadoEncontrado.containsKey('operacion')) {
-        return Map<String, dynamic>.from(estadoEncontrado['operacion']);
-      } else {
-        return {
-          'nivel': '',
-          'tipo_labor': '',
-          'labor': '',
-          'ala': '',
-          'observaciones': '',
-        };
-      }
-    } catch (e) {
-      print('Error decodificando registros: $e');
-
-      return {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'observaciones': '',
-      };
-    }
   }
 
   Future<bool> updateOperacionByEstadoIdScalamin(
@@ -9071,54 +6708,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     Map<String, dynamic> operacionData,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Scalamin',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      operacionData,
+      tableName: 'Operacion_scalamin',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-      bool encontrado = false;
-
-      // Buscar y actualizar el estado específico
-      for (var i = 0; i < registros.length; i++) {
-        if (registros[i]['id'] == estadoId) {
-          // Mantener todos los datos del estado, solo actualizar el campo 'operacion'
-          registros[i]['operacion'] = operacionData;
-          encontrado = true;
-          break;
-        }
-      }
-
-      if (!encontrado) {
-        print('⚠ Estado no encontrado en JSON');
-        return false;
-      }
-
-      // Guardar en la base de datos
-      int updated = await db.update(
-        'Operacion_Scalamin',
-        {'registros': jsonEncode(registros)},
-        where: 'id = ?',
-        whereArgs: [operacionId],
-      );
-
-      print('✔ Datos de perforación actualizados para estado $estadoId');
-      return updated > 0;
-    } catch (e) {
-      print('Error actualizando datos de perforación: $e');
-      return false;
-    }
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdScalamin(
@@ -9195,30 +6790,10 @@ CREATE TABLE UsuarioEquipo (
   Future<Map<String, dynamic>?> getUltimoEstadoByOperacionIdScalamin(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Scalamin',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getUltimoEstadoByOperacionId(
+      operacionId,
+      tableName: 'Operacion_scalamin',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      if (registros.isEmpty) return null;
-
-      // ✅ SIMPLE: el último insertado es el último real
-      return Map<String, dynamic>.from(registros.last);
-    } catch (e) {
-      print('Error obteniendo último estado: $e');
-      return null;
-    }
   }
 
   Future<Map<String, dynamic>?> createReservaEstadoScalamin(
@@ -9227,65 +6802,17 @@ CREATE TABLE UsuarioEquipo (
     String horaInicio,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Scalamin',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createReservaEstado(
+      operacionId,
+      numero,
+      horaInicio,
+      horaFinal,
+      tableName: 'Operacion_scalamin',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    List<dynamic> registros = [];
-    try {
-      registros = jsonDecode(registrosJson);
-    } catch (e) {
-      registros = [];
-    }
-
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': numero,
-      'estado': 'RESERVA',
-      'codigo': '401',
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': {
-        'nivel': '',
-        'tipo_labor': '',
-        'labor': '',
-        'ala': '',
-        'observaciones': '',
-      },
-    };
-
-    registros.add(nuevoEstado);
-
-    await db.update(
-      'Operacion_Scalamin',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<void> cerrarOperacionScalamin(int operacionId) async {
-    final Database db = await DatabaseHelper().database;
-
-    await db.update(
-      'Operacion_Scalamin',
-      {'estado': 'cerrado'}, // Nuevo estado
-      where: 'id = ?',
-      whereArgs: [operacionId], // Parámetro para evitar SQL Injection
-    );
+    return cerrarOperacion(operacionId, tableName: 'Operacion_scalamin');
   }
 
   Future<Map<String, dynamic>> getCondicionesEquipoByOperacionIdScalamin(
@@ -9371,98 +6898,7 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<bool> deleteEstadoScalamin(int operacionId, int estadoId) async {
-    final db = await database;
-
-    // 1. Obtener registros
-    final result = await db.query(
-      'Operacion_Scalamin',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) return false;
-
-    // 2. Parsear JSON
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    if (registros.isEmpty) return false;
-
-    // 3. Convertir todo a Map seguro
-    List<Map<String, dynamic>> lista = registros
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-
-    // 4. Ordenar por numero (orden real)
-    lista.sort((a, b) {
-      return (a['numero'] ?? 0).compareTo(b['numero'] ?? 0);
-    });
-
-    // 5. Buscar el estado a eliminar
-    Map<String, dynamic>? estadoAEliminar;
-    for (var e in lista) {
-      if (e['id'] == estadoId) {
-        estadoAEliminar = e;
-        break;
-      }
-    }
-
-    if (estadoAEliminar == null) return false;
-
-    int numeroEliminar = estadoAEliminar['numero'] ?? 0;
-
-    // 6. Filtrar (eliminar en cascada desde ese numero)
-    List<Map<String, dynamic>> nuevosRegistros = [];
-    List<Map<String, dynamic>> eliminados = [];
-
-    for (var e in lista) {
-      int numero = e['numero'] ?? 0;
-
-      if (numero < numeroEliminar) {
-        nuevosRegistros.add(e);
-      } else {
-        eliminados.add({
-          'id': e['id'],
-          'estado': e['estado'],
-          'numero': numero,
-          'hora_inicio': e['hora_inicio'],
-        });
-      }
-    }
-
-    // Debug
-    print("🗑️ Eliminados: ${eliminados.length}");
-    for (var e in eliminados) {
-      print("   - ${e['estado']} #${e['numero']} (${e['hora_inicio']})");
-    }
-
-    // 7. Renumerar secuencialmente
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      nuevosRegistros[i]['numero'] = i + 1;
-    }
-
-    // 8. Reconstruir horas finales (solo encadenar)
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      if (i < nuevosRegistros.length - 1) {
-        nuevosRegistros[i]['hora_final'] =
-            nuevosRegistros[i + 1]['hora_inicio'] ?? '';
-      } else {
-        nuevosRegistros[i]['hora_final'] = "";
-      }
-    }
-
-    // 9. Guardar
-    int updated = await db.update(
-      'Operacion_Scalamin',
-      {'registros': jsonEncode(nuevosRegistros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("📊 Final: ${nuevosRegistros.length} registros");
-
-    return updated > 0;
+    return deleteEstado(operacionId, estadoId, tableName: 'Operacion_scalamin');
   }
 
   Future<bool> updateControlLlantasScalamin(
@@ -9629,22 +7065,22 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<Map<String, dynamic>>> getOperacionScissorByTurnoAndFechaMaster(
-    String turno,
+    int turnoId,
     String fecha,
   ) async {
     final db = await database;
 
     final List<Map<String, dynamic>> result = await db.query(
       'Operacion_scissor',
-      where: 'turno = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turno, fecha, 'activo', 'parciales'],
+      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
+      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
     );
 
     return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionScissorByTurnoAndFecha(
-    String turno,
+    int turnoId,
     String fecha, {
     int? operadorId,
   }) async {
@@ -9653,11 +7089,11 @@ CREATE TABLE UsuarioEquipo (
     late final String where;
     late final List<dynamic> whereArgs;
     if (operadorId != null) {
-      where = 'turno = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turno, fecha, operadorId];
+      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
+      whereArgs = [turnoId, fecha, operadorId];
     } else {
-      where = 'turno = ? AND fecha = ?';
-      whereArgs = [turno, fecha];
+      where = 'turno_id = ? AND fecha = ?';
+      whereArgs = [turnoId, fecha];
     }
 
     final List<Map<String, dynamic>> result = await db.query(
@@ -9673,23 +7109,7 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Map<String, dynamic>>> getEstadosByOperacionIdScissor(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_scissor',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      return [];
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    return registros.map((e) => Map<String, dynamic>.from(e)).toList();
+    return getEstadosByOperacionId(operacionId, tableName: 'Operacion_scissor');
   }
 
   Future<int> eliminarOperacionTalScissorFisico(int id) async {
@@ -9709,48 +7129,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_scissor',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateHoraFinal(
+      operacionId,
+      estadoId,
+      horaFinal,
+      tableName: 'Operacion_scissor',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    bool encontrado = false;
-    String tipoEstado = "";
-
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'].toString() == estadoId.toString()) {
-        tipoEstado = registros[i]['estado']; // Guardar el tipo para log
-        registros[i]['hora_final'] = horaFinal;
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      print("⚠ Estado no encontrado en JSON");
-      return false;
-    }
-
-    int updated = await db.update(
-      'Operacion_scissor',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("✔ Hora final actualizada para estado $tipoEstado: $horaFinal");
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>?> createEstadoScissor(
@@ -9761,71 +7145,15 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, dynamic>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener registros actuales
-    final result = await db.query(
-      'Operacion_scissor',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createEstado(
+      operacionId,
+      estado,
+      codigo,
+      horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion,
+      tableName: 'Operacion_scissor',
     );
-
-    if (result.isEmpty) {
-      return null;
-    }
-
-    // 2. Parsear registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Calcular número
-    int nuevoNumero = 1;
-    if (registros.isNotEmpty) {
-      int ultimoNumero = registros.last['numero'] ?? 0;
-      nuevoNumero = ultimoNumero + 1;
-    }
-
-    // 4. ID único
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    /// NUEVA estructura operación (origen / destino)
-    Map<String, dynamic> operacionSimple = {
-      'origen_nivel': operacion?['origen_nivel'] ?? '',
-      'origen_tipo_labor': operacion?['origen_tipo_labor'] ?? '',
-      'origen_labor': operacion?['origen_labor'] ?? '',
-      'origen_ala': operacion?['origen_ala'] ?? '',
-
-      'destino_nivel': operacion?['destino_nivel'] ?? '',
-      'destino_tipo_labor': operacion?['destino_tipo_labor'] ?? '',
-      'destino_labor': operacion?['destino_labor'] ?? '',
-      'destino_ala': operacion?['destino_ala'] ?? '',
-
-      'observaciones': operacion?['observaciones'] ?? '',
-    };
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': nuevoNumero,
-      'estado': estado,
-      'codigo': codigo,
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': operacionSimple,
-    };
-
-    // 5. Agregar al array
-    registros.add(nuevoEstado);
-
-    // 6. Guardar
-    await db.update(
-      'Operacion_scissor',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<bool> updateEstadoScissor(
@@ -9838,128 +7166,28 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, String>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener el registro actual
-    final result = await db.query(
-      'Operacion_scissor',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateEstado(
+      operacionId,
+      estadoId,
+      numero: numero,
+      estado: estado,
+      codigo: codigo,
+      horaInicio: horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion?.map((k, v) => MapEntry(k, v.toString())),
+      tableName: 'Operacion_scissor',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    // 2. Parsear el JSON de registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Buscar y actualizar el estado específico
-    bool encontrado = false;
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'] == estadoId) {
-        // Actualizar solo los campos proporcionados
-        if (numero != null) registros[i]['numero'] = numero;
-        if (estado != null) registros[i]['estado'] = estado;
-        if (codigo != null) registros[i]['codigo'] = codigo;
-        if (horaInicio != null) registros[i]['hora_inicio'] = horaInicio;
-        if (horaFinal != null) registros[i]['hora_final'] = horaFinal;
-        if (operacion != null) {
-          registros[i]['operacion'] = {
-            ...registros[i]['operacion'] as Map,
-            ...operacion,
-          };
-        }
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      return false;
-    }
-
-    // 4. Guardar los cambios
-    int updated = await db.update(
-      'Operacion_scissor',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>> getOperacionByEstadoIdScissor(
     int operacionId,
     int estadoId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_scissor',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_scissor',
     );
-
-    if (result.isEmpty) {
-      return {
-        'origen_nivel': '',
-        'origen_tipo_labor': '',
-        'origen_labor': '',
-        'origen_ala': '',
-        'destino_nivel': '',
-        'destino_tipo_labor': '',
-        'destino_labor': '',
-        'destino_ala': '',
-        'observaciones': '',
-      };
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      var estadoEncontrado = registros.firstWhere(
-        (estado) => estado['id'] == estadoId,
-        orElse: () => null,
-      );
-
-      if (estadoEncontrado != null &&
-          estadoEncontrado.containsKey('operacion')) {
-        return Map<String, dynamic>.from(estadoEncontrado['operacion']);
-      } else {
-        return {
-          'origen_nivel': '',
-          'origen_tipo_labor': '',
-          'origen_labor': '',
-          'origen_ala': '',
-          'destino_nivel': '',
-          'destino_tipo_labor': '',
-          'destino_labor': '',
-          'destino_ala': '',
-          'observaciones': '',
-        };
-      }
-    } catch (e) {
-      print('Error decodificando registros: $e');
-
-      return {
-        'origen_nivel': '',
-        'origen_tipo_labor': '',
-        'origen_labor': '',
-        'origen_ala': '',
-        'destino_nivel': '',
-        'destino_tipo_labor': '',
-        'destino_labor': '',
-        'destino_ala': '',
-        'observaciones': '',
-      };
-    }
   }
 
   Future<bool> updateOperacionByEstadoIdScissor(
@@ -9967,54 +7195,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     Map<String, dynamic> operacionData,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_scissor',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      operacionData,
+      tableName: 'Operacion_scissor',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-      bool encontrado = false;
-
-      // Buscar y actualizar el estado específico
-      for (var i = 0; i < registros.length; i++) {
-        if (registros[i]['id'] == estadoId) {
-          // Mantener todos los datos del estado, solo actualizar el campo 'operacion'
-          registros[i]['operacion'] = operacionData;
-          encontrado = true;
-          break;
-        }
-      }
-
-      if (!encontrado) {
-        print('⚠ Estado no encontrado en JSON');
-        return false;
-      }
-
-      // Guardar en la base de datos
-      int updated = await db.update(
-        'Operacion_scissor',
-        {'registros': jsonEncode(registros)},
-        where: 'id = ?',
-        whereArgs: [operacionId],
-      );
-
-      print('✔ Datos de perforación actualizados para estado $estadoId');
-      return updated > 0;
-    } catch (e) {
-      print('Error actualizando datos de perforación: $e');
-      return false;
-    }
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdScissor(
@@ -10091,30 +7277,10 @@ CREATE TABLE UsuarioEquipo (
   Future<Map<String, dynamic>?> getUltimoEstadoByOperacionIdScissor(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_scissor',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getUltimoEstadoByOperacionId(
+      operacionId,
+      tableName: 'Operacion_scissor',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      if (registros.isEmpty) return null;
-
-      // ✅ SIMPLE: el último insertado es el último real
-      return Map<String, dynamic>.from(registros.last);
-    } catch (e) {
-      print('Error obteniendo último estado: $e');
-      return null;
-    }
   }
 
   Future<Map<String, dynamic>?> createReservaEstadoScissor(
@@ -10123,71 +7289,17 @@ CREATE TABLE UsuarioEquipo (
     String horaInicio,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_scissor',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createReservaEstado(
+      operacionId,
+      numero,
+      horaInicio,
+      horaFinal,
+      tableName: 'Operacion_scissor',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    List<dynamic> registros = [];
-    try {
-      registros = jsonDecode(registrosJson);
-    } catch (e) {
-      registros = [];
-    }
-
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': numero,
-      'estado': 'RESERVA',
-      'codigo': '401',
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': {
-        'origen_nivel': '',
-        'origen_tipo_labor': '',
-        'origen_labor': '',
-        'origen_ala': '',
-
-        'destino_nivel': '',
-        'destino_tipo_labor': '',
-        'destino_labor': '',
-        'destino_ala': '',
-
-        'observaciones': '',
-      },
-    };
-
-    registros.add(nuevoEstado);
-
-    await db.update(
-      'Operacion_scissor',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<void> cerrarOperacionScissor(int operacionId) async {
-    final Database db = await DatabaseHelper().database;
-
-    await db.update(
-      'Operacion_scissor',
-      {'estado': 'cerrado'}, // Nuevo estado
-      where: 'id = ?',
-      whereArgs: [operacionId], // Parámetro para evitar SQL Injection
-    );
+    return cerrarOperacion(operacionId, tableName: 'Operacion_scissor');
   }
 
   Future<Map<String, dynamic>> getCondicionesEquipoByOperacionIdScissor(
@@ -10273,98 +7385,7 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<bool> deleteEstadoScissor(int operacionId, int estadoId) async {
-    final db = await database;
-
-    // 1. Obtener registros
-    final result = await db.query(
-      'Operacion_scissor',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) return false;
-
-    // 2. Parsear JSON
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    if (registros.isEmpty) return false;
-
-    // 3. Convertir todo a Map seguro
-    List<Map<String, dynamic>> lista = registros
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-
-    // 4. Ordenar por numero (orden real)
-    lista.sort((a, b) {
-      return (a['numero'] ?? 0).compareTo(b['numero'] ?? 0);
-    });
-
-    // 5. Buscar el estado a eliminar
-    Map<String, dynamic>? estadoAEliminar;
-    for (var e in lista) {
-      if (e['id'] == estadoId) {
-        estadoAEliminar = e;
-        break;
-      }
-    }
-
-    if (estadoAEliminar == null) return false;
-
-    int numeroEliminar = estadoAEliminar['numero'] ?? 0;
-
-    // 6. Filtrar (eliminar en cascada desde ese numero)
-    List<Map<String, dynamic>> nuevosRegistros = [];
-    List<Map<String, dynamic>> eliminados = [];
-
-    for (var e in lista) {
-      int numero = e['numero'] ?? 0;
-
-      if (numero < numeroEliminar) {
-        nuevosRegistros.add(e);
-      } else {
-        eliminados.add({
-          'id': e['id'],
-          'estado': e['estado'],
-          'numero': numero,
-          'hora_inicio': e['hora_inicio'],
-        });
-      }
-    }
-
-    // Debug
-    print("🗑️ Eliminados: ${eliminados.length}");
-    for (var e in eliminados) {
-      print("   - ${e['estado']} #${e['numero']} (${e['hora_inicio']})");
-    }
-
-    // 7. Renumerar secuencialmente
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      nuevosRegistros[i]['numero'] = i + 1;
-    }
-
-    // 8. Reconstruir horas finales (solo encadenar)
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      if (i < nuevosRegistros.length - 1) {
-        nuevosRegistros[i]['hora_final'] =
-            nuevosRegistros[i + 1]['hora_inicio'] ?? '';
-      } else {
-        nuevosRegistros[i]['hora_final'] = "";
-      }
-    }
-
-    // 9. Guardar
-    int updated = await db.update(
-      'Operacion_scissor',
-      {'registros': jsonEncode(nuevosRegistros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("📊 Final: ${nuevosRegistros.length} registros");
-
-    return updated > 0;
+    return deleteEstado(operacionId, estadoId, tableName: 'Operacion_scissor');
   }
 
   Future<bool> updateControlLlantasScissor(
@@ -10546,22 +7567,22 @@ CREATE TABLE UsuarioEquipo (
 
   Future<List<Map<String, dynamic>>>
   getOperacionAnfochangerByTurnoAndFechaMaster(
-    String turno,
+    int turnoId,
     String fecha,
   ) async {
     final db = await database;
 
     final List<Map<String, dynamic>> result = await db.query(
       'Operacion_anfochanger',
-      where: 'turno = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turno, fecha, 'activo', 'parciales'],
+      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
+      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
     );
 
     return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionAnfochangerByTurnoAndFecha(
-    String turno,
+    int turnoId,
     String fecha, {
     int? operadorId,
   }) async {
@@ -10570,11 +7591,11 @@ CREATE TABLE UsuarioEquipo (
     late final String where;
     late final List<dynamic> whereArgs;
     if (operadorId != null) {
-      where = 'turno = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turno, fecha, operadorId];
+      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
+      whereArgs = [turnoId, fecha, operadorId];
     } else {
-      where = 'turno = ? AND fecha = ?';
-      whereArgs = [turno, fecha];
+      where = 'turno_id = ? AND fecha = ?';
+      whereArgs = [turnoId, fecha];
     }
 
     final List<Map<String, dynamic>> result = await db.query(
@@ -10590,23 +7611,10 @@ CREATE TABLE UsuarioEquipo (
   Future<List<Map<String, dynamic>>> getEstadosByOperacionIdAnfochanger(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_anfochanger',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getEstadosByOperacionId(
+      operacionId,
+      tableName: 'Operacion_anfochanger',
     );
-
-    if (result.isEmpty) {
-      return [];
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    return registros.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
   Future<int> eliminarOperacionTalAnfochangerFisico(int id) async {
@@ -10626,48 +7634,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_anfochanger',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateHoraFinal(
+      operacionId,
+      estadoId,
+      horaFinal,
+      tableName: 'Operacion_anfochanger',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    bool encontrado = false;
-    String tipoEstado = "";
-
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'].toString() == estadoId.toString()) {
-        tipoEstado = registros[i]['estado']; // Guardar el tipo para log
-        registros[i]['hora_final'] = horaFinal;
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      print("⚠ Estado no encontrado en JSON");
-      return false;
-    }
-
-    int updated = await db.update(
-      'Operacion_anfochanger',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("✔ Hora final actualizada para estado $tipoEstado: $horaFinal");
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>?> createEstadoAnfochanger(
@@ -10678,70 +7650,15 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, dynamic>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener registros actuales
-    final result = await db.query(
-      'Operacion_anfochanger',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createEstado(
+      operacionId,
+      estado,
+      codigo,
+      horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion,
+      tableName: 'Operacion_anfochanger',
     );
-
-    if (result.isEmpty) {
-      return null;
-    }
-
-    // 2. Parsear registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Calcular número
-    int nuevoNumero = 1;
-    if (registros.isNotEmpty) {
-      int ultimoNumero = registros.last['numero'] ?? 0;
-      nuevoNumero = ultimoNumero + 1;
-    }
-
-    // 4. ID único
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    /// NUEVA estructura del estado
-    Map<String, dynamic> operacionSimple = {
-      'origen_nivel': operacion?['origen_nivel'] ?? '',
-      'origen_tipo_labor': operacion?['origen_tipo_labor'] ?? '',
-      'origen_labor': operacion?['origen_labor'] ?? '',
-      'origen_ala': operacion?['origen_ala'] ?? '',
-
-      'n_taladros_cargados': operacion?['n_taladros_cargados'] ?? 0,
-      'cantidad_anfo': operacion?['cantidad_anfo'] ?? 0,
-      'n_cartuchos': operacion?['n_cartuchos'] ?? 0,
-
-      'observaciones': operacion?['observaciones'] ?? '',
-    };
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': nuevoNumero,
-      'estado': estado,
-      'codigo': codigo,
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': operacionSimple,
-    };
-
-    // 5. Agregar al array
-    registros.add(nuevoEstado);
-
-    // 6. Guardar
-    await db.update(
-      'Operacion_anfochanger',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<bool> updateEstadoAnfochanger(
@@ -10754,125 +7671,28 @@ CREATE TABLE UsuarioEquipo (
     String? horaFinal,
     Map<String, String>? operacion,
   }) async {
-    final db = await database;
-
-    // 1. Obtener el registro actual
-    final result = await db.query(
-      'Operacion_anfochanger',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateEstado(
+      operacionId,
+      estadoId,
+      numero: numero,
+      estado: estado,
+      codigo: codigo,
+      horaInicio: horaInicio,
+      horaFinal: horaFinal,
+      operacion: operacion?.map((k, v) => MapEntry(k, v.toString())),
+      tableName: 'Operacion_anfochanger',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    // 2. Parsear el JSON de registros
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    // 3. Buscar y actualizar el estado específico
-    bool encontrado = false;
-    for (var i = 0; i < registros.length; i++) {
-      if (registros[i]['id'] == estadoId) {
-        // Actualizar solo los campos proporcionados
-        if (numero != null) registros[i]['numero'] = numero;
-        if (estado != null) registros[i]['estado'] = estado;
-        if (codigo != null) registros[i]['codigo'] = codigo;
-        if (horaInicio != null) registros[i]['hora_inicio'] = horaInicio;
-        if (horaFinal != null) registros[i]['hora_final'] = horaFinal;
-        if (operacion != null) {
-          registros[i]['operacion'] = {
-            ...registros[i]['operacion'] as Map,
-            ...operacion,
-          };
-        }
-        encontrado = true;
-        break;
-      }
-    }
-
-    if (!encontrado) {
-      return false;
-    }
-
-    // 4. Guardar los cambios
-    int updated = await db.update(
-      'Operacion_anfochanger',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return updated > 0;
   }
 
   Future<Map<String, dynamic>> getOperacionByEstadoIdAnfochanger(
     int operacionId,
     int estadoId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_anfochanger',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_anfochanger',
     );
-
-    if (result.isEmpty) {
-      return {
-        'origen_nivel': '',
-        'origen_tipo_labor': '',
-        'origen_labor': '',
-        'origen_ala': '',
-        'n_taladros_cargados': 0,
-        'cantidad_anfo': 0,
-        'n_cartuchos': 0,
-        'observaciones': '',
-      };
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      var estadoEncontrado = registros.firstWhere(
-        (estado) => estado['id'] == estadoId,
-        orElse: () => null,
-      );
-
-      if (estadoEncontrado != null &&
-          estadoEncontrado.containsKey('operacion')) {
-        return Map<String, dynamic>.from(estadoEncontrado['operacion']);
-      } else {
-        return {
-          'origen_nivel': '',
-          'origen_tipo_labor': '',
-          'origen_labor': '',
-          'origen_ala': '',
-          'n_taladros_cargados': 0,
-          'cantidad_anfo': 0,
-          'n_cartuchos': 0,
-          'observaciones': '',
-        };
-      }
-    } catch (e) {
-      print('Error decodificando registros: $e');
-
-      return {
-        'origen_nivel': '',
-        'origen_tipo_labor': '',
-        'origen_labor': '',
-        'origen_ala': '',
-        'n_taladros_cargados': 0,
-        'cantidad_anfo': 0,
-        'n_cartuchos': 0,
-        'observaciones': '',
-      };
-    }
   }
 
   Future<bool> updateOperacionByEstadoIdAnfochanger(
@@ -10880,54 +7700,12 @@ CREATE TABLE UsuarioEquipo (
     int estadoId,
     Map<String, dynamic> operacionData,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_anfochanger',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return updateOperacionByEstadoId(
+      operacionId,
+      estadoId,
+      operacionData,
+      tableName: 'Operacion_anfochanger',
     );
-
-    if (result.isEmpty) {
-      return false;
-    }
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-      bool encontrado = false;
-
-      // Buscar y actualizar el estado específico
-      for (var i = 0; i < registros.length; i++) {
-        if (registros[i]['id'] == estadoId) {
-          // Mantener todos los datos del estado, solo actualizar el campo 'operacion'
-          registros[i]['operacion'] = operacionData;
-          encontrado = true;
-          break;
-        }
-      }
-
-      if (!encontrado) {
-        print('⚠ Estado no encontrado en JSON');
-        return false;
-      }
-
-      // Guardar en la base de datos
-      int updated = await db.update(
-        'Operacion_anfochanger',
-        {'registros': jsonEncode(registros)},
-        where: 'id = ?',
-        whereArgs: [operacionId],
-      );
-
-      print('✔ Datos de perforación actualizados para estado $estadoId');
-      return updated > 0;
-    } catch (e) {
-      print('Error actualizando datos de perforación: $e');
-      return false;
-    }
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdAnfochanger(
@@ -11010,30 +7788,10 @@ CREATE TABLE UsuarioEquipo (
   Future<Map<String, dynamic>?> getUltimoEstadoByOperacionIdAnfochanger(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_anfochanger',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return getUltimoEstadoByOperacionId(
+      operacionId,
+      tableName: 'Operacion_anfochanger',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    try {
-      List<dynamic> registros = jsonDecode(registrosJson);
-
-      if (registros.isEmpty) return null;
-
-      // ✅ SIMPLE: el último insertado es el último real
-      return Map<String, dynamic>.from(registros.last);
-    } catch (e) {
-      print('Error obteniendo último estado: $e');
-      return null;
-    }
   }
 
   Future<Map<String, dynamic>?> createReservaEstadoAnfochanger(
@@ -11042,69 +7800,17 @@ CREATE TABLE UsuarioEquipo (
     String horaInicio,
     String horaFinal,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_anfochanger',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return createReservaEstado(
+      operacionId,
+      numero,
+      horaInicio,
+      horaFinal,
+      tableName: 'Operacion_anfochanger',
     );
-
-    if (result.isEmpty) return null;
-
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-
-    List<dynamic> registros = [];
-    try {
-      registros = jsonDecode(registrosJson);
-    } catch (e) {
-      registros = [];
-    }
-
-    int nuevoId = DateTime.now().millisecondsSinceEpoch + registros.length;
-
-    Map<String, dynamic> nuevoEstado = {
-      'id': nuevoId,
-      'numero': numero,
-      'estado': 'RESERVA',
-      'codigo': '401',
-      'hora_inicio': horaInicio,
-      'hora_final': horaFinal,
-      'operacion': {
-        'origen_nivel': '',
-        'origen_tipo_labor': '',
-        'origen_labor': '',
-        'origen_ala': '',
-
-        'n_taladros_cargados': 0,
-        'cantidad_anfo': 0,
-
-        'observaciones': '',
-      },
-    };
-
-    registros.add(nuevoEstado);
-
-    await db.update(
-      'Operacion_anfochanger',
-      {'registros': jsonEncode(registros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    return nuevoEstado;
   }
 
   Future<void> cerrarOperacionAnfochanger(int operacionId) async {
-    final Database db = await DatabaseHelper().database;
-
-    await db.update(
-      'Operacion_anfochanger',
-      {'estado': 'cerrado'}, // Nuevo estado
-      where: 'id = ?',
-      whereArgs: [operacionId], // Parámetro para evitar SQL Injection
-    );
+    return cerrarOperacion(operacionId, tableName: 'Operacion_anfochanger');
   }
 
   Future<Map<String, dynamic>> getCondicionesEquipoByOperacionIdAnfochanger(
@@ -11190,98 +7896,11 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<bool> deleteEstadoAnfochanger(int operacionId, int estadoId) async {
-    final db = await database;
-
-    // 1. Obtener registros
-    final result = await db.query(
-      'Operacion_anfochanger',
-      columns: ['registros'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
+    return deleteEstado(
+      operacionId,
+      estadoId,
+      tableName: 'Operacion_anfochanger',
     );
-
-    if (result.isEmpty) return false;
-
-    // 2. Parsear JSON
-    String registrosJson = result.first['registros'] as String? ?? '[]';
-    List<dynamic> registros = jsonDecode(registrosJson);
-
-    if (registros.isEmpty) return false;
-
-    // 3. Convertir todo a Map seguro
-    List<Map<String, dynamic>> lista = registros
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
-
-    // 4. Ordenar por numero (orden real)
-    lista.sort((a, b) {
-      return (a['numero'] ?? 0).compareTo(b['numero'] ?? 0);
-    });
-
-    // 5. Buscar el estado a eliminar
-    Map<String, dynamic>? estadoAEliminar;
-    for (var e in lista) {
-      if (e['id'] == estadoId) {
-        estadoAEliminar = e;
-        break;
-      }
-    }
-
-    if (estadoAEliminar == null) return false;
-
-    int numeroEliminar = estadoAEliminar['numero'] ?? 0;
-
-    // 6. Filtrar (eliminar en cascada desde ese numero)
-    List<Map<String, dynamic>> nuevosRegistros = [];
-    List<Map<String, dynamic>> eliminados = [];
-
-    for (var e in lista) {
-      int numero = e['numero'] ?? 0;
-
-      if (numero < numeroEliminar) {
-        nuevosRegistros.add(e);
-      } else {
-        eliminados.add({
-          'id': e['id'],
-          'estado': e['estado'],
-          'numero': numero,
-          'hora_inicio': e['hora_inicio'],
-        });
-      }
-    }
-
-    // Debug
-    print("🗑️ Eliminados: ${eliminados.length}");
-    for (var e in eliminados) {
-      print("   - ${e['estado']} #${e['numero']} (${e['hora_inicio']})");
-    }
-
-    // 7. Renumerar secuencialmente
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      nuevosRegistros[i]['numero'] = i + 1;
-    }
-
-    // 8. Reconstruir horas finales (solo encadenar)
-    for (int i = 0; i < nuevosRegistros.length; i++) {
-      if (i < nuevosRegistros.length - 1) {
-        nuevosRegistros[i]['hora_final'] =
-            nuevosRegistros[i + 1]['hora_inicio'] ?? '';
-      } else {
-        nuevosRegistros[i]['hora_final'] = "";
-      }
-    }
-
-    // 9. Guardar
-    int updated = await db.update(
-      'Operacion_anfochanger',
-      {'registros': jsonEncode(nuevosRegistros)},
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    print("📊 Final: ${nuevosRegistros.length} registros");
-
-    return updated > 0;
   }
 
   Future<bool> updateControlLlantasAnfochanger(

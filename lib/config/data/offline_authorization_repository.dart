@@ -52,13 +52,13 @@ class OfflineAuthorizationRepository {
     final db = await _sharedDb;
     final rows = await db.query(
       'usuario_directorio',
-      columns: ['operador_id'],
+      columns: ['id'],
       where: 'codigo_dni = ?',
       whereArgs: [dni],
       limit: 1,
     );
     if (rows.isEmpty) return null;
-    return rows.first['operador_id'] as int?;
+    return rows.first['id'] as int?;
   }
 
   Future<Set<int>> getAuthorizedProcessIds(String dni) async {

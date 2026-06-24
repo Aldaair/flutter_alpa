@@ -41,7 +41,7 @@ class OperatorSelectorCard extends StatelessWidget {
                 isDense: true,
               ),
               items: operators.map((operator) {
-                final operatorId = operator['operador_id'] as int?;
+                final operatorId = operator['id'] as int?;
                 final dni = operator['codigo_dni']?.toString() ?? '';
                 final nombres = operator['nombres']?.toString() ?? '';
                 final apellidos = operator['apellidos']?.toString() ?? '';
@@ -69,6 +69,6 @@ class OperatorSelectorCard extends StatelessWidget {
   }
 
   bool _containsSelected() {
-    return operators.any((operator) => operator['operador_id'] == selectedOperatorId);
+    return operators.any((operator) => operator['id'] == selectedOperatorId);
   }
 }

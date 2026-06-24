@@ -68,7 +68,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
         await UserService().syncOfflineProfileSnapshot(
           dni: dni,
-          password: pass,
         );
 
         // Token: intentar obtenerlo online, si falla usar "offline"

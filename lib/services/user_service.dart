@@ -1,5 +1,4 @@
 // lib/services/user_service.dart
-import 'package:crypt/crypt.dart';
 import 'package:i_miner/config/api/api_config.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:http/http.dart' as http;
@@ -28,7 +27,6 @@ class UserService {
   Future<Map<String, dynamic>> syncOfflineProfileSnapshot({
     required String dni,
     String? token,
-    String? password,
     DatabaseHelper? databaseHelper,
   }) async {
     final dbHelper = databaseHelper ?? DatabaseHelper();
@@ -37,19 +35,6 @@ class UserService {
     final user = await dbHelper.getUserByDni(dni);
     if (user == null) {
       throw Exception('Usuario no encontrado en base de datos local');
-    }
-
-    if (password != null && password.isNotEmpty) {
-      final sharedDb = await dbHelper.sharedCatalogDatabase;
-      await sharedDb.update(
-        'usuario_directorio',
-        {
-          'password': Crypt.sha256(password).toString(),
-          'updated_at': DateTime.now().toIso8601String(),
-        },
-        where: 'codigo_dni = ?',
-        whereArgs: [dni],
-      );
     }
 
     return user;

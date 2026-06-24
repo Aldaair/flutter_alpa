@@ -44,8 +44,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Estados',
       'Checklist',
       'Checklist Carguio',
-      'Equipos por usuario',
-      'Usuario procesos',
+      'Usuarios',
     ],
     'Catálogos': [
       'Minas',

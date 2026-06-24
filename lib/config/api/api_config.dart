@@ -46,7 +46,6 @@ class ApiConfig {
   static const String procesosEndpoint = '/procesos';
   static const String cargosEndpoint = '/cargos';
   static const String usuarioDirectorioEndpoint = '/usuarios';
-  static const String usuarioEquiposEndpoint = '/usuario-equipos';
 
   // API v2 — operaciones
   static const String operacionesV2Base = '/operaciones-v2';

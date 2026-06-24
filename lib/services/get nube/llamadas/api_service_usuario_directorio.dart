@@ -26,11 +26,16 @@ class ApiServiceUsuarioDirectorio {
     final batch = db.batch();
 
     batch.delete('usuario_directorio');
+    batch.delete('usuario_procesos');
+    batch.delete('usuario_equipos');
+
     for (final row in decoded) {
       final item = row as Map;
+      final operadorId = item['id'];
+
       batch.insert('usuario_directorio', {
         'codigo_dni': item['codigo_dni']?.toString() ?? '',
-        'operador_id': item['operador_id'],
+        'id': operadorId,
         'nombres': item['nombres'] ?? '',
         'apellidos': item['apellidos'] ?? '',
         'rol': item['rol'],
@@ -38,6 +43,24 @@ class ApiServiceUsuarioDirectorio {
         'password': item['password'],
         'updated_at': DateTime.now().toIso8601String(),
       });
+
+      if (operadorId != null) {
+        final procesos = item['procesos'] as List? ?? [];
+        for (final p in procesos) {
+          batch.insert('usuario_procesos', {
+            'usuarios_id': operadorId,
+            'proceso_id': (p as Map)['id'],
+          });
+        }
+
+        final equipos = item['equipos'] as List? ?? [];
+        for (final e in equipos) {
+          batch.insert('usuario_equipos', {
+            'usuarios_id': operadorId,
+            'equipo_id': (e as Map)['id'],
+          });
+        }
+      }
     }
 
     await batch.commit(noResult: true);

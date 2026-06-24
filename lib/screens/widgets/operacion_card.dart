@@ -124,7 +124,7 @@ class _OperacionCardState extends State<OperacionCard> {
 
       if (usuario != null) {
         setState(() {
-          operadorId = usuario['operador_id'] as int?;
+          operadorId = usuario['id'] as int?;
           registradorUsuarioId = usuario['id'] as int?;
           registradorNombre = '${usuario['nombres']} ${usuario['apellidos']}'
               .trim();
@@ -942,21 +942,24 @@ class _OperacionCardState extends State<OperacionCard> {
     }
 
     Map<String, dynamic> data = {
-      'turno': widget.selectedTurno,
-      'equipo': selectedEquipo,
       'equipo_id': equipoId,
       'turno_id': turnoId,
-      widget.config.claveCodigo: selectedCodigo,
-      'operador': operador ?? operadorEjemplo,
-      'actor_dni': widget.dniUsuario,
       'actor_operador_id': operadorId,
       'operador_id': widget.selectedOperatorId ?? operadorId,
       'registrador_usuario_id': registradorUsuarioId,
-      'registrador_nombre': registradorNombre,
-      widget.config.claveJefeGuardia: selectedJefeGuardia,
       'jefe_guardia_id': jefeGuardiaId,
       'fecha': widget.fechaActual,
     };
+
+    if (!widget.config.soloIds) {
+      data['turno'] = widget.selectedTurno;
+      data['equipo'] = selectedEquipo;
+      data[widget.config.claveCodigo] = selectedCodigo;
+      data['operador'] = operador ?? operadorEjemplo;
+      data['actor_dni'] = widget.dniUsuario;
+      data['registrador_nombre'] = registradorNombre;
+      data[widget.config.claveJefeGuardia] = selectedJefeGuardia;
+    }
 
     if (widget.config.mostrarModelo && selectedModelo != null) {
       data['modelo'] = selectedModelo;
