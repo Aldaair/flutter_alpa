@@ -36,7 +36,7 @@ class ApiServicePlanAvance {
 
         print('📦 PlanAvanceTH rows recibidas: ${planes.length}');
 
-        await _dbHelper.deleteAll('PlanAvanceTH');
+        await _dbHelper.deleteAll('planes_metrajes_avances');
         await savePlanesToLocalDB(planes);
 
         return planes;
@@ -55,7 +55,7 @@ class ApiServicePlanAvance {
     print('🗄️ PlanAvanceTH shared DB path: ${sharedDb.path}');
 
     for (final plan in planes) {
-      await _dbHelper.insert('planes_metrajes_avance', plan.toMap());
+      await _dbHelper.insert('planes_metrajes_avances', plan.toMap());
     }
 
     print('✅ PlanAvanceTH rows guardadas: ${planes.length}');

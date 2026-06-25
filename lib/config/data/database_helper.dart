@@ -33,7 +33,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 25;
+  static const int _sharedCatalogDbVersion = 27;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -397,13 +397,21 @@ CREATE TABLE IF NOT EXISTS procesos (
     // v12 tables
     await db.execute('''
 CREATE TABLE IF NOT EXISTS planes_metrajes_avances (
-  plan_metraje_avance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  plan_metraje_avance_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
   turno_id INTEGER NOT NULL,
   ley_id INTEGER NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  proceso_nombre TEXT NOT NULL,
   dia INTEGER NOT NULL,
-  valor REAL NOT NULL
+  valor REAL NOT NULL,
+  labor_nombre TEXT NOT NULL,
+  turno_nombre TEXT NOT NULL,
+  ley_nombre TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
 )
 ''');
 
@@ -749,13 +757,21 @@ CREATE TABLE IF NOT EXISTS procesos (
       if (!await _tablaExiste(db, 'planes_metrajes_avances')) {
         await db.execute('''
 CREATE TABLE IF NOT EXISTS planes_metrajes_avances (
-  plan_metraje_avance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  plan_metraje_avance_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
   turno_id INTEGER NOT NULL,
   ley_id INTEGER NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  proceso_nombre TEXT NOT NULL,
   dia INTEGER NOT NULL,
-  valor REAL NOT NULL
+  valor REAL NOT NULL,
+  labor_nombre TEXT NOT NULL,
+  turno_nombre TEXT NOT NULL,
+  ley_nombre TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
 )
 ''');
       }
@@ -1021,6 +1037,10 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
     if (oldVersion < 25) {
       await _resetEstadosTable(db);
     }
+
+    if (oldVersion < 27) {
+      await _resetPlanesMetrajesAvancesTable(db);
+    }
   }
 
   Future<void> _resetEstadosTable(Database db) async {
@@ -1035,6 +1055,31 @@ CREATE TABLE estados (
   proceso TEXT NOT NULL,
   proceso_id INTEGER,
   categoria_id INTEGER
+)
+''');
+    });
+  }
+
+  Future<void> _resetPlanesMetrajesAvancesTable(Database db) async {
+    await db.transaction((txn) async {
+      await txn.execute('DROP TABLE IF EXISTS planes_metrajes_avances');
+      await txn.execute('''
+CREATE TABLE planes_metrajes_avances (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  plan_metraje_avance_id INTEGER NOT NULL,
+  labor_id INTEGER NOT NULL,
+  periodo_id INTEGER NOT NULL,
+  turno_id INTEGER NOT NULL,
+  ley_id INTEGER NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  proceso_nombre TEXT NOT NULL,
+  dia INTEGER NOT NULL,
+  valor REAL NOT NULL,
+  labor_nombre TEXT NOT NULL,
+  turno_nombre TEXT NOT NULL,
+  ley_nombre TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
 )
 ''');
     });

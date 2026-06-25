@@ -47,6 +47,7 @@ class _DashboardModuleDefinition {
     required this.title,
     required this.image,
     required this.authorizedNames,
+    this.processLookupNames = const [],
     this.authorizedProcessIds = const {},
   });
 
@@ -54,6 +55,7 @@ class _DashboardModuleDefinition {
   final String title;
   final String image;
   final Set<String> authorizedNames;
+  final List<String> processLookupNames;
   final Set<int> authorizedProcessIds;
 }
 
@@ -62,6 +64,11 @@ final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
     legacyKey: 'PERFORACIÓN TALADROS LARGOS',
     title: 'PERFORACIÓN\nTALADROS LARGOS',
     image: 'assets/images/perforacion_taladros.png',
+    processLookupNames: [
+      'PERFORACIÓN TALADROS LARGOS',
+      'TALADRO LARGO',
+      'TALADROS LARGOS',
+    ],
     authorizedProcessIds: {1},
     authorizedNames: {
       normalizeAuthorizationName('PERFORACIÓN TALADROS LARGOS'),
@@ -73,6 +80,11 @@ final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
     legacyKey: 'PERFORACIÓN HORIZONTAL',
     title: 'PERFORACIÓN\nHORIZONTAL',
     image: 'assets/images/perfo_horizontal.png',
+    processLookupNames: [
+      'PERFORACIÓN HORIZONTAL',
+      'TALADRO HORIZONTAL',
+      'TALADROS HORIZONTAL',
+    ],
     authorizedProcessIds: {2},
     authorizedNames: {
       normalizeAuthorizationName('PERFORACIÓN HORIZONTAL'),
@@ -85,6 +97,7 @@ final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
     legacyKey: 'SOSTENIMIENTO',
     title: 'SOSTENIMIENTO',
     image: 'assets/images/sostenimiento.png',
+    processLookupNames: ['SOSTENIMIENTO', 'EMPERNADOR'],
     authorizedProcessIds: {3},
     authorizedNames: {
       normalizeAuthorizationName('SOSTENIMIENTO'),
@@ -119,6 +132,7 @@ final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
     legacyKey: 'CARGUÍO',
     title: 'CARGUÍO',
     image: 'assets/images/carguio.png',
+    processLookupNames: ['SCOOP', 'CARGUÍO', 'CARGUIO', 'SCOOPTRAM'],
     authorizedProcessIds: {4},
     authorizedNames: {
       normalizeAuthorizationName('CARGUÍO'),
@@ -130,6 +144,7 @@ final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
     legacyKey: 'ACARREO',
     title: 'ACARREO',
     image: 'assets/images/acarreo.png',
+    processLookupNames: ['ACARREO', 'DUMPER'],
     authorizedProcessIds: {5},
     authorizedNames: {
       normalizeAuthorizationName('ACARREO'),
@@ -199,6 +214,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String rol = "Cargando...";
   String cargo = "";
   Map<String, dynamic> operacionesAutorizadas = {};
+  Map<String, int> _catalogProcessIds = {};
 
   bool estaAutorizadoPara(String operacion) {
     return operacionesAutorizadas[operacion] == true;
@@ -214,6 +230,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final dbHelper = DatabaseHelper();
       final usuario = await dbHelper.getUserByDni(widget.dni);
+      final catalogProcessIds = await _cargarCatalogoProcesos(dbHelper);
       print('Usuario cargado: $usuario');
       if (usuario != null) {
         final authorizedModules = await loadDashboardAuthorizationState(
@@ -243,12 +260,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           rol = usuario['rol']?.toString() ?? '';
           cargo = nombreCargo;
           operacionesAutorizadas = authorizedModules;
+          _catalogProcessIds = catalogProcessIds;
         });
       } else {
         setState(() {
           nombreUsuario = "Usuario no encontrado";
           rol = "sin rol";
           cargo = "sin cargo";
+          _catalogProcessIds = catalogProcessIds;
         });
       }
     } catch (e) {
@@ -259,6 +278,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
         cargo = "Error al cargar cargo";
       });
     }
+  }
+
+  Future<Map<String, int>> _cargarCatalogoProcesos(
+    DatabaseHelper dbHelper,
+  ) async {
+    final procesos = await dbHelper.getProcesos();
+    final idsByName = <String, int>{};
+
+    for (final proceso in procesos) {
+      final id = proceso['id'] as int?;
+      final nombre = proceso['nombre']?.toString();
+      final nombreAbreviado = proceso['nombre_abreviado']?.toString();
+
+      if (id == null) continue;
+      if (nombre != null && nombre.trim().isNotEmpty) {
+        idsByName[normalizeAuthorizationName(nombre)] = id;
+      }
+      if (nombreAbreviado != null && nombreAbreviado.trim().isNotEmpty) {
+        idsByName[normalizeAuthorizationName(nombreAbreviado)] = id;
+      }
+    }
+
+    return idsByName;
+  }
+
+  _DashboardModuleDefinition? _findModuleByTitle(String title) {
+    for (final module in _dashboardModuleDefinitions) {
+      if (module.title == title) return module;
+    }
+    return null;
+  }
+
+  Future<int?> _resolveProcesoIdForTitle(String title) async {
+    if (_catalogProcessIds.isEmpty) {
+      _catalogProcessIds = await _cargarCatalogoProcesos(DatabaseHelper());
+    }
+
+    final module = _findModuleByTitle(title);
+    if (module == null) return null;
+
+    for (final processName in module.processLookupNames) {
+      final procesoId =
+          _catalogProcessIds[normalizeAuthorizationName(processName)];
+      if (procesoId != null) {
+        return procesoId;
+      }
+    }
+
+    return null;
   }
 
   @override
@@ -546,9 +614,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           title: module['title']!,
           imagePath: module['image']!,
           backgroundColor: navbarColor, // MISMO COLOR PARA TODAS
-          onPressed: () {
+          onPressed: () async {
             // Acción según el módulo
-            _handleModulePress(module['title']!);
+            await _handleModulePress(module['title']!);
           },
         ),
       );
@@ -557,7 +625,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return buttons;
   }
 
-  void _handleModulePress(String title) {
+  Future<void> _handleModulePress(String title) async {
+    final resolvedProcesoId = await _resolveProcesoIdForTitle(title);
+    if (!mounted) return;
+
+    if (resolvedProcesoId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se encontró el proceso configurado para "$title" en la tabla procesos.',
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     switch (title) {
       case 'PERFORACIÓN\nTALADROS LARGOS':
         Navigator.push(
@@ -566,9 +650,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             builder: (context) => OperacionListScreen(
               rolUsuario: rol,
               dniUsuario: widget.dni,
-              config: const OperacionScreenConfig(
+              config: OperacionScreenConfig(
                 proceso: 'PERFORACIÓN TALADROS LARGOS',
-                procesoId: 1,
+                procesoId: resolvedProcesoId,
                 dbSuffix: '',
                 operacionNombreDb: 'TalLargo',
               ),
@@ -703,9 +787,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             builder: (context) => OperacionListScreen(
               rolUsuario: rol,
               dniUsuario: widget.dni,
-              config: const OperacionScreenConfig(
+              config: OperacionScreenConfig(
                 proceso: 'PERFORACIÓN HORIZONTAL',
-                procesoId: 2,
+                procesoId: resolvedProcesoId,
                 dbSuffix: 'Horizontal',
                 operacionNombreDb: 'TalHorizontal',
               ),
@@ -840,9 +924,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             builder: (context) => OperacionListScreen(
               rolUsuario: rol,
               dniUsuario: widget.dni,
-              config: const OperacionScreenConfig(
+              config: OperacionScreenConfig(
                 proceso: 'SOSTENIMIENTO',
-                procesoId: 3,
+                procesoId: resolvedProcesoId,
                 dbSuffix: 'Empernador',
                 operacionNombreDb: 'Empernador',
               ),
@@ -975,9 +1059,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             builder: (context) => OperacionListScreen(
               rolUsuario: rol,
               dniUsuario: widget.dni,
-              config: const OperacionScreenConfig(
+              config: OperacionScreenConfig(
                 proceso: 'SCOOP',
-                procesoId: 4,
+                procesoId: resolvedProcesoId,
                 dbSuffix: 'Scoop',
                 operacionNombreDb: 'Scoop',
                 hasChecklistTelemando: true,
@@ -1112,9 +1196,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             builder: (context) => OperacionListScreen(
               rolUsuario: rol,
               dniUsuario: widget.dni,
-              config: const OperacionScreenConfig(
+              config: OperacionScreenConfig(
                 proceso: 'ACARREO',
-                procesoId: 5,
+                procesoId: resolvedProcesoId,
                 dbSuffix: 'Dumper',
                 operacionNombreDb: 'Dumper',
                 hasChecklistTelemando: true,

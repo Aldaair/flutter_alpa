@@ -33,7 +33,10 @@ class PlanAvanceTH {
 
   factory PlanAvanceTH.fromJson(Map<String, dynamic> json) {
     return PlanAvanceTH(
-      planAvanceThId: _asInt(json['planAvanceThId']) ?? 0,
+      planAvanceThId:
+          _asInt(json['planMetrajeAvanceId']) ??
+          _asInt(json['plan_metraje_avance_id']) ??
+          0,
       laborId: _asInt(json['labor_id']) ?? 0,
       periodoId: _asInt(json['periodo_id']) ?? 0,
       turnoId: _asInt(json['turno_id']) ?? 0,
@@ -52,7 +55,7 @@ class PlanAvanceTH {
 
   Map<String, dynamic> toMap() {
     return {
-      'planAvanceThId': planAvanceThId,
+      'plan_metraje_avance_id': planAvanceThId,
       'labor_id': laborId,
       'periodo_id': periodoId,
       'turno_id': turnoId,

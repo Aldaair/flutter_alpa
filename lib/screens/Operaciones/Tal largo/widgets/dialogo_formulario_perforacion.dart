@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/assigned_labor.dart';
-import 'package:i_miner/models/PlanProduccion.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:i_miner/models/DimMina.dart';
 import 'package:i_miner/models/DimZona.dart';
@@ -111,28 +110,8 @@ class _DialogoFormularioPerforacionState
   String? longitudBarraSeleccionada;
 
   // Opciones para los dropdowns
-  List<String> opcionesMina = [];
-  List<String> opcionesZona = [];
-  List<String> opcionesArea = [];
-  List<String> opcionesFase = [];
-  List<String> opcionesEstructuraMineral = [];
-  List<String> opcionesNivel = [];
-  List<String> opcionesTipoLabor = [];
-  List<String> opcionesLabor = [];
-  List<String> opcionesAla = [];
   List<String> opcionesTipoPerforacion = [];
   List<String> opcionesLongitudBarras = [];
-
-  // Listas filtradas para la selección en cascada (invertida)
-  List<String> filteredMinas = [];
-  List<String> filteredZonas = [];
-  List<String> filteredAreas = [];
-  List<String> filteredFases = [];
-  List<String> filteredEstructurasMinerales = [];
-  List<String> filteredTiposLabor = [];
-  List<String> filteredLabores = [];
-  List<String> filteredAlas = [];
-  List<String> filteredNiveles = []; // Nueva lista filtrada para niveles
 
   // Catálogos desde shared DB
   List<DimMina> minasCatalogo = [];
@@ -146,7 +125,6 @@ class _DialogoFormularioPerforacionState
   List<DimLabor> laboresCatalogo = [];
 
   // Almacenar objetos completos
-  List<PlanProduccion> planesProduccionCompletos = [];
   List<PlanMetrajeTL> planMetrajeTLCompletos = [];
   List<_LongHolePlanLocation> ubicacionesPlanCompletas = [];
   List<TipoPerforacion> tiposPerforacionCompletos = [];
@@ -296,7 +274,6 @@ class _DialogoFormularioPerforacionState
 
   void _aplicarLaborAsignada(AssignedLabor labor) {
     final ubicacion = _resolverUbicacionPlanificada(labor);
-    final ala = ubicacion?.ala ?? _resolverAlaPlanificada(labor);
 
     setState(() {
       minaSeleccionada = ubicacion?.mina;
@@ -308,9 +285,8 @@ class _DialogoFormularioPerforacionState
           ubicacion?.nivel ?? (labor.nivel.isEmpty ? null : labor.nivel);
       tipoLaborSeleccionado = labor.tipoLabor.isEmpty ? null : labor.tipoLabor;
       laborSeleccionado = labor.laborNombre.isEmpty ? null : labor.laborNombre;
-      alaSeleccionado = ala;
+      alaSeleccionado = ubicacion?.ala;
       laborAsignadaSeleccionada = labor;
-      _actualizarFiltros();
     });
   }
 
@@ -416,29 +392,7 @@ class _DialogoFormularioPerforacionState
       laborSeleccionado = labor.nombreLabor;
       alaSeleccionado = null;
       selectedLaborFromCatalogo = labor;
-      _actualizarFiltros();
     });
-  }
-
-  String? _resolverAlaPlanificada(AssignedLabor labor) {
-    final alas = <String>{};
-
-    for (final plan in planesProduccionCompletos) {
-      if (plan.tipoLabor == labor.tipoLabor &&
-          plan.labor == labor.laborNombre &&
-          plan.nivel == labor.nivel &&
-          (plan.ala?.isNotEmpty ?? false)) {
-        alas.add(plan.ala!);
-      }
-    }
-
-    if (alas.length == 1) {
-      return alas.first;
-    }
-
-    return widget.datosIniciales?['ala']?.toString().isNotEmpty == true
-        ? widget.datosIniciales!['ala'].toString()
-        : null;
   }
 
   Future<void> _cargarLongitudBarras() async {
@@ -490,258 +444,7 @@ class _DialogoFormularioPerforacionState
   void _onAlaChanged(String? nuevoAla) {
     setState(() {
       alaSeleccionado = nuevoAla;
-      _actualizarFiltros();
     });
-  }
-
-  void _actualizarFiltros() {
-    if (usarFrentePlanificado && ubicacionesPlanCompletas.isNotEmpty) {
-      _actualizarFiltrosDesdePlanes();
-    } else {
-      _actualizarFiltrosDesdeCatalogos();
-    }
-  }
-
-  void _actualizarFiltrosDesdePlanes() {
-    filteredMinas = _uniqueSorted(
-      ubicacionesPlanCompletas.map((ubicacion) => ubicacion.mina),
-    );
-    filteredZonas = _uniqueSorted(
-      ubicacionesPlanCompletas
-          .where(
-            (ubicacion) =>
-                minaSeleccionada == null || ubicacion.mina == minaSeleccionada,
-          )
-          .map((ubicacion) => ubicacion.zona),
-    );
-    filteredAreas = _uniqueSorted(
-      ubicacionesPlanCompletas
-          .where(
-            (ubicacion) =>
-                (minaSeleccionada == null ||
-                    ubicacion.mina == minaSeleccionada) &&
-                (zonaSeleccionada == null ||
-                    ubicacion.zona == zonaSeleccionada),
-          )
-          .map((ubicacion) => ubicacion.area),
-    );
-    filteredFases = _uniqueSorted(
-      ubicacionesPlanCompletas
-          .where(
-            (ubicacion) =>
-                (minaSeleccionada == null ||
-                    ubicacion.mina == minaSeleccionada) &&
-                (zonaSeleccionada == null ||
-                    ubicacion.zona == zonaSeleccionada) &&
-                (areaSeleccionada == null ||
-                    ubicacion.area == areaSeleccionada),
-          )
-          .map((ubicacion) => ubicacion.fase),
-    );
-    filteredEstructurasMinerales = _uniqueSorted(
-      ubicacionesPlanCompletas
-          .where(
-            (ubicacion) =>
-                (minaSeleccionada == null ||
-                    ubicacion.mina == minaSeleccionada) &&
-                (zonaSeleccionada == null ||
-                    ubicacion.zona == zonaSeleccionada) &&
-                (areaSeleccionada == null ||
-                    ubicacion.area == areaSeleccionada) &&
-                (faseSeleccionada == null ||
-                    ubicacion.fase == faseSeleccionada),
-          )
-          .map((ubicacion) => ubicacion.estructuraMineral),
-    );
-    filteredNiveles = _uniqueSorted(
-      ubicacionesPlanCompletas
-          .where(
-            (ubicacion) =>
-                (minaSeleccionada == null ||
-                    ubicacion.mina == minaSeleccionada) &&
-                (zonaSeleccionada == null ||
-                    ubicacion.zona == zonaSeleccionada) &&
-                (areaSeleccionada == null ||
-                    ubicacion.area == areaSeleccionada) &&
-                (faseSeleccionada == null ||
-                    ubicacion.fase == faseSeleccionada) &&
-                (estructuraMineralSeleccionada == null ||
-                    ubicacion.estructuraMineral ==
-                        estructuraMineralSeleccionada),
-          )
-          .map((ubicacion) => ubicacion.nivel),
-    );
-    filteredTiposLabor = _uniqueSorted(
-      ubicacionesPlanCompletas
-          .where(
-            (ubicacion) =>
-                (minaSeleccionada == null ||
-                    ubicacion.mina == minaSeleccionada) &&
-                (zonaSeleccionada == null ||
-                    ubicacion.zona == zonaSeleccionada) &&
-                (areaSeleccionada == null ||
-                    ubicacion.area == areaSeleccionada) &&
-                (faseSeleccionada == null ||
-                    ubicacion.fase == faseSeleccionada) &&
-                (estructuraMineralSeleccionada == null ||
-                    ubicacion.estructuraMineral ==
-                        estructuraMineralSeleccionada) &&
-                (nivelSeleccionado == null ||
-                    ubicacion.nivel == nivelSeleccionado),
-          )
-          .map((ubicacion) => ubicacion.tipoLabor),
-    );
-    filteredLabores = _uniqueSorted(
-      ubicacionesPlanCompletas
-          .where(
-            (ubicacion) =>
-                (minaSeleccionada == null ||
-                    ubicacion.mina == minaSeleccionada) &&
-                (zonaSeleccionada == null ||
-                    ubicacion.zona == zonaSeleccionada) &&
-                (areaSeleccionada == null ||
-                    ubicacion.area == areaSeleccionada) &&
-                (faseSeleccionada == null ||
-                    ubicacion.fase == faseSeleccionada) &&
-                (estructuraMineralSeleccionada == null ||
-                    ubicacion.estructuraMineral ==
-                        estructuraMineralSeleccionada) &&
-                (nivelSeleccionado == null ||
-                    ubicacion.nivel == nivelSeleccionado) &&
-                (tipoLaborSeleccionado == null ||
-                    ubicacion.tipoLabor == tipoLaborSeleccionado),
-          )
-          .map((ubicacion) => ubicacion.labor),
-    );
-    filteredAlas = _uniqueSorted(
-      ubicacionesPlanCompletas
-          .where(
-            (ubicacion) =>
-                (minaSeleccionada == null ||
-                    ubicacion.mina == minaSeleccionada) &&
-                (zonaSeleccionada == null ||
-                    ubicacion.zona == zonaSeleccionada) &&
-                (areaSeleccionada == null ||
-                    ubicacion.area == areaSeleccionada) &&
-                (faseSeleccionada == null ||
-                    ubicacion.fase == faseSeleccionada) &&
-                (estructuraMineralSeleccionada == null ||
-                    ubicacion.estructuraMineral ==
-                        estructuraMineralSeleccionada) &&
-                (nivelSeleccionado == null ||
-                    ubicacion.nivel == nivelSeleccionado) &&
-                (tipoLaborSeleccionado == null ||
-                    ubicacion.tipoLabor == tipoLaborSeleccionado) &&
-                (laborSeleccionado == null ||
-                    ubicacion.labor == laborSeleccionado),
-          )
-          .map((ubicacion) => ubicacion.ala)
-          .where((ala) => ala.isNotEmpty),
-    );
-
-    _clearSelectionsIfMissing();
-  }
-
-  void _actualizarFiltrosDesdeCatalogos() {
-    filteredMinas = _uniqueSorted(minasCatalogo.map((m) => m.nombre));
-    filteredZonas = _uniqueSorted(
-      zonasCatalogo
-          .where(
-            (z) =>
-                minaSeleccionada == null ||
-                (z.minaId != null &&
-                    minasCatalogo.any(
-                      (m) =>
-                          m.minaId == z.minaId && m.nombre == minaSeleccionada,
-                    )),
-          )
-          .map((z) => z.nombre),
-    );
-    filteredAreas = _uniqueSorted(
-      areasCatalogo
-          .where(
-            (a) =>
-                (minaSeleccionada == null ||
-                    zonasCatalogo.any(
-                      (z) =>
-                          z.zonaId == a.zonaId &&
-                          zonasCatalogo.any(
-                            (zs) => zs.nombre == minaSeleccionada || true,
-                          ),
-                    )) &&
-                (zonaSeleccionada == null ||
-                    (a.zonaId != null &&
-                        zonasCatalogo.any(
-                          (z) =>
-                              z.zonaId == a.zonaId &&
-                              z.nombre == zonaSeleccionada,
-                        ))),
-          )
-          .map((a) => a.nombre),
-    );
-    filteredFases = _uniqueSorted(fasesCatalogo.map((f) => f.nombre));
-    filteredEstructurasMinerales = _uniqueSorted(
-      estructurasMineralesCatalogo.map((e) => e.nombre),
-    );
-    filteredNiveles = _uniqueSorted(nivelesCatalogo.map((n) => n.nombre));
-    filteredTiposLabor = _uniqueSorted(tiposLaborCatalogo.map((t) => t.nombre));
-    filteredLabores = _uniqueSorted(laboresCatalogo.map((l) => l.nombreLabor));
-    filteredAlas = _uniqueSorted(alasCatalogo.map((a) => a.nombre));
-
-    _clearSelectionsIfMissing();
-  }
-
-  void _clearSelectionsIfMissing() {
-    final selectionChanged =
-        _clearSelectionIfMissing(
-          () => minaSeleccionada = null,
-          minaSeleccionada,
-          filteredMinas,
-        ) |
-        _clearSelectionIfMissing(
-          () => zonaSeleccionada = null,
-          zonaSeleccionada,
-          filteredZonas,
-        ) |
-        _clearSelectionIfMissing(
-          () => areaSeleccionada = null,
-          areaSeleccionada,
-          filteredAreas,
-        ) |
-        _clearSelectionIfMissing(
-          () => faseSeleccionada = null,
-          faseSeleccionada,
-          filteredFases,
-        ) |
-        _clearSelectionIfMissing(
-          () => estructuraMineralSeleccionada = null,
-          estructuraMineralSeleccionada,
-          filteredEstructurasMinerales,
-        ) |
-        _clearSelectionIfMissing(
-          () => nivelSeleccionado = null,
-          nivelSeleccionado,
-          filteredNiveles,
-        ) |
-        _clearSelectionIfMissing(
-          () => tipoLaborSeleccionado = null,
-          tipoLaborSeleccionado,
-          filteredTiposLabor,
-        ) |
-        _clearSelectionIfMissing(
-          () => laborSeleccionado = null,
-          laborSeleccionado,
-          filteredLabores,
-        ) |
-        _clearSelectionIfMissing(
-          () => alaSeleccionado = null,
-          alaSeleccionado,
-          filteredAlas,
-        );
-
-    if (selectionChanged) {
-      _actualizarFiltros();
-    }
   }
 
   void _cargarDatosIniciales() {
@@ -812,10 +515,6 @@ class _DialogoFormularioPerforacionState
             widget.datosIniciales!['num_barras']?.toString() ?? '';
         observacionesController.text =
             widget.datosIniciales!['observaciones'] ?? '';
-      });
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _actualizarFiltros();
       });
     }
   }
@@ -1623,45 +1322,6 @@ class _DialogoFormularioPerforacionState
     );
   }
 
-  List<_LongHolePlanLocation> _buildPlanLocations() {
-    final locations = <_LongHolePlanLocation>[];
-
-    for (final plan in planesProduccionCompletos) {
-      final location = _locationFromPlan(
-        mina: plan.mina,
-        zona: plan.zona,
-        area: plan.area,
-        fase: plan.fase,
-        estructuraMineral: plan.estructuraVeta,
-        nivel: plan.nivel,
-        tipoLabor: plan.tipoLabor,
-        labor: plan.labor,
-        ala: plan.ala,
-      );
-      if (location != null) {
-        locations.add(location);
-      }
-    }
-
-    final unique = <String, _LongHolePlanLocation>{};
-    for (final location in locations) {
-      final key = [
-        location.mina,
-        location.zona,
-        location.area,
-        location.fase,
-        location.estructuraMineral,
-        location.nivel,
-        location.tipoLabor,
-        location.labor,
-        location.ala,
-      ].join('|');
-      unique[key] = location;
-    }
-
-    return unique.values.toList();
-  }
-
   Future<void> _resolverUbicacionesPlanMetrajeTL() async {
     final nuevasUbicaciones = <_LongHolePlanLocation>[];
 
@@ -1690,75 +1350,9 @@ class _DialogoFormularioPerforacionState
           existentes.add(key);
         }
       }
-
-      opcionesMina = _uniqueSorted(ubicacionesPlanCompletas.map((u) => u.mina));
-      opcionesZona = _uniqueSorted(ubicacionesPlanCompletas.map((u) => u.zona));
-      opcionesArea = _uniqueSorted(ubicacionesPlanCompletas.map((u) => u.area));
-      opcionesFase = _uniqueSorted(ubicacionesPlanCompletas.map((u) => u.fase));
-      opcionesEstructuraMineral = _uniqueSorted(
-        ubicacionesPlanCompletas.map((u) => u.estructuraMineral),
-      );
-      opcionesNivel = _uniqueSorted(
-        ubicacionesPlanCompletas.map((u) => u.nivel),
-      );
-      opcionesTipoLabor = _uniqueSorted(
-        ubicacionesPlanCompletas.map((u) => u.tipoLabor),
-      );
-      opcionesLabor = _uniqueSorted(
-        ubicacionesPlanCompletas.map((u) => u.labor),
-      );
-      opcionesAla = _uniqueSorted(
-        ubicacionesPlanCompletas.map((u) => u.ala).where((a) => a.isNotEmpty),
-      );
     });
 
-    _actualizarFiltros();
     _sincronizarFrentePlanificado();
-  }
-
-  _LongHolePlanLocation? _locationFromPlan({
-    required String? mina,
-    required String? zona,
-    required String? area,
-    required String? fase,
-    required String? estructuraMineral,
-    required String? nivel,
-    required String? tipoLabor,
-    required String? labor,
-    required String? ala,
-  }) {
-    final resolvedMina = mina?.trim() ?? '';
-    final resolvedZona = zona?.trim() ?? '';
-    final resolvedArea = area?.trim() ?? '';
-    final resolvedFase = fase?.trim() ?? '';
-    final resolvedEstructura = estructuraMineral?.trim() ?? '';
-    final resolvedNivel = nivel?.trim() ?? '';
-    final resolvedTipoLabor = tipoLabor?.trim() ?? '';
-    final resolvedLabor = labor?.trim() ?? '';
-    final resolvedAla = ala?.trim() ?? '';
-
-    if (resolvedMina.isEmpty ||
-        resolvedZona.isEmpty ||
-        resolvedArea.isEmpty ||
-        resolvedFase.isEmpty ||
-        resolvedEstructura.isEmpty ||
-        resolvedNivel.isEmpty ||
-        resolvedTipoLabor.isEmpty ||
-        resolvedLabor.isEmpty) {
-      return null;
-    }
-
-    return _LongHolePlanLocation(
-      mina: resolvedMina,
-      zona: resolvedZona,
-      area: resolvedArea,
-      fase: resolvedFase,
-      estructuraMineral: resolvedEstructura,
-      nivel: resolvedNivel,
-      tipoLabor: resolvedTipoLabor,
-      labor: resolvedLabor,
-      ala: resolvedAla,
-    );
   }
 
   List<String> _uniqueSorted(Iterable<String> values) {
@@ -1768,18 +1362,5 @@ class _DialogoFormularioPerforacionState
         .toList();
     unique.sort();
     return unique;
-  }
-
-  bool _clearSelectionIfMissing(
-    void Function() clear,
-    String? selectedValue,
-    List<String> options,
-  ) {
-    if (selectedValue != null && !options.contains(selectedValue)) {
-      clear();
-      return true;
-    }
-
-    return false;
   }
 }
