@@ -365,7 +365,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -376,7 +376,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: navbarColor.withOpacity(0.1),
+                        color: navbarColor.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(Icons.person, size: 24, color: navbarColor),
@@ -564,8 +564,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => OperacionListScreen(
-              rolUsuario: '${rol}',
-              dniUsuario: '${widget.dni}',
+              rolUsuario: rol,
+              dniUsuario: widget.dni,
               config: const OperacionScreenConfig(
                 proceso: 'PERFORACIÓN TALADROS LARGOS',
                 procesoId: 1,
@@ -654,8 +654,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         estado: estado,
                         controlLlantasData: controlLlantasData ?? {},
                         primaryColor: primaryColor,
-                        onSave: (id, datos) =>
-                            DatabaseHelper().updateControlLlantas(id, datos),
+                        onSave: (id, datos) => DatabaseHelper()
+                            .updateControlLlantasHorizontal(id, datos),
                       ),
               buildBotonesEstado: (onEstadoSeleccionado) =>
                   BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
@@ -701,8 +701,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => OperacionListScreen(
-              rolUsuario: '$rol',
-              dniUsuario: '${widget.dni}',
+              rolUsuario: rol,
+              dniUsuario: widget.dni,
               config: const OperacionScreenConfig(
                 proceso: 'PERFORACIÓN HORIZONTAL',
                 procesoId: 2,
@@ -838,8 +838,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => OperacionListScreen(
-              rolUsuario: '$rol',
-              dniUsuario: '${widget.dni}',
+              rolUsuario: rol,
+              dniUsuario: widget.dni,
               config: const OperacionScreenConfig(
                 proceso: 'SOSTENIMIENTO',
                 procesoId: 3,
@@ -973,8 +973,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => OperacionListScreen(
-              rolUsuario: '$rol',
-              dniUsuario: '${widget.dni}',
+              rolUsuario: rol,
+              dniUsuario: widget.dni,
               config: const OperacionScreenConfig(
                 proceso: 'SCOOP',
                 procesoId: 4,
@@ -1110,8 +1110,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => OperacionListScreen(
-              rolUsuario: '$rol',
-              dniUsuario: '${widget.dni}',
+              rolUsuario: rol,
+              dniUsuario: widget.dni,
               config: const OperacionScreenConfig(
                 proceso: 'ACARREO',
                 procesoId: 5,
@@ -1254,8 +1254,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => ServiciosAuxiliaresScreen(
-              rolUsuario: '$rol',
-              dniUsuario: '${widget.dni}',
+              rolUsuario: rol,
+              dniUsuario: widget.dni,
             ),
           ),
         );
@@ -1290,7 +1290,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: iconColor, size: 20),
@@ -1317,7 +1317,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (opcionesSeleccionadas == null || opcionesSeleccionadas.isEmpty) {
       return;
     }
-    print("token" + widget.token);
+    print("token${widget.token}");
     // Crear y ejecutar el servicio de actualización
     final actualizacionService = ActualizacionService(
       context: context,

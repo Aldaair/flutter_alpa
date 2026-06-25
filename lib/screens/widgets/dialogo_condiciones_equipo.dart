@@ -5,19 +5,21 @@ class DialogoCondicionesEquipo extends StatefulWidget {
   final String estado;
   final Map<String, dynamic>? condicionesData;
   final Color primaryColor;
-  final Future<bool> Function(int operacionId, Map<String, dynamic> datos)? onGuardar;
+  final Future<bool> Function(int operacionId, Map<String, dynamic> datos)?
+  onGuardar;
 
   const DialogoCondicionesEquipo({
-    Key? key,
+    super.key,
     required this.operacionId,
     this.condicionesData,
     required this.estado,
     this.primaryColor = const Color(0xFF1B5E6B),
     this.onGuardar,
-  }) : super(key: key);
+  });
 
   @override
-  State<DialogoCondicionesEquipo> createState() => _DialogoCondicionesEquipoState();
+  State<DialogoCondicionesEquipo> createState() =>
+      _DialogoCondicionesEquipoState();
 }
 
 class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
@@ -44,7 +46,8 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
   }
 
   void _cargarDatosBD() {
-    final datos = widget.condicionesData ??
+    final datos =
+        widget.condicionesData ??
         {
           'op': false,
           'noOp': false,
@@ -119,9 +122,7 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
     final screenWidth = MediaQuery.of(context).size.width;
     isSmallScreen = screenWidth < 600;
 
-    final dialogWidth = isSmallScreen
-        ? screenWidth * 0.95
-        : screenWidth * 0.5;
+    final dialogWidth = isSmallScreen ? screenWidth * 0.95 : screenWidth * 0.5;
 
     final dialogHeight = isSmallScreen
         ? MediaQuery.of(context).size.height * 0.85
@@ -168,7 +169,10 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
 
   Widget _buildCompactHeader() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 16 : 20,
+        vertical: 12,
+      ),
       decoration: BoxDecoration(
         color: widget.primaryColor,
         borderRadius: const BorderRadius.only(
@@ -181,16 +185,24 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(Icons.engineering, color: Colors.white, size: isSmallScreen ? 16 : 18),
+            child: Icon(
+              Icons.engineering,
+              color: Colors.white,
+              size: isSmallScreen ? 16 : 18,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               isSmallScreen ? 'Condiciones Equipo' : 'Condiciones del Equipo',
-              style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 13 : 15, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isSmallScreen ? 13 : 15,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           _buildCompactEstadoBadge(),
@@ -203,18 +215,34 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isEditable ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+        color: isEditable
+            ? Colors.green.withValues(alpha: 0.2)
+            : Colors.grey.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isEditable ? Colors.green : Colors.grey, width: 0.5),
+        border: Border.all(
+          color: isEditable ? Colors.green : Colors.grey,
+          width: 0.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 6, height: 6, decoration: BoxDecoration(color: isEditable ? Colors.green : Colors.grey, shape: BoxShape.circle)),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: isEditable ? Colors.green : Colors.grey,
+              shape: BoxShape.circle,
+            ),
+          ),
           const SizedBox(width: 4),
           Text(
             isEditable ? 'EDITABLE' : 'LECTURA',
-            style: TextStyle(color: isEditable ? Colors.green : Colors.grey, fontSize: isSmallScreen ? 8 : 9, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: isEditable ? Colors.green : Colors.grey,
+              fontSize: isSmallScreen ? 8 : 9,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -233,17 +261,46 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('ESTADO', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+            Text(
+              'ESTADO',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+              ),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildCheckboxCompacto(label: 'OP', value: _opChecked, onChanged: (value) { setState(() { _opChecked = value ?? false; if (_opChecked) _noOpChecked = false; }); }),
+                _buildCheckboxCompacto(
+                  label: 'OP',
+                  value: _opChecked,
+                  onChanged: (value) {
+                    setState(() {
+                      _opChecked = value ?? false;
+                      if (_opChecked) _noOpChecked = false;
+                    });
+                  },
+                ),
                 const SizedBox(width: 16),
-                _buildCheckboxCompacto(label: 'NO-OP', value: _noOpChecked, onChanged: (value) { setState(() { _noOpChecked = value ?? false; if (_noOpChecked) _opChecked = false; }); }),
+                _buildCheckboxCompacto(
+                  label: 'NO-OP',
+                  value: _noOpChecked,
+                  onChanged: (value) {
+                    setState(() {
+                      _noOpChecked = value ?? false;
+                      if (_noOpChecked) _opChecked = false;
+                    });
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 16),
-            _buildCampoCompacto(label: 'LUGAR', controller: _lugarController, hintText: 'Ubicación del equipo'),
+            _buildCampoCompacto(
+              label: 'LUGAR',
+              controller: _lugarController,
+              hintText: 'Ubicación del equipo',
+            ),
           ],
         ),
       );
@@ -262,13 +319,38 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('ESTADO', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+                  Text(
+                    'ESTADO',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _buildCheckboxCompacto(label: 'OP', value: _opChecked, onChanged: (value) { setState(() { _opChecked = value ?? false; if (_opChecked) _noOpChecked = false; }); }),
+                      _buildCheckboxCompacto(
+                        label: 'OP',
+                        value: _opChecked,
+                        onChanged: (value) {
+                          setState(() {
+                            _opChecked = value ?? false;
+                            if (_opChecked) _noOpChecked = false;
+                          });
+                        },
+                      ),
                       const SizedBox(width: 12),
-                      _buildCheckboxCompacto(label: 'NO-OP', value: _noOpChecked, onChanged: (value) { setState(() { _noOpChecked = value ?? false; if (_noOpChecked) _opChecked = false; }); }),
+                      _buildCheckboxCompacto(
+                        label: 'NO-OP',
+                        value: _noOpChecked,
+                        onChanged: (value) {
+                          setState(() {
+                            _noOpChecked = value ?? false;
+                            if (_noOpChecked) _opChecked = false;
+                          });
+                        },
+                      ),
                     ],
                   ),
                 ],
@@ -277,7 +359,11 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
             const VerticalDivider(width: 16),
             Expanded(
               flex: 3,
-              child: _buildCampoCompacto(label: 'LUGAR', controller: _lugarController, hintText: 'Ubicación del equipo'),
+              child: _buildCampoCompacto(
+                label: 'LUGAR',
+                controller: _lugarController,
+                hintText: 'Ubicación del equipo',
+              ),
             ),
           ],
         ),
@@ -310,15 +396,37 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
               children: [
                 Icon(Icons.oil_barrel, size: 14, color: widget.primaryColor),
                 const SizedBox(width: 6),
-                Text('ACEITES Y LUBRICANTES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.primaryColor)),
+                Text(
+                  'ACEITES Y LUBRICANTES',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: widget.primaryColor,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
-            _buildCheckboxCompacto(label: 'MOTOR', value: _aceiteMotorChecked, onChanged: (value) => setState(() => _aceiteMotorChecked = value ?? false)),
+            _buildCheckboxCompacto(
+              label: 'MOTOR',
+              value: _aceiteMotorChecked,
+              onChanged: (value) =>
+                  setState(() => _aceiteMotorChecked = value ?? false),
+            ),
             const SizedBox(height: 8),
-            _buildCheckboxCompacto(label: 'HIDRÁULICO', value: _aceiteHidraulicoChecked, onChanged: (value) => setState(() => _aceiteHidraulicoChecked = value ?? false)),
+            _buildCheckboxCompacto(
+              label: 'HIDRÁULICO',
+              value: _aceiteHidraulicoChecked,
+              onChanged: (value) =>
+                  setState(() => _aceiteHidraulicoChecked = value ?? false),
+            ),
             const SizedBox(height: 8),
-            _buildCheckboxCompacto(label: 'TRANSMISIÓN', value: _aceiteTransmisionChecked, onChanged: (value) => setState(() => _aceiteTransmisionChecked = value ?? false)),
+            _buildCheckboxCompacto(
+              label: 'TRANSMISIÓN',
+              value: _aceiteTransmisionChecked,
+              onChanged: (value) =>
+                  setState(() => _aceiteTransmisionChecked = value ?? false),
+            ),
           ],
         ),
       );
@@ -337,15 +445,45 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
               children: [
                 Icon(Icons.oil_barrel, size: 14, color: widget.primaryColor),
                 const SizedBox(width: 6),
-                Text('ACEITES Y LUBRICANTES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.primaryColor)),
+                Text(
+                  'ACEITES Y LUBRICANTES',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: widget.primaryColor,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
             Row(
               children: [
-                Expanded(child: _buildCheckboxCompacto(label: 'MOTOR', value: _aceiteMotorChecked, onChanged: (value) => setState(() => _aceiteMotorChecked = value ?? false))),
-                Expanded(child: _buildCheckboxCompacto(label: 'HIDRÁULICO', value: _aceiteHidraulicoChecked, onChanged: (value) => setState(() => _aceiteHidraulicoChecked = value ?? false))),
-                Expanded(child: _buildCheckboxCompacto(label: 'TRANSMISIÓN', value: _aceiteTransmisionChecked, onChanged: (value) => setState(() => _aceiteTransmisionChecked = value ?? false))),
+                Expanded(
+                  child: _buildCheckboxCompacto(
+                    label: 'MOTOR',
+                    value: _aceiteMotorChecked,
+                    onChanged: (value) =>
+                        setState(() => _aceiteMotorChecked = value ?? false),
+                  ),
+                ),
+                Expanded(
+                  child: _buildCheckboxCompacto(
+                    label: 'HIDRÁULICO',
+                    value: _aceiteHidraulicoChecked,
+                    onChanged: (value) => setState(
+                      () => _aceiteHidraulicoChecked = value ?? false,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: _buildCheckboxCompacto(
+                    label: 'TRANSMISIÓN',
+                    value: _aceiteTransmisionChecked,
+                    onChanged: (value) => setState(
+                      () => _aceiteTransmisionChecked = value ?? false,
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -368,9 +506,20 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
           children: [
             Row(
               children: [
-                Icon(Icons.local_gas_station, size: 14, color: widget.primaryColor),
+                Icon(
+                  Icons.local_gas_station,
+                  size: 14,
+                  color: widget.primaryColor,
+                ),
                 const SizedBox(width: 6),
-                Text('COMBUSTIBLE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.primaryColor)),
+                Text(
+                  'COMBUSTIBLE',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: widget.primaryColor,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -382,11 +531,26 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
                 hintText: 'Ej: 1/2, 3/4, LLENO',
                 hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: widget.primaryColor)),
-                disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade200)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: BorderSide(color: widget.primaryColor),
+                ),
+                disabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
                 filled: !isEditable,
                 fillColor: Colors.grey.shade50,
               ),
@@ -406,7 +570,16 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
           children: [
             Icon(Icons.local_gas_station, size: 14, color: widget.primaryColor),
             const SizedBox(width: 8),
-            Expanded(child: Text('COMBUSTIBLE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.primaryColor))),
+            Expanded(
+              child: Text(
+                'COMBUSTIBLE',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: widget.primaryColor,
+                ),
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               flex: 2,
@@ -416,13 +589,31 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
                 style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Ej: 1/2, 3/4, LLENO',
-                  hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                  hintStyle: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade400,
+                  ),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: widget.primaryColor)),
-                  disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade200)),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: widget.primaryColor),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
                   filled: !isEditable,
                   fillColor: Colors.grey.shade50,
                 ),
@@ -450,7 +641,14 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
               children: [
                 Icon(Icons.access_time, size: 14, color: widget.primaryColor),
                 const SizedBox(width: 6),
-                Text('HORA DE LLENADO', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.primaryColor)),
+                Text(
+                  'HORA DE LLENADO',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: widget.primaryColor,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -462,8 +660,13 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
                 hintText: 'Seleccionar hora',
                 suffixIcon: const Icon(Icons.schedule, size: 18),
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
             ),
           ],
@@ -481,7 +684,16 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
           children: [
             Icon(Icons.access_time, size: 14, color: widget.primaryColor),
             const SizedBox(width: 8),
-            Expanded(child: Text('HORA DE LLENADO', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.primaryColor))),
+            Expanded(
+              child: Text(
+                'HORA DE LLENADO',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: widget.primaryColor,
+                ),
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               flex: 2,
@@ -493,8 +705,13 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
                   hintText: 'Seleccionar hora',
                   suffixIcon: const Icon(Icons.schedule, size: 18),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
                 ),
               ),
             ),
@@ -519,7 +736,9 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
             value: value,
             onChanged: isEditable ? onChanged : null,
             activeColor: widget.primaryColor,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ),
@@ -545,7 +764,14 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: isSmallScreen ? 10 : 11, fontWeight: FontWeight.w600, color: Colors.grey.shade600)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isSmallScreen ? 10 : 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade600,
+          ),
+        ),
         const SizedBox(height: 4),
         TextFormField(
           controller: controller,
@@ -554,13 +780,31 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
           style: TextStyle(fontSize: isSmallScreen ? 12 : 13),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.grey.shade400),
+            hintStyle: TextStyle(
+              fontSize: isSmallScreen ? 11 : 12,
+              color: Colors.grey.shade400,
+            ),
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: widget.primaryColor)),
-            disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade200)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 8,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: widget.primaryColor),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
             filled: !isEditable,
             fillColor: Colors.grey.shade50,
           ),
@@ -571,10 +815,16 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
 
   Widget _buildCompactFooter() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 20, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 16 : 20,
+        vertical: 12,
+      ),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
@@ -582,8 +832,17 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
         children: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), minimumSize: Size.zero),
-            child: Text('Cancelar', style: TextStyle(color: Colors.grey.shade700, fontSize: isSmallScreen ? 12 : 13)),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              minimumSize: Size.zero,
+            ),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontSize: isSmallScreen ? 12 : 13,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           if (isEditable)
@@ -592,16 +851,27 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 minimumSize: Size.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.save, size: isSmallScreen ? 12 : 14),
                   const SizedBox(width: 4),
-                  Text('Guardar', style: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.w600)),
+                  Text(
+                    'Guardar',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),

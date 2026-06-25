@@ -189,7 +189,7 @@ class ActualizacionService {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Errores de actualización'),
-        content: Container(
+        content: SizedBox(
           width: double.maxFinite,
           child: ListView.builder(
             shrinkWrap: true,

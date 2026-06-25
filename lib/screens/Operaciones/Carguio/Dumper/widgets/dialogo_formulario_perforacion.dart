@@ -12,14 +12,14 @@ class DialogoFormularioPerforacion extends StatefulWidget {
   final Function(Map<String, dynamic>) onGuardar;
 
   const DialogoFormularioPerforacion({
-    Key? key,
+    super.key,
     required this.operacionId,
     required this.estadoId,
     this.datosIniciales,
     required this.estado,
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
-  }) : super(key: key);
+  });
 
   @override
   State<DialogoFormularioPerforacion> createState() =>
@@ -122,7 +122,7 @@ class _DialogoFormularioPerforacionState
         dbHelper.getOrigenDestino('DUMPER', 'ORIGEN'),
       ]);
 
-      final origenes = results[0] as List<Map<String, dynamic>>;
+      final origenes = results[0];
 
       Set<String> nivelesSet = {};
       Set<String> tiposLaborSet = {};
@@ -131,19 +131,21 @@ class _DialogoFormularioPerforacionState
 
       // Procesar PlanMensual
       for (var plan in planesMensualCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false)
-          tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
+        if (plan.nivel.isNotEmpty ?? false) nivelesSet.add(plan.nivel);
+        if (plan.tipoLabor.isNotEmpty ?? false) {
+          tiposLaborSet.add(plan.tipoLabor);
+        }
+        if (plan.labor.isNotEmpty ?? false) laboresSet.add(plan.labor);
+        if (plan.ala.isNotEmpty ?? false) alasSet.add(plan.ala);
       }
 
       // Procesar PlanProduccion
       for (var plan in planesProduccionCompletos) {
         if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false)
-          tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
+        if (plan.tipoLabor.isNotEmpty ?? false) {
+          tiposLaborSet.add(plan.tipoLabor);
+        }
+        if (plan.labor.isNotEmpty ?? false) laboresSet.add(plan.labor);
         if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
       }
 
@@ -190,16 +192,16 @@ class _DialogoFormularioPerforacionState
       // Buscar en PlanMensual
       for (var plan in planesMensualCompletos) {
         if (plan.nivel == nivelInicioSeleccionado &&
-            (plan.tipoLabor?.isNotEmpty ?? false)) {
-          tiposLaborFiltrados.add(plan.tipoLabor!);
+            (plan.tipoLabor.isNotEmpty ?? false)) {
+          tiposLaborFiltrados.add(plan.tipoLabor);
         }
       }
 
       // Buscar en PlanProduccion
       for (var plan in planesProduccionCompletos) {
         if (plan.nivel == nivelInicioSeleccionado &&
-            (plan.tipoLabor?.isNotEmpty ?? false)) {
-          tiposLaborFiltrados.add(plan.tipoLabor!);
+            (plan.tipoLabor.isNotEmpty ?? false)) {
+          tiposLaborFiltrados.add(plan.tipoLabor);
         }
       }
 
@@ -217,8 +219,8 @@ class _DialogoFormularioPerforacionState
       for (var plan in planesMensualCompletos) {
         if (plan.nivel == nivelInicioSeleccionado &&
             plan.tipoLabor == tipoLaborInicioSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
+            (plan.labor.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor);
         }
       }
 
@@ -226,8 +228,8 @@ class _DialogoFormularioPerforacionState
       for (var plan in planesProduccionCompletos) {
         if (plan.nivel == nivelInicioSeleccionado &&
             plan.tipoLabor == tipoLaborInicioSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
+            (plan.labor.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor);
         }
       }
 
@@ -247,8 +249,8 @@ class _DialogoFormularioPerforacionState
         if (plan.nivel == nivelInicioSeleccionado &&
             plan.tipoLabor == tipoLaborInicioSeleccionado &&
             plan.labor == laborInicioSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
+            (plan.ala.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala);
         }
       }
 
@@ -431,7 +433,7 @@ class _DialogoFormularioPerforacionState
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Icon(
@@ -545,7 +547,7 @@ class _DialogoFormularioPerforacionState
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
+                  color: Colors.orange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Icon(
@@ -619,7 +621,7 @@ class _DialogoFormularioPerforacionState
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: widget.primaryColor.withOpacity(0.1),
+              color: widget.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Icon(Icons.calculate, size: 14, color: widget.primaryColor),
@@ -727,7 +729,7 @@ class _DialogoFormularioPerforacionState
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Icon(Icons.description, color: Colors.white, size: 18),
@@ -753,8 +755,8 @@ class _DialogoFormularioPerforacionState
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isEditable
-            ? Colors.green.withOpacity(0.2)
-            : Colors.grey.withOpacity(0.2),
+            ? Colors.green.withValues(alpha: 0.2)
+            : Colors.grey.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEditable ? Colors.green : Colors.grey,

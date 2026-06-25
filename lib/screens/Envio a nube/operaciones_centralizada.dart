@@ -6,6 +6,8 @@ import 'package:i_miner/screens/widgets/envio%20nube/detalle_envio_screen.dart';
 import 'package:i_miner/services/envio%20nube/exportar_service.dart';
 
 class SeccionesScreen extends StatefulWidget {
+  const SeccionesScreen({super.key});
+
   @override
   _SeccionesScreenState createState() => _SeccionesScreenState();
 }
@@ -34,8 +36,9 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalLargoFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvio(id),
-        prepararDatosExportar: (ids, data) =>
-            ExportarService(_db).prepararDatosParaExportar('tal_largo', ids, data),
+        prepararDatosExportar: (ids, data) => ExportarService(
+          _db,
+        ).prepararDatosParaExportar('tal_largo', ids, data),
         formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
@@ -46,10 +49,10 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalHorizontalFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioHorizontal(id),
-        prepararDatosExportar: (ids, data) =>
-            ExportarService(_db).prepararDatosParaExportar('tal_horizontal', ids, data),
-        formatearJson: (data) =>
-            ExportarService(_db).formatearJson(data),
+        prepararDatosExportar: (ids, data) => ExportarService(
+          _db,
+        ).prepararDatosParaExportar('tal_horizontal', ids, data),
+        formatearJson: (data) => ExportarService(_db).formatearJson(data),
         isItemExportable: (item) =>
             item['identity_version'] == 2 && item['syncable'] == 1,
       ),
@@ -61,10 +64,10 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalEmpernadorFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioEmpernador(id),
-        prepararDatosExportar: (ids, data) =>
-            ExportarService(_db).prepararDatosParaExportar('empernador', ids, data),
-        formatearJson: (data) =>
-            ExportarService(_db).formatearJson(data),
+        prepararDatosExportar: (ids, data) => ExportarService(
+          _db,
+        ).prepararDatosParaExportar('empernador', ids, data),
+        formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
       "ROMPEBANCO": (context) => DetalleEnvioScreen(
@@ -74,10 +77,10 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalRompeBacoFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioRompeBancos(id),
-        prepararDatosExportar: (ids, data) =>
-            ExportarService(_db).prepararDatosParaExportar('rompebanco', ids, data),
-        formatearJson: (data) =>
-            ExportarService(_db).formatearJson(data),
+        prepararDatosExportar: (ids, data) => ExportarService(
+          _db,
+        ).prepararDatosParaExportar('rompebanco', ids, data),
+        formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
       "CARGUÍO": (context) => DetalleEnvioScreen(
@@ -87,10 +90,10 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalCarguioFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioCarguio(id),
-        prepararDatosExportar: (ids, data) =>
-            ExportarService(_db).prepararDatosParaExportar('carguio', ids, data),
-        formatearJson: (data) =>
-            ExportarService(_db).formatearJson(data),
+        prepararDatosExportar: (ids, data) => ExportarService(
+          _db,
+        ).prepararDatosParaExportar('carguio', ids, data),
+        formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
       "DUMPER": (context) => DetalleEnvioScreen(
@@ -102,8 +105,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         marcarComoEnviado: (id) => _db.actualizarEnvioDumper(id),
         prepararDatosExportar: (ids, data) =>
             ExportarService(_db).prepararDatosParaExportar('dumper', ids, data),
-        formatearJson: (data) =>
-            ExportarService(_db).formatearJson(data),
+        formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
       "ANFOCHANGER": (context) => DetalleEnvioScreen(
@@ -113,10 +115,10 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalAnfochangerFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioRAnfoChanger(id),
-        prepararDatosExportar: (ids, data) =>
-            ExportarService(_db).prepararDatosParaExportar('anfochanger', ids, data),
-        formatearJson: (data) =>
-            ExportarService(_db).formatearJson(data),
+        prepararDatosExportar: (ids, data) => ExportarService(
+          _db,
+        ).prepararDatosParaExportar('anfochanger', ids, data),
+        formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
       "SCISSOR": (context) => DetalleEnvioScreen(
@@ -126,10 +128,10 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalScissorFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioscissor(id),
-        prepararDatosExportar: (ids, data) =>
-            ExportarService(_db).prepararDatosParaExportar('scissor', ids, data),
-        formatearJson: (data) =>
-            ExportarService(_db).formatearJson(data),
+        prepararDatosExportar: (ids, data) => ExportarService(
+          _db,
+        ).prepararDatosParaExportar('scissor', ids, data),
+        formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
       "SCALAMIN": (context) => DetalleEnvioScreen(
@@ -139,10 +141,10 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalScalaminFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioScalamin(id),
-        prepararDatosExportar: (ids, data) =>
-            ExportarService(_db).prepararDatosParaExportar('scalamin', ids, data),
-        formatearJson: (data) =>
-            ExportarService(_db).formatearJson(data),
+        prepararDatosExportar: (ids, data) => ExportarService(
+          _db,
+        ).prepararDatosParaExportar('scalamin', ids, data),
+        formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
       "MEDICIONES TAL. HORIZONTAL": (context) =>
@@ -244,7 +246,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
@@ -319,7 +321,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -412,7 +414,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -439,7 +441,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: isAvailable
-                    ? primaryColor.withOpacity(0.2)
+                    ? primaryColor.withValues(alpha: 0.2)
                     : Colors.grey.shade200,
                 width: 1.5,
               ),
@@ -451,7 +453,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isAvailable
-                        ? primaryColor.withOpacity(0.1)
+                        ? primaryColor.withValues(alpha: 0.1)
                         : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -560,7 +562,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),

@@ -47,7 +47,9 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
   }
 
   Future<void> _cargarEstados() async {
-    print("🔍 _cargarEstados: procesoId=${widget.procesoId}, categoriaId=${widget.categoriaId}");
+    print(
+      "🔍 _cargarEstados: procesoId=${widget.procesoId}, categoriaId=${widget.categoriaId}",
+    );
     final estados = await DatabaseHelper().getEstadosByProcesoAndCategoria(
       widget.procesoId,
       widget.categoriaId,
@@ -118,7 +120,9 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     return times;
   }
 
-  List<String> _getValidTimeRangeForEdit(List<Map<String, dynamic>> codigoOperativos) {
+  List<String> _getValidTimeRangeForEdit(
+    List<Map<String, dynamic>> codigoOperativos,
+  ) {
     if (!isEditing || widget.existingRecord == null) return [];
 
     int currentIndex = codigoOperativos.indexWhere(
@@ -175,16 +179,17 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     return _estadosCatalogo
         .where((e) => seen.add(e["codigo"] as String? ?? ""))
         .map((e) {
-      String codigo = e["codigo"] as String? ?? "";
-      String tipoEstado = e["tipo_estado"] as String? ?? "";
-      return DropdownMenuItem<String>(
-        value: codigo,
-        child: Text(
-          "$codigo - $tipoEstado",
-          style: const TextStyle(fontSize: 14),
-        ),
-      );
-    }).toList();
+          String codigo = e["codigo"] as String? ?? "";
+          String tipoEstado = e["tipo_estado"] as String? ?? "";
+          return DropdownMenuItem<String>(
+            value: codigo,
+            child: Text(
+              "$codigo - $tipoEstado",
+              style: const TextStyle(fontSize: 14),
+            ),
+          );
+        })
+        .toList();
   }
 
   bool _validateSelection(List<Map<String, dynamic>> codigoOperativos) {
@@ -206,10 +211,10 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
               item["id"].toString() != widget.existingRecord!["id"],
         )
         .any((item) {
-      String horaItem = item["hora_inicio"]?.toString() ?? '';
-      if (horaItem.contains(' ')) horaItem = horaItem.split(' ')[1];
-      return horaItem == selectedTime;
-    });
+          String horaItem = item["hora_inicio"]?.toString() ?? '';
+          if (horaItem.contains(' ')) horaItem = horaItem.split(' ')[1];
+          return horaItem == selectedTime;
+        });
 
     if (horaExiste) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -391,7 +396,7 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                   ),
                   border: OutlineInputBorder(),
                 ),
-                value: selectedCodigo,
+                initialValue: selectedCodigo,
                 items: _obtenerOpcionesUnicas(),
                 onChanged: (value) {
                   setState(() {
@@ -412,15 +417,12 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                   ),
                   border: const OutlineInputBorder(),
                 ),
-                value: selectedTime,
+                initialValue: selectedTime,
                 items: availableTimeOptions
                     .map(
                       (time) => DropdownMenuItem(
                         value: time,
-                        child: Text(
-                          time,
-                          style: const TextStyle(fontSize: 14),
-                        ),
+                        child: Text(time, style: const TextStyle(fontSize: 14)),
                       ),
                     )
                     .toList(),
@@ -475,8 +477,9 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                     child: ElevatedButton(
                       onPressed: () => _handleConfirm(_estadosCatalogo),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            isEditing ? Colors.orange : Colors.green,
+                        backgroundColor: isEditing
+                            ? Colors.orange
+                            : Colors.green,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),

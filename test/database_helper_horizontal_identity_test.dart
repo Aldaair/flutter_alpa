@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/config/data/horizontal_catalog_repository.dart';
-import 'package:i_miner/config/data/offline_authorization_repository.dart';
 import 'package:i_miner/models/Equipo.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
 import 'package:i_miner/models/Seccion.dart';

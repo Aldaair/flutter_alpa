@@ -108,8 +108,9 @@ class _OperacionCardState extends State<OperacionCard> {
 
     codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
     if (selectedCodigo != null) {
-      if (widget.config.mostrarModelo)
+      if (widget.config.mostrarModelo) {
         _actualizarModelosPorCodigo(selectedCodigo);
+      }
       if (widget.config.mostrarCapacidad &&
           capacidadPorCodigo.containsKey(selectedCodigo)) {
         selectedCapacidad = capacidadPorCodigo[selectedCodigo];
@@ -238,7 +239,7 @@ class _OperacionCardState extends State<OperacionCard> {
           }
         }
 
-        if (widget.config.mostrarCapacidad && equipo.codigo != null) {
+        if (widget.config.mostrarCapacidad) {
           double capacidadValor = equipo.capacidadYd3 ?? 0;
           String capacidadString;
           if (capacidadValor == capacidadValor.floorToDouble()) {
@@ -258,8 +259,9 @@ class _OperacionCardState extends State<OperacionCard> {
           codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
         }
         if (selectedCodigo != null) {
-          if (widget.config.mostrarModelo)
+          if (widget.config.mostrarModelo) {
             modelosFiltrados = modelosPorCodigo[selectedCodigo] ?? [];
+          }
           if (widget.config.mostrarCapacidad &&
               capacidadPorCodigo.containsKey(selectedCodigo)) {
             selectedCapacidad = capacidadPorCodigo[selectedCodigo];
@@ -676,7 +678,7 @@ class _OperacionCardState extends State<OperacionCard> {
                   ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? widget.primaryColor.withOpacity(0.1)
+                        ? widget.primaryColor.withValues(alpha: 0.1)
                         : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
@@ -774,7 +776,7 @@ class _OperacionCardState extends State<OperacionCard> {
         decoration: BoxDecoration(
           border: Border.all(
             color: isEnabled
-                ? widget.primaryColor.withOpacity(0.5)
+                ? widget.primaryColor.withValues(alpha: 0.5)
                 : Colors.grey.shade300,
           ),
           borderRadius: BorderRadius.circular(8),
@@ -825,7 +827,7 @@ class _OperacionCardState extends State<OperacionCard> {
           : null;
 
       return DropdownButtonFormField<int>(
-        value: selectedValue,
+        initialValue: selectedValue,
         decoration: InputDecoration(
           labelText: 'Operador',
           labelStyle: TextStyle(fontSize: 12, color: Colors.grey[600]),

@@ -6,18 +6,16 @@ class ExitoDialog extends StatelessWidget {
   final VoidCallback? onAceptar;
 
   const ExitoDialog({
-    Key? key,
+    super.key,
     this.titulo = 'Éxito',
     required this.mensaje,
     this.onAceptar,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 350,
         constraints: const BoxConstraints(maxWidth: 350),
@@ -67,10 +65,7 @@ class ExitoDialog extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               child: Text(
                 mensaje,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: Colors.black87,
-                ),
+                style: const TextStyle(fontSize: 15, color: Colors.black87),
                 textAlign: TextAlign.center,
               ),
             ),

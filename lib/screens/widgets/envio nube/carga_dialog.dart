@@ -3,17 +3,12 @@ import 'package:flutter/material.dart';
 class CargaDialog extends StatelessWidget {
   final String mensaje;
 
-  const CargaDialog({
-    Key? key,
-    this.mensaje = 'Procesando...',
-  }) : super(key: key);
+  const CargaDialog({super.key, this.mensaje = 'Procesando...'});
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
@@ -27,10 +22,7 @@ class CargaDialog extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               mensaje,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
             ),
           ],
         ),

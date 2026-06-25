@@ -20,14 +20,15 @@ class DetalleEnvioScreen extends StatefulWidget {
   final Future<List<Map<String, dynamic>>> Function(
     Set<int>,
     List<Map<String, dynamic>>,
-  ) prepararDatosExportar;
+  )
+  prepararDatosExportar;
   final String Function(List<Map<String, dynamic>>) formatearJson;
 
   final String endpointTipo;
   final bool Function(Map<String, dynamic>)? isItemExportable;
 
   const DetalleEnvioScreen({
-    Key? key,
+    super.key,
     required this.tipoOperacion,
     required this.endpointTipo,
     required this.fetchOperaciones,
@@ -37,7 +38,7 @@ class DetalleEnvioScreen extends StatefulWidget {
     required this.formatearJson,
     this.primaryColor = const Color(0xFF1B5E6B),
     this.isItemExportable,
-  }) : super(key: key);
+  });
 
   @override
   State<DetalleEnvioScreen> createState() => _DetalleEnvioScreenState();
@@ -86,8 +87,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
       return;
     }
 
-    if (widget.isItemExportable != null &&
-        !widget.isItemExportable!(item)) {
+    if (widget.isItemExportable != null && !widget.isItemExportable!(item)) {
       _mostrarAdvertencia(
         'Registro no exportable',
         'Este registro no cumple los requisitos para ser exportado.',
@@ -146,8 +146,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
         context: context,
         builder: (context) => ExitoDialog(
           titulo: 'Eliminación exitosa',
-          mensaje:
-              'Se eliminaron $totalEliminados registro(s) correctamente',
+          mensaje: 'Se eliminaron $totalEliminados registro(s) correctamente',
         ),
       );
     } catch (e) {
@@ -163,8 +162,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) =>
-          const CargaDialog(mensaje: 'Preparando datos...'),
+      builder: (context) => const CargaDialog(mensaje: 'Preparando datos...'),
     );
 
     try {
@@ -229,11 +227,10 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child:
-                        const Icon(Icons.cloud_upload, color: Colors.white),
+                    child: const Icon(Icons.cloud_upload, color: Colors.white),
                   ),
                   const SizedBox(width: 12),
                   const Text(
@@ -266,8 +263,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
                         decoration: BoxDecoration(
                           color: Colors.grey.shade50,
                           borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: Colors.grey.shade200),
+                          border: Border.all(color: Colors.grey.shade200),
                         ),
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
@@ -295,8 +291,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
                   bottomLeft: Radius.circular(20),
                   bottomRight: Radius.circular(20),
                 ),
-                border: Border(
-                    top: BorderSide(color: Colors.grey.shade200)),
+                border: Border(top: BorderSide(color: Colors.grey.shade200)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -312,7 +307,9 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
                       backgroundColor: widget.primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
                     child: const Text('Enviar a la nube'),
                   ),
@@ -325,15 +322,13 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
     );
   }
 
-  Future<void> _enviarDatosALaNube(
-      List<Map<String, dynamic>> jsonData) async {
+  Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
     final operacionService = OperacionesService();
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) =>
-          const CargaDialog(mensaje: 'Enviando a la nube...'),
+      builder: (context) => const CargaDialog(mensaje: 'Enviando a la nube...'),
     );
 
     try {
@@ -343,8 +338,10 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
         return copia;
       }).toList();
 
-      final success =
-          await operacionService.crear(widget.endpointTipo, dataParaEnviar);
+      final success = await operacionService.crear(
+        widget.endpointTipo,
+        dataParaEnviar,
+      );
 
       if (!mounted) return;
       Navigator.pop(context);
@@ -362,8 +359,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
           context: context,
           builder: (context) => ExitoDialog(
             titulo: '¡Envío exitoso!',
-            mensaje:
-                'Se enviaron ${jsonData.length} operaciones correctamente',
+            mensaje: 'Se enviaron ${jsonData.length} operaciones correctamente',
           ),
         );
       } else {
@@ -425,12 +421,12 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
             child: isLoading
                 ? const LoadingState()
                 : operacionData.isEmpty
-                    ? EmptyState(
-                        mensaje: mensajeUsuario,
-                        subtitulo: 'No hay registros disponibles',
-                        icono: Icons.inbox,
-                      )
-                    : _buildOperacionesList(),
+                ? EmptyState(
+                    mensaje: mensajeUsuario,
+                    subtitulo: 'No hay registros disponibles',
+                    icono: Icons.inbox,
+                  )
+                : _buildOperacionesList(),
           ),
         ],
       ),
@@ -444,7 +440,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Icon(Icons.list_alt, size: 18),
@@ -453,8 +449,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
           Expanded(
             child: Text(
               widget.tipoOperacion,
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               overflow: TextOverflow.ellipsis,
             ),
           ),

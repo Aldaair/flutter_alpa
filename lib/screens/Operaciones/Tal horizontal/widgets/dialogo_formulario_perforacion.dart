@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/models/DimLabor.dart';
 import 'package:i_miner/models/assigned_labor.dart';
 import 'package:i_miner/models/PlanMensual.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
@@ -16,7 +17,7 @@ class DialogoFormularioPerforacion extends StatefulWidget {
   final Function(Map<String, dynamic>) onGuardar;
 
   const DialogoFormularioPerforacion({
-    Key? key,
+    super.key,
     required this.operacionId,
     required this.estadoId,
     this.datosIniciales,
@@ -25,7 +26,7 @@ class DialogoFormularioPerforacion extends StatefulWidget {
     required this.turno,
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
-  }) : super(key: key);
+  });
 
   @override
   State<DialogoFormularioPerforacion> createState() =>
@@ -74,8 +75,10 @@ class _DialogoFormularioPerforacionState
   // Almacenar objetos completos para referencia
   List<PlanMensual> planesCompletos = [];
   List<TipoPerforacion> tiposPerforacionCompletos = [];
+  List<DimLabor> laboresCatalogo = [];
   List<AssignedLabor> laboresAsignadas = [];
   AssignedLabor? laborAsignadaSeleccionada;
+  DimLabor? selectedLaborFromCatalogo;
 
   @override
   void initState() {
@@ -93,6 +96,7 @@ class _DialogoFormularioPerforacionState
         _cargarTiposPerforacion(),
         _cargarLongitudBarras(),
         _cargarMisLabores(),
+        _cargarLaboresCatalogo(),
       ]);
     } catch (e) {
       print("Error cargando datos: $e");
@@ -182,8 +186,8 @@ class _DialogoFormularioPerforacionState
       if (plan.tipoLabor == labor.tipoLabor &&
           plan.labor == labor.laborNombre &&
           plan.nivel == labor.nivel &&
-          (plan.ala?.isNotEmpty ?? false)) {
-        alas.add(plan.ala!);
+          (plan.ala.isNotEmpty ?? false)) {
+        alas.add(plan.ala);
       }
     }
 
@@ -217,7 +221,28 @@ class _DialogoFormularioPerforacionState
       print("Error cargando longitudes: $e");
     }
   }
-// ✅ Cargar tipos de perforación
+
+  Future<void> _cargarLaboresCatalogo() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final labores = await dbHelper.getLabores();
+
+      if (!mounted) return;
+
+      setState(() {
+        laboresCatalogo = labores;
+        if (selectedLaborFromCatalogo == null && laborSeleccionado != null) {
+          selectedLaborFromCatalogo = _resolveSelectedLaborFromCatalog(
+            laborSeleccionado,
+          );
+        }
+      });
+    } catch (e) {
+      print('Error cargando labores catálogo: $e');
+    }
+  }
+
+  // ✅ Cargar tipos de perforación
   Future<void> _cargarTiposPerforacion() async {
     try {
       final dbHelper = DatabaseHelper();
@@ -266,8 +291,21 @@ class _DialogoFormularioPerforacionState
       laborSeleccionado = nuevoLabor;
       alaSeleccionado = null;
       nivelSeleccionado = null;
+      selectedLaborFromCatalogo = _resolveSelectedLaborFromCatalog(nuevoLabor);
       _actualizarFiltros();
     });
+  }
+
+  DimLabor? _resolveSelectedLaborFromCatalog(String? laborNombre) {
+    if (laborNombre == null || laborNombre.isEmpty) return null;
+
+    for (final labor in laboresCatalogo) {
+      if (labor.nombreLabor == laborNombre) {
+        return labor;
+      }
+    }
+
+    return null;
   }
 
   void _onAlaChanged(String? nuevoAla) {
@@ -284,8 +322,8 @@ class _DialogoFormularioPerforacionState
       Set<String> laboresFiltrados = {};
       for (var plan in planesCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
+            (plan.labor.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor);
         }
       }
       filteredLabores = laboresFiltrados.toList()..sort();
@@ -299,8 +337,8 @@ class _DialogoFormularioPerforacionState
       for (var plan in planesCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
+            (plan.ala.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala);
         }
       }
       filteredAlas = alasFiltrados.toList()..sort();
@@ -322,8 +360,8 @@ class _DialogoFormularioPerforacionState
             alaSeleccionado!.isEmpty ||
             plan.ala == alaSeleccionado;
 
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
+        if (coincideBase && coincideAla && (plan.nivel.isNotEmpty ?? false)) {
+          nivelesFiltrados.add(plan.nivel);
         }
       }
 
@@ -362,6 +400,9 @@ class _DialogoFormularioPerforacionState
         nivelSeleccionado = widget.datosIniciales!['nivel']?.isNotEmpty == true
             ? widget.datosIniciales!['nivel']
             : null;
+        selectedLaborFromCatalogo = _resolveSelectedLaborFromCatalog(
+          laborSeleccionado,
+        );
 
         talProdController.text = widget.datosIniciales!['tal_prod'] ?? '';
         talRimadosController.text = widget.datosIniciales!['tal_rimados'] ?? '';
@@ -391,21 +432,43 @@ class _DialogoFormularioPerforacionState
       return;
     }
 
+    if (laborSeleccionado == null || laborSeleccionado!.isEmpty) {
+      _mostrarSnackbar('Debe seleccionar un frente de trabajo', Colors.orange);
+      return;
+    }
+
+    final existingLaborIdValue = widget.datosIniciales != null
+        ? widget.datosIniciales!['labor_id']
+        : null;
+    final existingLaborId = existingLaborIdValue is int
+        ? existingLaborIdValue
+        : int.tryParse(existingLaborIdValue?.toString() ?? '');
+
+    final resolvedLaborId = usarFrentePlanificado
+        ? laborAsignadaSeleccionada?.laborId
+        : (selectedLaborFromCatalogo?.laborId ?? existingLaborId);
+
+    if (resolvedLaborId == null) {
+      _mostrarSnackbar(
+        'No se pudo resolver la labor seleccionada',
+        Colors.orange,
+      );
+      return;
+    }
+
     Map<String, dynamic> datosFormulario = {
-      'labor_id': usarFrentePlanificado
-          ? laborAsignadaSeleccionada?.laborId
-          : null,
+      'labor_id': resolvedLaborId,
       'frente_origen': usarFrentePlanificado ? 'planificado' : 'otro_frente',
       'tipo_labor': tipoLaborSeleccionado ?? '',
       'labor': laborSeleccionado ?? '',
       'ala': alaSeleccionado ?? '',
       'nivel': nivelSeleccionado ?? '',
-      'tal_prod': talProdController.text,
-      'tal_rimados': talRimadosController.text,
-      'tal_alivio': talAlivioController.text,
-      'tal_repaso': talRepasoController.text,
-      'long_barras': longitudBarraSeleccionada ?? '',
-      'num_barras': numBarrasController.text,
+      'tal_prod': int.tryParse(talProdController.text) ?? 0,
+      'tal_rimados': int.tryParse(talRimadosController.text) ?? 0,
+      'tal_alivio': int.tryParse(talAlivioController.text) ?? 0,
+      'tal_repaso': int.tryParse(talRepasoController.text) ?? 0,
+      'long_barras': double.tryParse(longitudBarraSeleccionada ?? '') ?? 0.0,
+      'num_barras': int.tryParse(numBarrasController.text) ?? 0,
       'tipo_perforacion': tipoPerforacionSeleccionado ?? '',
 
       // También guardar el ID si es necesario
@@ -637,12 +700,12 @@ class _DialogoFormularioPerforacionState
                                 icon: Icons.format_list_numbered,
                               ),
                               const SizedBox(width: 8),
-                              Container(
+                              SizedBox(
                                 width: 1,
                                 child: const SizedBox.shrink(),
                               ),
                               const SizedBox(width: 8),
-                              Container(
+                              SizedBox(
                                 width: 1,
                                 child: const SizedBox.shrink(),
                               ),
@@ -669,17 +732,17 @@ class _DialogoFormularioPerforacionState
                                 icon: Icons.settings_input_component,
                               ),
                               const SizedBox(width: 8),
-                              Container(
+                              SizedBox(
                                 width: 1,
                                 child: const SizedBox.shrink(),
                               ),
                               const SizedBox(width: 8),
-                              Container(
+                              SizedBox(
                                 width: 1,
                                 child: const SizedBox.shrink(),
                               ),
                               const SizedBox(width: 8),
-                              Container(
+                              SizedBox(
                                 width: 1,
                                 child: const SizedBox.shrink(),
                               ),
@@ -712,7 +775,7 @@ class _DialogoFormularioPerforacionState
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: widget.primaryColor.withOpacity(0.1),
+                color: widget.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Icon(Icons.note_alt, size: 14, color: widget.primaryColor),
@@ -754,7 +817,7 @@ class _DialogoFormularioPerforacionState
                 child: Icon(
                   Icons.comment,
                   size: 16,
-                  color: widget.primaryColor.withOpacity(0.7),
+                  color: widget.primaryColor.withValues(alpha: 0.7),
                 ),
               ),
               border: InputBorder.none,
@@ -785,7 +848,7 @@ class _DialogoFormularioPerforacionState
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: widget.primaryColor.withOpacity(0.1),
+                color: widget.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Icon(icon, size: 14, color: widget.primaryColor),
@@ -831,7 +894,7 @@ class _DialogoFormularioPerforacionState
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Icon(Icons.description, color: Colors.white, size: 18),
@@ -857,8 +920,8 @@ class _DialogoFormularioPerforacionState
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isEditable
-            ? Colors.green.withOpacity(0.2)
-            : Colors.grey.withOpacity(0.2),
+            ? Colors.green.withValues(alpha: 0.2)
+            : Colors.grey.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEditable ? Colors.green : Colors.grey,
@@ -1062,7 +1125,7 @@ class _DialogoFormularioPerforacionState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButtonFormField<int>(
-          value: selected?.laborId,
+          initialValue: selected?.laborId,
           decoration: const InputDecoration(
             labelText: 'Labor asignada',
             border: OutlineInputBorder(),

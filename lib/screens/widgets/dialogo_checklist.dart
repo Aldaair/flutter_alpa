@@ -208,7 +208,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Icon(
@@ -444,7 +444,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -467,7 +467,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: widget.primaryColor.withOpacity(0.05),
+                  color: widget.primaryColor.withValues(alpha: 0.05),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(12),
                     topRight: Radius.circular(12),
@@ -485,7 +485,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: widget.primaryColor.withOpacity(0.1),
+                        color: widget.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Icon(
@@ -578,9 +578,9 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: color.withOpacity(0.3)),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -628,7 +628,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: widget.primaryColor.withOpacity(0.1),
+                color: widget.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Center(

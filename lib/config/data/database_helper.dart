@@ -3135,13 +3135,15 @@ CREATE TABLE UsuarioEquipo (
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorOperadorId != null)
+    if (actorOperadorId != null) {
       insertData['actor_operador_id'] = actorOperadorId;
+    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
     if (equipoId != null) insertData['equipo_id'] = equipoId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null)
+    if (identityVersion != null) {
       insertData['identity_version'] = identityVersion;
+    }
     if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
@@ -4055,15 +4057,17 @@ CREATE TABLE UsuarioEquipo (
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorOperadorId != null)
+    if (actorOperadorId != null) {
       insertData['actor_operador_id'] = actorOperadorId;
+    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
     if (equipoId != null) insertData['equipo_id'] = equipoId;
     if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null)
+    if (identityVersion != null) {
       insertData['identity_version'] = identityVersion;
+    }
     if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
@@ -4534,15 +4538,17 @@ CREATE TABLE UsuarioEquipo (
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorOperadorId != null)
+    if (actorOperadorId != null) {
       insertData['actor_operador_id'] = actorOperadorId;
+    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
     if (equipoId != null) insertData['equipo_id'] = equipoId;
     if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null)
+    if (identityVersion != null) {
       insertData['identity_version'] = identityVersion;
+    }
     if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
@@ -5019,15 +5025,17 @@ CREATE TABLE UsuarioEquipo (
       'check_list_telemando': checkListTelemandoStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorOperadorId != null)
+    if (actorOperadorId != null) {
       insertData['actor_operador_id'] = actorOperadorId;
+    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
     if (equipoId != null) insertData['equipo_id'] = equipoId;
     if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null)
+    if (identityVersion != null) {
       insertData['identity_version'] = identityVersion;
+    }
     if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
@@ -5597,15 +5605,17 @@ CREATE TABLE UsuarioEquipo (
       'check_list_telemando': checkListTelemandoStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorOperadorId != null)
+    if (actorOperadorId != null) {
       insertData['actor_operador_id'] = actorOperadorId;
+    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
     if (equipoId != null) insertData['equipo_id'] = equipoId;
     if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null)
+    if (identityVersion != null) {
       insertData['identity_version'] = identityVersion;
+    }
     if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
@@ -6190,15 +6200,17 @@ CREATE TABLE UsuarioEquipo (
       'estado': 'activo',
       'envio': 0,
     };
-    if (actorOperadorId != null)
+    if (actorOperadorId != null) {
       insertData['actor_operador_id'] = actorOperadorId;
+    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
     if (equipoId != null) insertData['equipo_id'] = equipoId;
     if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null)
+    if (identityVersion != null) {
       insertData['identity_version'] = identityVersion;
+    }
     if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
@@ -6673,8 +6685,9 @@ CREATE TABLE UsuarioEquipo (
     if (equipoId != null) insertData['equipo_id'] = equipoId;
     if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null)
+    if (identityVersion != null) {
       insertData['identity_version'] = identityVersion;
+    }
     if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
@@ -7134,15 +7147,17 @@ CREATE TABLE UsuarioEquipo (
       'estado': 'activo',
       'envio': 0,
     };
-    if (actorOperadorId != null)
+    if (actorOperadorId != null) {
       insertData['actor_operador_id'] = actorOperadorId;
+    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
 
     if (equipoId != null) insertData['equipo_id'] = equipoId;
     if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null)
+    if (identityVersion != null) {
       insertData['identity_version'] = identityVersion;
+    }
     if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
@@ -7612,14 +7627,16 @@ CREATE TABLE UsuarioEquipo (
       'estado': 'activo',
       'envio': 0,
     };
-    if (actorOperadorId != null)
+    if (actorOperadorId != null) {
       insertData['actor_operador_id'] = actorOperadorId;
+    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
     if (equipoId != null) insertData['equipo_id'] = equipoId;
     if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null)
+    if (identityVersion != null) {
       insertData['identity_version'] = identityVersion;
+    }
     if (syncable != null) insertData['syncable'] = syncable;
 
     _appendHybridOperationMetadata(

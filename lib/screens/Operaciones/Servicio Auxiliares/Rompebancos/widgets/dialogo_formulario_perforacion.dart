@@ -12,14 +12,14 @@ class DialogoFormularioRompebanco extends StatefulWidget {
   final Function(Map<String, dynamic>) onGuardar;
 
   const DialogoFormularioRompebanco({
-    Key? key,
+    super.key,
     required this.operacionId,
     required this.estadoId,
     this.datosIniciales,
     required this.estado,
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
-  }) : super(key: key);
+  });
 
   @override
   State<DialogoFormularioRompebanco> createState() =>
@@ -71,16 +71,16 @@ class _DialogoFormularioRompebancoState
       // Buscar en PlanMensual
       for (var plan in planesMensualCompletos) {
         if (plan.nivel == nivelSeleccionado &&
-            (plan.tipoLabor?.isNotEmpty ?? false)) {
-          tiposLaborFiltrados.add(plan.tipoLabor!);
+            (plan.tipoLabor.isNotEmpty ?? false)) {
+          tiposLaborFiltrados.add(plan.tipoLabor);
         }
       }
 
       // Buscar en PlanProduccion
       for (var plan in planesProduccionCompletos) {
         if (plan.nivel == nivelSeleccionado &&
-            (plan.tipoLabor?.isNotEmpty ?? false)) {
-          tiposLaborFiltrados.add(plan.tipoLabor!);
+            (plan.tipoLabor.isNotEmpty ?? false)) {
+          tiposLaborFiltrados.add(plan.tipoLabor);
         }
       }
 
@@ -97,8 +97,8 @@ class _DialogoFormularioRompebancoState
       for (var plan in planesMensualCompletos) {
         if (plan.nivel == nivelSeleccionado &&
             plan.tipoLabor == tipoLaborSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
+            (plan.labor.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor);
         }
       }
 
@@ -106,8 +106,8 @@ class _DialogoFormularioRompebancoState
       for (var plan in planesProduccionCompletos) {
         if (plan.nivel == nivelSeleccionado &&
             plan.tipoLabor == tipoLaborSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
+            (plan.labor.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor);
         }
       }
 
@@ -127,8 +127,8 @@ class _DialogoFormularioRompebancoState
         if (plan.nivel == nivelSeleccionado &&
             plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
+            (plan.ala.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala);
         }
       }
 
@@ -271,7 +271,7 @@ class _DialogoFormularioRompebancoState
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: widget.primaryColor.withOpacity(0.1),
+                  color: widget.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Icon(
@@ -436,7 +436,7 @@ class _DialogoFormularioRompebancoState
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Icon(
@@ -466,8 +466,8 @@ class _DialogoFormularioRompebancoState
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isEditable
-            ? Colors.green.withOpacity(0.2)
-            : Colors.grey.withOpacity(0.2),
+            ? Colors.green.withValues(alpha: 0.2)
+            : Colors.grey.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEditable ? Colors.green : Colors.grey,

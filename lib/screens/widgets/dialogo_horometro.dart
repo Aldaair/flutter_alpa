@@ -19,10 +19,13 @@ class HorometroDef {
       'horometro_principal': 'Horómetro Principal',
       'empernador': 'Empernador',
     };
-    return displayNames[nombre] ?? nombre
-        .split('_')
-        .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
-        .join(' ');
+    return displayNames[nombre] ??
+        nombre
+            .split('_')
+            .map(
+              (w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}',
+            )
+            .join(' ');
   }
 }
 
@@ -34,7 +37,10 @@ class DialogoHorometro extends StatefulWidget {
 
   final List<HorometroDef> horometroDefs;
   final Future<bool> Function(
-      int operacionId, Map<String, dynamic> horometrosToSave) onSave;
+    int operacionId,
+    Map<String, dynamic> horometrosToSave,
+  )
+  onSave;
   final String? headerTitle;
   final String? headerSubtitle;
   final double col0Width;
@@ -218,8 +224,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
       };
     }
 
-    final guardado =
-        await widget.onSave(widget.operacionId, horometrosToSave);
+    final guardado = await widget.onSave(widget.operacionId, horometrosToSave);
 
     if (guardado && mounted) {
       _mostrarSnackbar('Horómetros guardados correctamente', Colors.green);
@@ -319,8 +324,11 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.info_outline,
-                          size: 48, color: Colors.grey.shade400),
+                      Icon(
+                        Icons.info_outline,
+                        size: 48,
+                        color: Colors.grey.shade400,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'No hay horómetros asociados a este equipo',
@@ -373,7 +381,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Icon(
@@ -399,7 +407,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                   Text(
                     widget.headerSubtitle!,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
+                      color: Colors.white.withValues(alpha: 0.8),
                       fontSize: isSmallScreen ? 10 : 12,
                     ),
                   ),
@@ -465,8 +473,9 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
             ElevatedButton(
               onPressed: _guardarHorometros,
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _hayErrores() ? Colors.grey : widget.primaryColor,
+                backgroundColor: _hayErrores()
+                    ? Colors.grey
+                    : widget.primaryColor,
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(
                   horizontal: isSmallScreen ? 16 : 20,
@@ -534,7 +543,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
             TableRow(
               decoration: BoxDecoration(
                 color: erroresValidacion.containsKey(i)
-                    ? Colors.red.withOpacity(0.05)
+                    ? Colors.red.withValues(alpha: 0.05)
                     : null,
               ),
               children: [
@@ -637,16 +646,18 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
             ),
             decoration: InputDecoration(
               isDense: true,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 6,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(4),
                 borderSide: BorderSide(
                   color: error != null
                       ? Colors.red
                       : (isFinalEqual
-                          ? Colors.orange.shade300
-                          : Colors.grey.shade300),
+                            ? Colors.orange.shade300
+                            : Colors.grey.shade300),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
@@ -655,8 +666,8 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                   color: error != null
                       ? Colors.red
                       : (isFinalEqual
-                          ? Colors.orange.shade300
-                          : Colors.grey.shade300),
+                            ? Colors.orange.shade300
+                            : Colors.grey.shade300),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -664,9 +675,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                 borderSide: BorderSide(
                   color: error != null
                       ? Colors.red
-                      : (isFinalEqual
-                          ? Colors.orange
-                          : widget.primaryColor),
+                      : (isFinalEqual ? Colors.orange : widget.primaryColor),
                 ),
               ),
               disabledBorder: OutlineInputBorder(
@@ -675,10 +684,10 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
               ),
               filled: !isEditable,
               fillColor: error != null
-                  ? Colors.red.withOpacity(0.05)
+                  ? Colors.red.withValues(alpha: 0.05)
                   : (isFinalEqual
-                      ? Colors.orange.withOpacity(0.05)
-                      : (isEditable ? Colors.white : Colors.grey.shade50)),
+                        ? Colors.orange.withValues(alpha: 0.05)
+                        : (isEditable ? Colors.white : Colors.grey.shade50)),
               hintText: !isEditable ? 'INOP - Bloqueado' : null,
               hintStyle: TextStyle(
                 color: Colors.grey.shade500,
@@ -732,9 +741,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                 }
               : null,
           activeColor: widget.primaryColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(3),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
         ),
       ),
     );
@@ -757,7 +764,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withValues(alpha: 0.1),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
@@ -769,7 +776,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: widget.primaryColor.withOpacity(0.05),
+                  color: widget.primaryColor.withValues(alpha: 0.05),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(12),
                     topRight: Radius.circular(12),
@@ -780,8 +787,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.speed,
-                        size: 20, color: widget.primaryColor),
+                    Icon(Icons.speed, size: 20, color: widget.primaryColor),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -794,8 +800,11 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                       ),
                     ),
                     if (hasError)
-                      const Icon(Icons.error_outline,
-                          size: 20, color: Colors.red),
+                      const Icon(
+                        Icons.error_outline,
+                        size: 20,
+                        color: Colors.red,
+                      ),
                   ],
                 ),
               ),
@@ -806,18 +815,15 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                     _buildCardField(
                       label: 'Horómetro Inicial',
                       controller: inicialControllers[index],
-                      isEditable:
-                          isEditable && horometro['EstaOP'] == 1,
-                      onChanged: (v) =>
-                          _handleInicialChange(index, v),
+                      isEditable: isEditable && horometro['EstaOP'] == 1,
+                      onChanged: (v) => _handleInicialChange(index, v),
                       error: hasError ? erroresValidacion[index] : null,
                     ),
                     const SizedBox(height: 12),
                     _buildCardField(
                       label: 'Horómetro Final',
                       controller: finalControllers[index],
-                      isEditable:
-                          isEditable && horometro['EstaOP'] == 1,
+                      isEditable: isEditable && horometro['EstaOP'] == 1,
                       onChanged: (v) => _handleFinalChange(index, v),
                       error: null,
                     ),
@@ -827,16 +833,14 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                         _buildCardCheckbox(
                           label: 'OP',
                           value: horometro['EstaOP'] == 1,
-                          onChanged: (v) =>
-                              _handleOPChange(index, v),
+                          onChanged: (v) => _handleOPChange(index, v),
                           isEditable: isEditable,
                         ),
                         const SizedBox(width: 20),
                         _buildCardCheckbox(
                           label: 'INOP',
                           value: horometro['EstaINOP'] == 1,
-                          onChanged: (v) =>
-                              _handleINOPChange(index, v),
+                          onChanged: (v) => _handleINOPChange(index, v),
                           isEditable: isEditable,
                         ),
                       ],
@@ -881,8 +885,10 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
           ),
           decoration: InputDecoration(
             isDense: true,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
@@ -908,10 +914,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
             filled: !isEditable,
             fillColor: !isEditable ? Colors.grey.shade50 : null,
             hintText: !isEditable ? 'Bloqueado' : null,
-            hintStyle: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 12,
-            ),
+            hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 12),
             errorText: error,
             errorStyle: const TextStyle(fontSize: 10),
           ),
@@ -934,7 +937,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: value
-                ? widget.primaryColor.withOpacity(0.1)
+                ? widget.primaryColor.withValues(alpha: 0.1)
                 : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
@@ -947,9 +950,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
               Icon(
                 value ? Icons.check_circle : Icons.circle_outlined,
                 size: 18,
-                color: value
-                    ? widget.primaryColor
-                    : Colors.grey.shade600,
+                color: value ? widget.primaryColor : Colors.grey.shade600,
               ),
               const SizedBox(width: 8),
               Text(
@@ -957,9 +958,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: value
-                      ? widget.primaryColor
-                      : Colors.grey.shade700,
+                  color: value ? widget.primaryColor : Colors.grey.shade700,
                 ),
               ),
             ],

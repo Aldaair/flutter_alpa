@@ -26,7 +26,7 @@ class DialogoFormularioPerforacion extends StatefulWidget {
   final Function(Map<String, dynamic>) onGuardar;
 
   const DialogoFormularioPerforacion({
-    Key? key,
+    super.key,
     required this.operacionId,
     required this.estadoId,
     this.datosIniciales,
@@ -35,7 +35,7 @@ class DialogoFormularioPerforacion extends StatefulWidget {
     required this.turno,
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
-  }) : super(key: key);
+  });
 
   @override
   State<DialogoFormularioPerforacion> createState() =>
@@ -1119,7 +1119,7 @@ class _DialogoFormularioPerforacionState
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Icon(icon, size: 14, color: color),
@@ -1171,7 +1171,7 @@ class _DialogoFormularioPerforacionState
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: widget.primaryColor.withOpacity(0.1),
+                color: widget.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Icon(Icons.note_alt, size: 14, color: widget.primaryColor),
@@ -1211,7 +1211,7 @@ class _DialogoFormularioPerforacionState
                 child: Icon(
                   Icons.comment,
                   size: 16,
-                  color: widget.primaryColor.withOpacity(0.7),
+                  color: widget.primaryColor.withValues(alpha: 0.7),
                 ),
               ),
               border: InputBorder.none,
@@ -1242,7 +1242,7 @@ class _DialogoFormularioPerforacionState
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: widget.primaryColor.withOpacity(0.1),
+                color: widget.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Icon(icon, size: 14, color: widget.primaryColor),
@@ -1288,7 +1288,7 @@ class _DialogoFormularioPerforacionState
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Icon(Icons.description, color: Colors.white, size: 18),
@@ -1314,8 +1314,8 @@ class _DialogoFormularioPerforacionState
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isEditable
-            ? Colors.green.withOpacity(0.2)
-            : Colors.grey.withOpacity(0.2),
+            ? Colors.green.withValues(alpha: 0.2)
+            : Colors.grey.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEditable ? Colors.green : Colors.grey,
@@ -1519,7 +1519,7 @@ class _DialogoFormularioPerforacionState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButtonFormField<int>(
-          value: selected?.laborId,
+          initialValue: selected?.laborId,
           decoration: const InputDecoration(
             labelText: 'Labor asignada',
             border: OutlineInputBorder(),
@@ -1575,7 +1575,7 @@ class _DialogoFormularioPerforacionState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButtonFormField<int>(
-          value: selectedLaborFromCatalogo?.laborId,
+          initialValue: selectedLaborFromCatalogo?.laborId,
           decoration: const InputDecoration(
             labelText: 'Seleccionar labor',
             border: OutlineInputBorder(),

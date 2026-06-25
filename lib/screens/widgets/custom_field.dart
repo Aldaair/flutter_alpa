@@ -8,13 +8,13 @@ class CustomMaterialField extends StatelessWidget {
   final Color? primaryColor;
 
   const CustomMaterialField({
-    Key? key,
+    super.key,
     required this.label,
     required this.value,
     required this.icon,
     this.enabled = true,
     this.primaryColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,8 @@ class CustomMaterialField extends StatelessWidget {
           fontSize: 12,
           color: enabled ? Colors.grey[600] : Colors.grey[400],
         ),
-        prefixIcon: Icon(  // Solo UNA vez aquí
+        prefixIcon: Icon(
+          // Solo UNA vez aquí
           icon,
           size: 16,
           color: enabled ? primary : Colors.grey,

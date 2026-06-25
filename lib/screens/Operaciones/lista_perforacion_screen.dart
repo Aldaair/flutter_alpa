@@ -142,7 +142,7 @@ class OperacionListScreen extends StatefulWidget {
   onProgramaTrabajo;
 
   const OperacionListScreen({
-    Key? key,
+    super.key,
     this.rolUsuario,
     this.dniUsuario,
     required this.config,
@@ -157,7 +157,7 @@ class OperacionListScreen extends StatefulWidget {
     required this.buildBotonesAcciones,
     this.onChecklistTelemando,
     this.onProgramaTrabajo,
-  }) : super(key: key);
+  });
 
   @override
   State<OperacionListScreen> createState() => _OperacionListScreenState();
@@ -707,6 +707,111 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _getChecklistData(int operacionId) {
+    switch (_n) {
+      case 'TalLargo':
+        return _db.getCheckListByOperacionId(operacionId);
+      case 'TalHorizontal':
+        return _db.getCheckListByOperacionIdHorizontal(operacionId);
+      case 'Dumper':
+        return _db.getCheckListByOperacionIdDumper(operacionId);
+      case 'Carguio':
+        return _db.getCheckListByOperacionIdCarguio(operacionId);
+      case 'Scissor':
+        return _db.getCheckListByOperacionIdScissor(operacionId);
+      case 'Anfochanger':
+        return _db.getCheckListByOperacionIdAnfochanger(operacionId);
+      case 'Empernador':
+        return _db.getCheckListByOperacionIdEmpernador(operacionId);
+      case 'RompeBaco':
+        return _db.getCheckListByOperacionIdRompeBaco(operacionId);
+      case 'Scalamin':
+        return _db.getCheckListByOperacionIdScalamin(operacionId);
+      default:
+        throw Exception('Unknown operacionNombreDb for checklist: $_n');
+    }
+  }
+
+  Future<bool> _updateChecklistDispatch(
+    int operacionId,
+    List<Map<String, dynamic>> checklist,
+  ) {
+    switch (_n) {
+      case 'TalLargo':
+        return _db.updateCheckList(operacionId, checklist);
+      case 'TalHorizontal':
+        return _db.updateCheckListHorizontal(operacionId, checklist);
+      case 'Dumper':
+        return _db.updateCheckListDumper(operacionId, checklist);
+      case 'Carguio':
+        return _db.updateCheckListCarguio(operacionId, checklist);
+      case 'Scissor':
+        return _db.updateCheckListScissor(operacionId, checklist);
+      case 'Anfochanger':
+        return _db.updateCheckListAnfochanger(operacionId, checklist);
+      case 'Empernador':
+        return _db.updateCheckListEmpernador(operacionId, checklist);
+      case 'RompeBaco':
+        return _db.updateCheckListRompeBaco(operacionId, checklist);
+      case 'Scalamin':
+        return _db.updateCheckListScalamin(operacionId, checklist);
+      default:
+        throw Exception('Unknown operacionNombreDb for checklist: $_n');
+    }
+  }
+
+  Future<Map<String, dynamic>> _getCondicionesEquipoData(int operacionId) {
+    switch (_n) {
+      case 'TalLargo':
+        return _db.getCondicionesEquipoByOperacionId(operacionId);
+      case 'TalHorizontal':
+        return _db.getCondicionesEquipoByOperacionIdHorizontal(operacionId);
+      case 'Dumper':
+        return _db.getCondicionesEquipoByOperacionIdDumper(operacionId);
+      case 'Carguio':
+        return _db.getCondicionesEquipoByOperacionIdCarguio(operacionId);
+      case 'Scissor':
+        return _db.getCondicionesEquipoByOperacionIdScissor(operacionId);
+      case 'Anfochanger':
+        return _db.getCondicionesEquipoByOperacionIdAnfochanger(operacionId);
+      case 'Empernador':
+        return _db.getCondicionesEquipoByOperacionIdEmpernador(operacionId);
+      case 'RompeBaco':
+        return _db.getCondicionesEquipoByOperacionIdRompeBaco(operacionId);
+      case 'Scalamin':
+        return _db.getCondicionesEquipoByOperacionIdScalamin(operacionId);
+      default:
+        throw Exception(
+          'Unknown operacionNombreDb for condiciones equipo: $_n',
+        );
+    }
+  }
+
+  Future<Map<String, dynamic>> _getControlLlantasData(int operacionId) {
+    switch (_n) {
+      case 'TalLargo':
+        return _db.getControlLlantasByOperacionId(operacionId);
+      case 'TalHorizontal':
+        return _db.getControlLlantasByOperacionIdHorizontal(operacionId);
+      case 'Dumper':
+        return _db.getControlLlantasByOperacionIdDumper(operacionId);
+      case 'Carguio':
+        return _db.getControlLlantasByOperacionIdCarguio(operacionId);
+      case 'Scissor':
+        return _db.getControlLlantasByOperacionIdScissor(operacionId);
+      case 'Anfochanger':
+        return _db.getControlLlantasByOperacionIdAnfochanger(operacionId);
+      case 'Empernador':
+        return _db.getControlLlantasByOperacionIdEmpernador(operacionId);
+      case 'RompeBaco':
+        return _db.getControlLlantasByOperacionIdRompeBaco(operacionId);
+      case 'Scalamin':
+        return _db.getControlLlantasByOperacionIdScalamin(operacionId);
+      default:
+        throw Exception('Unknown operacionNombreDb for control llantas: $_n');
+    }
+  }
+
   // ======== FETCH OPERACION DATA ========
 
   Future<void> _fetchOperacionData() async {
@@ -913,7 +1018,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Icon(Icons.horizontal_rule, size: 16),
@@ -1246,7 +1351,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           if (horaStr.contains(' ')) {
             return DateTime.parse(horaStr);
           } else {
-            String fechaHora = '${fechaActual} ${horaStr}';
+            String fechaHora = '$fechaActual $horaStr';
             return DateTime.parse(fechaHora);
           }
         } catch (e) {
@@ -1342,7 +1447,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           if (horaStr.contains(' ')) {
             return DateTime.parse(horaStr);
           } else {
-            String fechaHora = '${fechaActual} ${horaStr}';
+            String fechaHora = '$fechaActual $horaStr';
             return DateTime.parse(fechaHora);
           }
         } catch (e) {
@@ -1717,8 +1822,9 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     int operacionId = operacionActual['id'];
     String estado = operacionActual['estado'] ?? 'OPERATIVO';
 
-    List<Map<String, dynamic>> savedDecisions = await DatabaseHelper()
-        .getCheckListByOperacionId(operacionId);
+    List<Map<String, dynamic>> savedDecisions = await _getChecklistData(
+      operacionId,
+    );
     List<Map<String, dynamic>> checklistData =
         await ChecklistHelper.enrichForDisplay(
           proceso: widget.config.proceso,
@@ -1732,8 +1838,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           operacionId: operacionId,
           estado: estado,
           checklistData: checklistData,
-          onSaveChecklist: (id, data) =>
-              DatabaseHelper().updateCheckList(id, data),
+          onSaveChecklist: _updateChecklistDispatch,
           primaryColor: primaryColor,
         );
       },
@@ -1910,8 +2015,9 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     int operacionId = operacionActual['id'];
     String estado = operacionActual['estado'] ?? 'OPERATIVO';
 
-    Map<String, dynamic> condicionesData = await DatabaseHelper()
-        .getCondicionesEquipoByOperacionId(operacionId);
+    Map<String, dynamic> condicionesData = await _getCondicionesEquipoData(
+      operacionId,
+    );
 
     showDialog(
       context: context,
@@ -1942,8 +2048,9 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     int operacionId = operacionActual['id'];
     String estado = operacionActual['estado'] ?? 'OPERATIVO';
 
-    Map<String, dynamic> controlLlantas = await DatabaseHelper()
-        .getControlLlantasByOperacionId(operacionId);
+    Map<String, dynamic> controlLlantas = await _getControlLlantasData(
+      operacionId,
+    );
 
     showDialog(
       context: context,

@@ -6,7 +6,6 @@ import 'package:i_miner/config/data/horizontal_catalog_repository.dart';
 import 'package:i_miner/config/data/horizontal_create_flow.dart';
 import 'package:i_miner/models/Equipo.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
-import 'package:i_miner/models/Seccion.dart';
 import 'package:i_miner/models/zona.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';

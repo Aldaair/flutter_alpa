@@ -7,18 +7,19 @@ class ReportButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const ReportButton({
-    Key? key,
+    super.key,
     required this.title,
     required this.imagePath,
     required this.backgroundColor,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final imageSize = constraints.maxWidth * 0.5; // dinámico respecto al ancho
+        final imageSize =
+            constraints.maxWidth * 0.5; // dinámico respecto al ancho
 
         return GestureDetector(
           onTap: onPressed,

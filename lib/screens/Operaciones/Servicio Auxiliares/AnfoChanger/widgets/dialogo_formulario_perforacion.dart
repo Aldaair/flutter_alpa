@@ -12,14 +12,14 @@ class DialogoFormularioAnfochanger extends StatefulWidget {
   final Function(Map<String, dynamic>) onGuardar;
 
   const DialogoFormularioAnfochanger({
-    Key? key,
+    super.key,
     required this.operacionId,
     required this.estadoId,
     this.datosIniciales,
     required this.estado,
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
-  }) : super(key: key);
+  });
 
   @override
   State<DialogoFormularioAnfochanger> createState() =>
@@ -101,14 +101,14 @@ class _DialogoFormularioAnfochangerState
 
       for (var plan in planesMensualCompletos) {
         if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
+            (plan.labor.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor);
         }
       }
       for (var plan in planesProduccionCompletos) {
         if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
+            (plan.labor.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor);
         }
       }
 
@@ -125,8 +125,8 @@ class _DialogoFormularioAnfochangerState
       for (var plan in planesMensualCompletos) {
         if (plan.tipoLabor == origenTipoLaborSeleccionado &&
             plan.labor == origenLaborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
+            (plan.ala.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala);
         }
       }
       for (var plan in planesProduccionCompletos) {
@@ -157,8 +157,8 @@ class _DialogoFormularioAnfochangerState
             origenAlaSeleccionado!.isEmpty ||
             plan.ala == origenAlaSeleccionado;
 
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
+        if (coincideBase && coincideAla && (plan.nivel.isNotEmpty ?? false)) {
+          nivelesFiltrados.add(plan.nivel);
         }
       }
       for (var plan in planesProduccionCompletos) {
@@ -636,7 +636,7 @@ class _DialogoFormularioAnfochangerState
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Icon(
@@ -666,8 +666,8 @@ class _DialogoFormularioAnfochangerState
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isEditable
-            ? Colors.green.withOpacity(0.2)
-            : Colors.grey.withOpacity(0.2),
+            ? Colors.green.withValues(alpha: 0.2)
+            : Colors.grey.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEditable ? Colors.green : Colors.grey,

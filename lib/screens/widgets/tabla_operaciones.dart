@@ -8,13 +8,13 @@ class TablaOperaciones extends StatelessWidget {
   final Color primaryColor;
 
   const TablaOperaciones({
-    Key? key,
+    super.key,
     required this.operaciones,
     required this.onVerDetalle,
     required this.onEditar,
     required this.onEliminar,
     required this.primaryColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ class TablaOperaciones extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -53,9 +53,7 @@ class TablaOperaciones extends StatelessWidget {
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
               ),
-              border: Border(
-                bottom: BorderSide(color: Colors.grey[200]!),
-              ),
+              border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
             ),
             child: Row(
               children: [
@@ -64,7 +62,11 @@ class TablaOperaciones extends StatelessWidget {
                 _buildHeaderCell('Código', flex: 2),
                 _buildHeaderCell('H. Ini', flex: isMobile ? 1 : 2),
                 _buildHeaderCell('H. Fin', flex: isMobile ? 1 : 2),
-                _buildHeaderCell('Acc.', flex: isMobile ? 2 : 3, align: Alignment.center),
+                _buildHeaderCell(
+                  'Acc.',
+                  flex: isMobile ? 2 : 3,
+                  align: Alignment.center,
+                ),
               ],
             ),
           ),
@@ -76,7 +78,8 @@ class TablaOperaciones extends StatelessWidget {
                 : ListView.separated(
                     padding: EdgeInsets.zero,
                     itemCount: operacionesOrdenadas.length,
-                    separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[100]),
+                    separatorBuilder: (context, index) =>
+                        Divider(height: 1, color: Colors.grey[100]),
                     itemBuilder: (context, index) {
                       final operacion = operacionesOrdenadas[index];
                       return _buildFilaOperacion(
@@ -92,25 +95,36 @@ class TablaOperaciones extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderCell(String texto,
-      {int flex = 1, Alignment align = Alignment.centerLeft}) {
+  Widget _buildHeaderCell(
+    String texto, {
+    int flex = 1,
+    Alignment align = Alignment.centerLeft,
+  }) {
     return Expanded(
       flex: flex,
       child: Container(
         alignment: align,
         child: Text(
           texto,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[700],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildFilaOperacion(
-      Map<String, dynamic> operacion, int numero, bool isMobile) {
+    Map<String, dynamic> operacion,
+    int numero,
+    bool isMobile,
+  ) {
     final String estado = operacion['estado'] ?? 'OPERATIVO';
-    final String estadoInicial =
-    estado.length > 2 ? estado.substring(0, 2) + '...' : estado;
+    final String estadoInicial = estado.length > 2
+        ? '${estado.substring(0, 2)}...'
+        : estado;
 
     Color estadoColor = _getEstadoColor(estado);
     IconData estadoIcon = _getEstadoIcon(estado);
@@ -123,54 +137,111 @@ class TablaOperaciones extends StatelessWidget {
       color: numero.isOdd ? Colors.white : Colors.grey[50],
       child: Row(
         children: [
-          Expanded(flex: 1, child: Text(numero.toString(), style: TextStyle(fontSize: isMobile ? 11 : 12))),
+          Expanded(
+            flex: 1,
+            child: Text(
+              numero.toString(),
+              style: TextStyle(fontSize: isMobile ? 11 : 12),
+            ),
+          ),
 
           Expanded(
             flex: isMobile ? 1 : 2,
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 6 : 8, vertical: 4),
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 6 : 8,
+                vertical: 4,
+              ),
               decoration: BoxDecoration(
-                color: estadoColor.withOpacity(0.1),
+                color: estadoColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(estadoIcon, size: isMobile ? 10 : 12, color: estadoColor),
+                  Icon(
+                    estadoIcon,
+                    size: isMobile ? 10 : 12,
+                    color: estadoColor,
+                  ),
                   if (!isMobile) ...[
                     const SizedBox(width: 4),
                     Expanded(
-                      child: Text(estado, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 11, color: estadoColor, fontWeight: FontWeight.w500),
+                      child: Text(
+                        estado,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: estadoColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ] else ...[
                     const SizedBox(width: 2),
-                    Text(estadoInicial,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: estadoColor),
+                    Text(
+                      estadoInicial,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: estadoColor,
+                      ),
                     ),
-                  ]
+                  ],
                 ],
               ),
             ),
           ),
 
-          Expanded(flex: 2, child: Text(operacion['codigo'] ?? '-', style: TextStyle(fontSize: isMobile ? 11 : 12))),
+          Expanded(
+            flex: 2,
+            child: Text(
+              operacion['codigo'] ?? '-',
+              style: TextStyle(fontSize: isMobile ? 11 : 12),
+            ),
+          ),
 
-          Expanded(flex: isMobile ? 1 : 2, child: Text(operacion['horaInicio'] ?? '--:--', style: TextStyle(fontSize: isMobile ? 11 : 12))),
+          Expanded(
+            flex: isMobile ? 1 : 2,
+            child: Text(
+              operacion['horaInicio'] ?? '--:--',
+              style: TextStyle(fontSize: isMobile ? 11 : 12),
+            ),
+          ),
 
-          Expanded(flex: isMobile ? 1 : 2, child: Text(operacion['horaFin'] ?? '--:--', style: TextStyle(fontSize: isMobile ? 11 : 12))),
+          Expanded(
+            flex: isMobile ? 1 : 2,
+            child: Text(
+              operacion['horaFin'] ?? '--:--',
+              style: TextStyle(fontSize: isMobile ? 11 : 12),
+            ),
+          ),
 
           Expanded(
             flex: isMobile ? 2 : 3,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildAccionButton(icon: Icons.visibility_outlined, color: Colors.blue, onPressed: () => onVerDetalle(operacion), size: isMobile ? 14 : 16),
+                _buildAccionButton(
+                  icon: Icons.visibility_outlined,
+                  color: Colors.blue,
+                  onPressed: () => onVerDetalle(operacion),
+                  size: isMobile ? 14 : 16,
+                ),
                 SizedBox(width: isMobile ? 4 : 8),
-                _buildAccionButton(icon: Icons.edit_outlined, color: Colors.orange, onPressed: () => onEditar(operacion), size: isMobile ? 14 : 16),
+                _buildAccionButton(
+                  icon: Icons.edit_outlined,
+                  color: Colors.orange,
+                  onPressed: () => onEditar(operacion),
+                  size: isMobile ? 14 : 16,
+                ),
                 SizedBox(width: isMobile ? 4 : 8),
-                _buildAccionButton(icon: Icons.delete_outline, color: Colors.red, onPressed: () => onEliminar(operacion), size: isMobile ? 14 : 16),
+                _buildAccionButton(
+                  icon: Icons.delete_outline,
+                  color: Colors.red,
+                  onPressed: () => onEliminar(operacion),
+                  size: isMobile ? 14 : 16,
+                ),
               ],
             ),
           ),
@@ -190,7 +261,7 @@ class TablaOperaciones extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.all(size == 14 ? 4 : 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Icon(icon, size: size, color: color),
@@ -205,9 +276,15 @@ class TablaOperaciones extends StatelessWidget {
         children: [
           Icon(Icons.inbox, size: 40, color: Colors.grey[300]),
           const SizedBox(height: 8),
-          Text('No hay operaciones registradas', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+          Text(
+            'No hay operaciones registradas',
+            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+          ),
           const SizedBox(height: 4),
-          Text('Complete el formulario para crear una nueva operación', style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+          Text(
+            'Complete el formulario para crear una nueva operación',
+            style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+          ),
         ],
       ),
     );
@@ -215,23 +292,35 @@ class TablaOperaciones extends StatelessWidget {
 
   Color _getEstadoColor(String estado) {
     switch (estado) {
-      case 'OPERATIVO': return const Color(0xFF4CAF50);
-      case 'DEMORA': return const Color(0xFFFF9800);
-      case 'MANTENIMIENTO': return const Color(0xFF2196F3);
-      case 'RESERVA': return const Color(0xFF9C27B0);
-      case 'FUERA DE PLAN': return const Color(0xFFF44336);
-      default: return Colors.grey;
+      case 'OPERATIVO':
+        return const Color(0xFF4CAF50);
+      case 'DEMORA':
+        return const Color(0xFFFF9800);
+      case 'MANTENIMIENTO':
+        return const Color(0xFF2196F3);
+      case 'RESERVA':
+        return const Color(0xFF9C27B0);
+      case 'FUERA DE PLAN':
+        return const Color(0xFFF44336);
+      default:
+        return Colors.grey;
     }
   }
 
   IconData _getEstadoIcon(String estado) {
     switch (estado) {
-      case 'OPERATIVO': return Icons.check_circle_outline;
-      case 'DEMORA': return Icons.access_time;
-      case 'MANTENIMIENTO': return Icons.build;
-      case 'RESERVA': return Icons.event_available;
-      case 'FUERA DE PLAN': return Icons.warning_amber_rounded;
-      default: return Icons.help_outline;
+      case 'OPERATIVO':
+        return Icons.check_circle_outline;
+      case 'DEMORA':
+        return Icons.access_time;
+      case 'MANTENIMIENTO':
+        return Icons.build;
+      case 'RESERVA':
+        return Icons.event_available;
+      case 'FUERA DE PLAN':
+        return Icons.warning_amber_rounded;
+      default:
+        return Icons.help_outline;
     }
   }
 }

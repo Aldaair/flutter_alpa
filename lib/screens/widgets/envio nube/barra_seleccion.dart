@@ -7,12 +7,12 @@ class BarraSeleccion extends StatelessWidget {
   final Color primaryColor;
 
   const BarraSeleccion({
-    Key? key,
+    super.key,
     required this.cantidadSeleccionados,
     required this.onEliminar,
     required this.onExportar,
     required this.primaryColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,7 @@ class BarraSeleccion extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -37,7 +37,7 @@ class BarraSeleccion extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(

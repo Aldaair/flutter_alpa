@@ -9,21 +9,19 @@ class ConfirmacionDialog extends StatelessWidget {
   final VoidCallback onConfirmar;
 
   const ConfirmacionDialog({
-    Key? key,
+    super.key,
     required this.titulo,
     required this.mensaje,
     required this.onConfirmar,
     this.textoConfirmar = 'Confirmar',
     this.textoCancelar = 'Cancelar',
     this.confirmColor = Colors.red,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 400,
         constraints: const BoxConstraints(maxWidth: 400),
@@ -38,7 +36,7 @@ class ConfirmacionDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: confirmColor.withOpacity(0.1),
+                color: confirmColor.withValues(alpha: 0.1),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -49,7 +47,7 @@ class ConfirmacionDialog extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: confirmColor.withOpacity(0.2),
+                      color: confirmColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -78,10 +76,7 @@ class ConfirmacionDialog extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               child: Text(
                 mensaje,
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: Colors.black87,
-                ),
+                style: const TextStyle(fontSize: 15, color: Colors.black87),
                 textAlign: TextAlign.center,
               ),
             ),

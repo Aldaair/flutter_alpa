@@ -7,12 +7,12 @@ class ExpandedReportButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const ExpandedReportButton({
-    Key? key,
+    super.key,
     required this.title,
     this.imagePath, // sin required
     required this.backgroundColor,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +30,8 @@ class ExpandedReportButton extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                backgroundColor.withOpacity(0.9),
-                backgroundColor.withOpacity(0.7),
+                backgroundColor.withValues(alpha: 0.9),
+                backgroundColor.withValues(alpha: 0.7),
               ],
             ),
           ),
@@ -44,10 +44,7 @@ class ExpandedReportButton extends StatelessWidget {
                   flex: 3,
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Image.asset(
-                      imagePath!,
-                      fit: BoxFit.contain,
-                    ),
+                    child: Image.asset(imagePath!, fit: BoxFit.contain),
                   ),
                 ),
               Expanded(

@@ -5,16 +5,17 @@ class DialogoCheckImagen extends StatefulWidget {
   final Map<String, dynamic> controlLlantasData;
   final String estado;
   final Color primaryColor;
-  final Future<bool> Function(int operacionId, Map<String, dynamic> datos)? onSave;
+  final Future<bool> Function(int operacionId, Map<String, dynamic> datos)?
+  onSave;
 
   const DialogoCheckImagen({
-    Key? key,
+    super.key,
     required this.operacionId,
     required this.estado,
     required this.controlLlantasData,
     this.primaryColor = const Color(0xFF1B5E6B),
     this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<DialogoCheckImagen> createState() => _DialogoCheckImagenState();
@@ -98,13 +99,29 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildItem('NEUMÁTICO 1', value1, (v) => setState(() => value1 = v)),
+                  _buildItem(
+                    'NEUMÁTICO 1',
+                    value1,
+                    (v) => setState(() => value1 = v),
+                  ),
                   const SizedBox(height: 16),
-                  _buildItem('NEUMÁTICO 2', value2, (v) => setState(() => value2 = v)),
+                  _buildItem(
+                    'NEUMÁTICO 2',
+                    value2,
+                    (v) => setState(() => value2 = v),
+                  ),
                   const SizedBox(height: 16),
-                  _buildItem('NEUMÁTICO 3', value3, (v) => setState(() => value3 = v)),
+                  _buildItem(
+                    'NEUMÁTICO 3',
+                    value3,
+                    (v) => setState(() => value3 = v),
+                  ),
                   const SizedBox(height: 16),
-                  _buildItem('NEUMÁTICO 4', value4, (v) => setState(() => value4 = v)),
+                  _buildItem(
+                    'NEUMÁTICO 4',
+                    value4,
+                    (v) => setState(() => value4 = v),
+                  ),
                 ],
               ),
             ),
@@ -168,7 +185,7 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.15) : Colors.white,
+          color: selected ? color.withValues(alpha: 0.15) : Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: selected ? color : Colors.grey.shade300,
@@ -178,11 +195,7 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 16,
-              color: selected ? color : Colors.grey,
-            ),
+            Icon(icon, size: 16, color: selected ? color : Colors.grey),
             const SizedBox(width: 4),
             Text(
               label,
@@ -213,7 +226,7 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Icon(Icons.tire_repair, color: Colors.white, size: 18),
@@ -239,8 +252,8 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isEditable
-            ? Colors.green.withOpacity(0.2)
-            : Colors.grey.withOpacity(0.2),
+            ? Colors.green.withValues(alpha: 0.2)
+            : Colors.grey.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEditable ? Colors.green : Colors.grey,

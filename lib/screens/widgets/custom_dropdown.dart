@@ -10,7 +10,7 @@ class CustomMaterialDropdown extends StatelessWidget {
   final Color? primaryColor;
 
   const CustomMaterialDropdown({
-    Key? key,
+    super.key,
     required this.label,
     required this.value,
     required this.items,
@@ -18,7 +18,7 @@ class CustomMaterialDropdown extends StatelessWidget {
     required this.icon,
     required this.hint,
     this.primaryColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +105,7 @@ class CustomMaterialDropdown extends StatelessWidget {
                     ),
                   );
                 }).toList(),
-          onChanged: isEnabled 
+          onChanged: isEnabled
               ? (newValue) {
                   if (newValue != null) {
                     onChanged!(newValue);

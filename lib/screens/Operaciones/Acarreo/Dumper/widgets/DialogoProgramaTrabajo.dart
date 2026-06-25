@@ -8,12 +8,12 @@ class DialogoProgramaTrabajo extends StatefulWidget {
   final Color primaryColor;
 
   const DialogoProgramaTrabajo({
-    Key? key,
+    super.key,
     required this.operacionId,
     required this.estado,
     required this.programaTrabajoData,
     this.primaryColor = const Color(0xFF1B5E6B),
-  }) : super(key: key);
+  });
 
   @override
   State<DialogoProgramaTrabajo> createState() => _DialogoProgramaTrabajoState();
@@ -36,19 +36,27 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
     isEditable = widget.estado.toLowerCase() != "cerrado";
 
     nViajeMineralController = TextEditingController(
-      text: _formatNumber(widget.programaTrabajoData['n_viaje_mineral'] ?? 0).toString(),
+      text: _formatNumber(
+        widget.programaTrabajoData['n_viaje_mineral'] ?? 0,
+      ).toString(),
     );
 
     nViajeDesmonteController = TextEditingController(
-      text: _formatNumber(widget.programaTrabajoData['n_viaje_desmonte'] ?? 0).toString(),
+      text: _formatNumber(
+        widget.programaTrabajoData['n_viaje_desmonte'] ?? 0,
+      ).toString(),
     );
 
     programadoController = TextEditingController(
-      text: _formatNumber(widget.programaTrabajoData['programado'] ?? 0).toString(),
+      text: _formatNumber(
+        widget.programaTrabajoData['programado'] ?? 0,
+      ).toString(),
     );
 
     realizadoController = TextEditingController(
-      text: _formatNumber(widget.programaTrabajoData['realizado'] ?? 0).toString(),
+      text: _formatNumber(
+        widget.programaTrabajoData['realizado'] ?? 0,
+      ).toString(),
     );
 
     totalController = TextEditingController(
@@ -57,14 +65,14 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
   }
 
   String _formatNumber(dynamic value) {
-  double number = (value ?? 0).toDouble();
+    double number = (value ?? 0).toDouble();
 
-  if (number % 1 == 0) {
-    return number.toInt().toString(); // sin .0
-  } else {
-    return number.toString(); // con decimales
+    if (number % 1 == 0) {
+      return number.toInt().toString(); // sin .0
+    } else {
+      return number.toString(); // con decimales
+    }
   }
-}
 
   @override
   void dispose() {
@@ -89,8 +97,10 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
       'total': _parseDouble(totalController.text),
     };
 
-    bool guardado = await DatabaseHelper()
-        .updateProgramaTrabajoDumper(widget.operacionId, data);
+    bool guardado = await DatabaseHelper().updateProgramaTrabajoDumper(
+      widget.operacionId,
+      data,
+    );
 
     if (guardado) {
       _mostrarSnackbar('Programa de trabajo guardado', Colors.green);
@@ -115,14 +125,12 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     isSmallScreen = screenWidth < 600;
-    
+
     final dialogWidth = isSmallScreen ? screenWidth * 0.95 : 500.0;
     final dialogHeight = isSmallScreen ? null : 600.0;
 
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         width: dialogWidth,
         constraints: BoxConstraints(
@@ -147,11 +155,7 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.work,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  const Icon(Icons.work, color: Colors.white, size: 20),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
@@ -204,7 +208,11 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.directions_bus, size: 16, color: Colors.blue.shade700),
+                              Icon(
+                                Icons.directions_bus,
+                                size: 16,
+                                color: Colors.blue.shade700,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'Viajes',
@@ -249,7 +257,11 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.production_quantity_limits, size: 16, color: Colors.green.shade700),
+                              Icon(
+                                Icons.production_quantity_limits,
+                                size: 16,
+                                color: Colors.green.shade700,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'Producción',
@@ -294,7 +306,11 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.summarize, size: 16, color: Colors.orange.shade700),
+                              Icon(
+                                Icons.summarize,
+                                size: 16,
+                                color: Colors.orange.shade700,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 'Total',
@@ -326,9 +342,7 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Colors.grey.shade200),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey.shade200)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -377,10 +391,12 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
           color: isTotal ? Colors.orange.shade700 : Colors.grey.shade700,
           fontWeight: isTotal ? FontWeight.w600 : FontWeight.normal,
         ),
-        prefixIcon: Icon(icon, size: 20, color: isTotal ? Colors.orange.shade700 : widget.primaryColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+        prefixIcon: Icon(
+          icon,
+          size: 20,
+          color: isTotal ? Colors.orange.shade700 : widget.primaryColor,
         ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(
@@ -394,7 +410,10 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
             width: 2,
           ),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
       ),
     );
   }

@@ -32,8 +32,11 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
   final String? rolUsuario;
   final String? dniUsuario;
 
-  const ServiciosAuxiliaresScreen({Key? key, this.rolUsuario, this.dniUsuario})
-    : super(key: key);
+  const ServiciosAuxiliaresScreen({
+    super.key,
+    this.rolUsuario,
+    this.dniUsuario,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +54,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: const Icon(
@@ -231,15 +234,14 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           primaryColor,
                                           onGuardar,
                                           datosIniciales,
-                                        ) =>
-                                            DialogoFormularioNoOperativo(
-                                              operacionId: operacionId,
-                                              estadoId: estadoId,
-                                              estado: estado,
-                                              datosIniciales: datosIniciales,
-                                              primaryColor: primaryColor,
-                                              onGuardar: onGuardar,
-                                            ),
+                                        ) => DialogoFormularioNoOperativo(
+                                          operacionId: operacionId,
+                                          estadoId: estadoId,
+                                          estado: estado,
+                                          datosIniciales: datosIniciales,
+                                          primaryColor: primaryColor,
+                                          onGuardar: onGuardar,
+                                        ),
                                     onBuildConfirmarCierre:
                                         (primaryColor, onConfirmar) =>
                                             DialogoConfirmarCierreRegistros(
@@ -275,7 +277,11 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           controlLlantasData:
                                               controlLlantasData ?? {},
                                           primaryColor: primaryColor,
-                                          onSave: (id, datos) => DatabaseHelper().updateControlLlantasAnfochanger(id, datos),
+                                          onSave: (id, datos) => DatabaseHelper()
+                                              .updateControlLlantasAnfochanger(
+                                                id,
+                                                datos,
+                                              ),
                                         ),
                                     buildBotonesEstado:
                                         (onEstadoSeleccionado) => BotonesEstado(
@@ -442,7 +448,12 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           controlLlantasData:
                                               controlLlantasData ?? {},
                                           primaryColor: primaryColor,
-                                          onSave: (id, datos) => DatabaseHelper().updateControlLlantasScissor(id, datos),
+                                          onSave: (id, datos) =>
+                                              DatabaseHelper()
+                                                  .updateControlLlantasScissor(
+                                                    id,
+                                                    datos,
+                                                  ),
                                         ),
                                     buildBotonesEstado:
                                         (onEstadoSeleccionado) => BotonesEstado(
@@ -565,15 +576,14 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           primaryColor,
                                           onGuardar,
                                           datosIniciales,
-                                        ) =>
-                                            DialogoFormularioNoOperativo(
-                                              operacionId: operacionId,
-                                              estadoId: estadoId,
-                                              estado: estado,
-                                              datosIniciales: datosIniciales,
-                                              primaryColor: primaryColor,
-                                              onGuardar: onGuardar,
-                                            ),
+                                        ) => DialogoFormularioNoOperativo(
+                                          operacionId: operacionId,
+                                          estadoId: estadoId,
+                                          estado: estado,
+                                          datosIniciales: datosIniciales,
+                                          primaryColor: primaryColor,
+                                          onGuardar: onGuardar,
+                                        ),
                                     onBuildConfirmarCierre:
                                         (primaryColor, onConfirmar) =>
                                             DialogoConfirmarCierreRegistros(
@@ -610,7 +620,12 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           controlLlantasData:
                                               controlLlantasData ?? {},
                                           primaryColor: primaryColor,
-                                          onSave: (id, datos) => DatabaseHelper().updateControlLlantasScalamin(id, datos),
+                                          onSave: (id, datos) =>
+                                              DatabaseHelper()
+                                                  .updateControlLlantasScalamin(
+                                                    id,
+                                                    datos,
+                                                  ),
                                         ),
                                     buildBotonesEstado:
                                         (onEstadoSeleccionado) => BotonesEstado(
@@ -715,14 +730,14 @@ class CorporateButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const CorporateButton({
-    Key? key,
+    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.backgroundColor,
     required this.accentColor,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -738,7 +753,7 @@ class CorporateButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -752,7 +767,7 @@ class CorporateButton extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 20),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: backgroundColor.withOpacity(0.08),
+                  color: backgroundColor.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, size: 36, color: accentColor),
@@ -792,7 +807,7 @@ class CorporateButton extends StatelessWidget {
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 height: 2,
-                color: accentColor.withOpacity(0.3),
+                color: accentColor.withValues(alpha: 0.3),
               ),
               const SizedBox(height: 12),
               Row(

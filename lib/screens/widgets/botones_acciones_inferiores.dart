@@ -11,7 +11,7 @@ class BotonesAccionesInferiores extends StatelessWidget {
   final VoidCallback? onProgramaTrabajoPressed;
 
   const BotonesAccionesInferiores({
-    Key? key,
+    super.key,
     required this.onChecklistPressed,
     required this.onHorometroPressed,
     required this.onCerrarRegistrosPressed,
@@ -20,7 +20,7 @@ class BotonesAccionesInferiores extends StatelessWidget {
     required this.primaryColor,
     this.onChecklistTelemandoPressed,
     this.onProgramaTrabajoPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ class BotonesAccionesInferiores extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, -1),
@@ -159,11 +159,7 @@ class BotonesAccionesInferiores extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 18,
-                color: primaryColor,
-              ),
+              Icon(icon, size: 18, color: primaryColor),
               const SizedBox(width: 4),
               Text(
                 label,

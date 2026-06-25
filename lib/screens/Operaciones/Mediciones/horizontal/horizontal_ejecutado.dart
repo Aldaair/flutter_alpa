@@ -5,6 +5,8 @@ import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:i_miner/screens/Operaciones/Mediciones/horizontal/listar_mediciones.dart';
 
 class RegistroExplosivoPagehorizontalEjecutado extends StatefulWidget {
+  const RegistroExplosivoPagehorizontalEjecutado({super.key});
+
   @override
   _RegistroExplosivoPageHorizontalEjecutadoState createState() =>
       _RegistroExplosivoPageHorizontalEjecutadoState();
@@ -77,272 +79,334 @@ class _RegistroExplosivoPageHorizontalEjecutadoState
 
   void _filtrarExploraciones() {
     // Extraemos los nombres de los tipos de perforación para comparar
-    final nombresTipos =
-        _tiposPerforacion.map((t) => t.nombre.toLowerCase()).toSet();
+    final nombresTipos = _tiposPerforacion
+        .map((t) => t.nombre.toLowerCase())
+        .toSet();
 
     setState(() {
       _exploraciones = _exploracionesSucio.where((exploracion) {
-        final tipoExploracion =
-            exploracion['tipo_perforacion']?.toString().toLowerCase();
+        final tipoExploracion = exploracion['tipo_perforacion']
+            ?.toString()
+            .toLowerCase();
         return tipoExploracion != null &&
             nombresTipos.contains(tipoExploracion);
       }).toList();
     });
   }
 
-@override
-Widget build(BuildContext context) {
-  // Agrupar exploraciones por empresa
-  final Map<String, List<Map<String, dynamic>>> exploracionesPorEmpresa = {};
-  for (var exploracion in _exploraciones) {
-    final empresa = exploracion['empresa']?.toString() ?? 'Sin empresa';
-    if (!exploracionesPorEmpresa.containsKey(empresa)) {
-      exploracionesPorEmpresa[empresa] = [];
+  @override
+  Widget build(BuildContext context) {
+    // Agrupar exploraciones por empresa
+    final Map<String, List<Map<String, dynamic>>> exploracionesPorEmpresa = {};
+    for (var exploracion in _exploraciones) {
+      final empresa = exploracion['empresa']?.toString() ?? 'Sin empresa';
+      if (!exploracionesPorEmpresa.containsKey(empresa)) {
+        exploracionesPorEmpresa[empresa] = [];
+      }
+      exploracionesPorEmpresa[empresa]!.add(exploracion);
     }
-    exploracionesPorEmpresa[empresa]!.add(exploracion);
-  }
 
-  return Scaffold(
-    appBar: AppBar(
-      title: Text('Mediciones Ejecutadas'),
-      backgroundColor: Color(0xFF21899C),
-      actions: [
-        IconButton(
-          icon: Icon(Icons.list),
-          onPressed: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ListaPantalla()),
-            );
-            _recargarDatos();
-          },
-        ),
-      ],
-    ),
-    body: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          // Filtros (se mantiene igual)
-          Row(
-            children: [
-              Flexible(
-                flex: 3,
-                child: TextField(
-                  controller: fechaController,
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: 'Fecha',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  onTap: () async {
-                    DateTime? pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (pickedDate != null) {
-                      setState(() {
-                        fechaController.text =
-                            "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
-                      });
-                    }
-                  },
-                ),
-              ),
-              SizedBox(width: 8),
-              Flexible(
-                flex: 2,
-                child: DropdownButtonFormField<String>(
-                  value: turnoController.text.isEmpty ? null : turnoController.text,
-                  decoration: InputDecoration(
-                    labelText: 'Turno',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: ['Día', 'Noche'].map((String turno) {
-                    return DropdownMenuItem<String>(
-                      value: turno,
-                      child: Text(turno),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      turnoController.text = newValue ?? '';
-                    });
-                  },
-                ),
-              ),
-              SizedBox(width: 8),
-              ElevatedButton.icon(
-                icon: Icon(Icons.search, size: 20),
-                label: Text('Buscar'),
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                ),
-              ),
-            ],
-          ),
-
-          SizedBox(height: 20),
-
-          // Tablas dinámicas por empresa
-          Expanded(
-            child: ListView(
-              children: exploracionesPorEmpresa.entries.map((entry) {
-                final empresa = entry.key;
-                final exploracionesEmpresa = entry.value;
-                
-                return Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15.0),
-                  ),
-                  elevation: 3,
-                  margin: EdgeInsets.only(bottom: 16),
-                  child: ExpansionTile(
-                    title: Text(
-                      empresa, // Mostramos el nombre de la empresa como título
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    initiallyExpanded: false,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Column(
-                          children: [
-                            SingleChildScrollView(
-                              scrollDirection: Axis.vertical,
-                              child: Table(
-                                border: TableBorder.all(
-                                  borderRadius: BorderRadius.circular(8),
-                                  color: Colors.grey,
-                                ),
-                                columnWidths: const {
-                                   0: FlexColumnWidth(0.6),
-                                   1: FlexColumnWidth(1.2),
-                                   2: FlexColumnWidth(1.2),
-                                   3: FlexColumnWidth(1.2),
-                                   4: FlexColumnWidth(1.2),
-                                   5: FlexColumnWidth(1.3),
-                                   6: FlexColumnWidth(1.2),
-                                   7: FlexColumnWidth(1.2),
-                                   8: FlexColumnWidth(1.2),
-                                   9: FlexColumnWidth(1.0),
-                                   10: FlexColumnWidth(1.0),
-                                 },
-                                children: [
-                                  // Encabezados de tabla
-                                  TableRow(
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[300],
-                                      borderRadius: BorderRadius.vertical(
-                                          top: Radius.circular(8)),
-                                    ),
-                                    children: [
-                                      tableCellBold(context, 'N°'),
-                                      tableCellBold(context, 'FECHA'),
-                                      tableCellBold(context, 'SEMANA'),
-                                      tableCellBold(context, 'TURNO'),
-                                      tableCellBold(context, 'EMPRESA'),
-                                      tableCellBold(context, 'ZONA'),
-                                      tableCellBold(context, 'LABOR'),
-                                      tableCellBold(context, 'TIPO PERFORACIÓN'),
-                                      tableCellBold(context, 'AVANCE PROGRAMADO (m)'),
-                                      tableCellBold(context, 'ANCHO (m)'),
-                                      tableCellBold(context, 'ALTO (m)'),
-                                    ],
-                                  ),
-
-                                  // Filas con datos
-                                  for (int i = 0; i < exploracionesEmpresa.length; i++)
-                                    TableRow(children: [
-                                      tableCell((i + 1).toString()),
-                                      tableCell(exploracionesEmpresa[i]['fecha']?.toString() ?? ''),
-                                      tableCell(exploracionesEmpresa[i]['semanaDefault']?.toString() ?? ''),
-                                      tableCell(exploracionesEmpresa[i]['turno']?.toString() ?? ''),
-                                      tableCell(exploracionesEmpresa[i]['empresa']?.toString() ?? ''),
-                                      tableCell(exploracionesEmpresa[i]['zona']?.toString() ?? ''),
-                                      tableCellMulti([
-                                        exploracionesEmpresa[i]['tipo_labor']?.toString() ?? '',
-                                        exploracionesEmpresa[i]['labor']?.toString() ?? '',
-                                        exploracionesEmpresa[i]['ala']?.toString() ?? ''
-                                      ]),
-                                      tableCell(exploracionesEmpresa[i]['tipo_perforacion']?.toString() ?? ''),
-                                      tableCellEditable(
-                                          'exploraciones',
-                                          'avance_programado',
-                                          _exploraciones.indexOf(exploracionesEmpresa[i]), // Encuentra el índice en _exploraciones
-                                          'avance_programado',
-                                          exploracionesEmpresa[i]['avance_programado']),
-                                      tableCellEditable(
-                                          'exploraciones',
-                                          'dimensiones',
-                                          _exploraciones.indexOf(exploracionesEmpresa[i]),
-                                          'ancho',
-                                          exploracionesEmpresa[i]['ancho']),
-                                      tableCellEditable(
-                                          'exploraciones',
-                                          'dimensiones',
-                                          _exploraciones.indexOf(exploracionesEmpresa[i]),
-                                          'alto',
-                                          exploracionesEmpresa[i]['alto']),
-                                    ]),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            // Botones de acción
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red,
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 12),
-                                    ),
-                                    icon: Icon(Icons.delete, size: 18),
-                                    onPressed: () {},
-                                    label: Text('BORRAR'),
-                                  ),
-                                  SizedBox(width: 10),
-                                  ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 12),
-                                    ),
-                                    icon: Icon(Icons.send, size: 18),
-                                    label: Text('ENVIAR'),
-                                    onPressed: () async {
-                                      await insertarYActualizarMedicionesHorizontal();
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Mediciones Ejecutadas'),
+        backgroundColor: Color(0xFF21899C),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.list),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ListaPantalla()),
+              );
+              _recargarDatos();
+            },
           ),
         ],
       ),
-    ),
-  );
-}
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Filtros (se mantiene igual)
+            Row(
+              children: [
+                Flexible(
+                  flex: 3,
+                  child: TextField(
+                    controller: fechaController,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'Fecha',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onTap: () async {
+                      DateTime? pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (pickedDate != null) {
+                        setState(() {
+                          fechaController.text =
+                              "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+                        });
+                      }
+                    },
+                  ),
+                ),
+                SizedBox(width: 8),
+                Flexible(
+                  flex: 2,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: turnoController.text.isEmpty
+                        ? null
+                        : turnoController.text,
+                    decoration: InputDecoration(
+                      labelText: 'Turno',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: ['Día', 'Noche'].map((String turno) {
+                      return DropdownMenuItem<String>(
+                        value: turno,
+                        child: Text(turno),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        turnoController.text = newValue ?? '';
+                      });
+                    },
+                  ),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton.icon(
+                  icon: Icon(Icons.search, size: 20),
+                  label: Text('Buscar'),
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
 
+            SizedBox(height: 20),
+
+            // Tablas dinámicas por empresa
+            Expanded(
+              child: ListView(
+                children: exploracionesPorEmpresa.entries.map((entry) {
+                  final empresa = entry.key;
+                  final exploracionesEmpresa = entry.value;
+
+                  return Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                    ),
+                    elevation: 3,
+                    margin: EdgeInsets.only(bottom: 16),
+                    child: ExpansionTile(
+                      title: Text(
+                        empresa, // Mostramos el nombre de la empresa como título
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      initiallyExpanded: false,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Column(
+                            children: [
+                              SingleChildScrollView(
+                                scrollDirection: Axis.vertical,
+                                child: Table(
+                                  border: TableBorder.all(
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.grey,
+                                  ),
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(0.6),
+                                    1: FlexColumnWidth(1.2),
+                                    2: FlexColumnWidth(1.2),
+                                    3: FlexColumnWidth(1.2),
+                                    4: FlexColumnWidth(1.2),
+                                    5: FlexColumnWidth(1.3),
+                                    6: FlexColumnWidth(1.2),
+                                    7: FlexColumnWidth(1.2),
+                                    8: FlexColumnWidth(1.2),
+                                    9: FlexColumnWidth(1.0),
+                                    10: FlexColumnWidth(1.0),
+                                  },
+                                  children: [
+                                    // Encabezados de tabla
+                                    TableRow(
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[300],
+                                        borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(8),
+                                        ),
+                                      ),
+                                      children: [
+                                        tableCellBold(context, 'N°'),
+                                        tableCellBold(context, 'FECHA'),
+                                        tableCellBold(context, 'SEMANA'),
+                                        tableCellBold(context, 'TURNO'),
+                                        tableCellBold(context, 'EMPRESA'),
+                                        tableCellBold(context, 'ZONA'),
+                                        tableCellBold(context, 'LABOR'),
+                                        tableCellBold(
+                                          context,
+                                          'TIPO PERFORACIÓN',
+                                        ),
+                                        tableCellBold(
+                                          context,
+                                          'AVANCE PROGRAMADO (m)',
+                                        ),
+                                        tableCellBold(context, 'ANCHO (m)'),
+                                        tableCellBold(context, 'ALTO (m)'),
+                                      ],
+                                    ),
+
+                                    // Filas con datos
+                                    for (
+                                      int i = 0;
+                                      i < exploracionesEmpresa.length;
+                                      i++
+                                    )
+                                      TableRow(
+                                        children: [
+                                          tableCell((i + 1).toString()),
+                                          tableCell(
+                                            exploracionesEmpresa[i]['fecha']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            exploracionesEmpresa[i]['semanaDefault']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            exploracionesEmpresa[i]['turno']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            exploracionesEmpresa[i]['empresa']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            exploracionesEmpresa[i]['zona']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCellMulti([
+                                            exploracionesEmpresa[i]['tipo_labor']
+                                                    ?.toString() ??
+                                                '',
+                                            exploracionesEmpresa[i]['labor']
+                                                    ?.toString() ??
+                                                '',
+                                            exploracionesEmpresa[i]['ala']
+                                                    ?.toString() ??
+                                                '',
+                                          ]),
+                                          tableCell(
+                                            exploracionesEmpresa[i]['tipo_perforacion']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCellEditable(
+                                            'exploraciones',
+                                            'avance_programado',
+                                            _exploraciones.indexOf(
+                                              exploracionesEmpresa[i],
+                                            ), // Encuentra el índice en _exploraciones
+                                            'avance_programado',
+                                            exploracionesEmpresa[i]['avance_programado'],
+                                          ),
+                                          tableCellEditable(
+                                            'exploraciones',
+                                            'dimensiones',
+                                            _exploraciones.indexOf(
+                                              exploracionesEmpresa[i],
+                                            ),
+                                            'ancho',
+                                            exploracionesEmpresa[i]['ancho'],
+                                          ),
+                                          tableCellEditable(
+                                            'exploraciones',
+                                            'dimensiones',
+                                            _exploraciones.indexOf(
+                                              exploracionesEmpresa[i],
+                                            ),
+                                            'alto',
+                                            exploracionesEmpresa[i]['alto'],
+                                          ),
+                                        ],
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              // Botones de acción
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                      icon: Icon(Icons.delete, size: 18),
+                                      onPressed: () {},
+                                      label: Text('BORRAR'),
+                                    ),
+                                    SizedBox(width: 10),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                      icon: Icon(Icons.send, size: 18),
+                                      label: Text('ENVIAR'),
+                                      onPressed: () async {
+                                        await insertarYActualizarMedicionesHorizontal();
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> insertarYActualizarMedicionesHorizontal() async {
     List<Map<String, dynamic>> registros = obtenerDatosEditadosFormateados();
@@ -357,21 +421,20 @@ Widget build(BuildContext context) {
     try {
       for (var registro in registros) {
         int idInsertado = await dbHelper.insertarMedicionHorizontal(registro);
-        print(
-            "Registro insertado con id: $idInsertado");
+        print("Registro insertado con id: $idInsertado");
       }
 
-        // Mostrar mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Datos guardados exitosamente')),
-        );
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Datos guardados exitosamente')));
 
-        // Recargar los datos
-        await _recargarDatos();
+      // Recargar los datos
+      await _recargarDatos();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar datos: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al guardar datos: $e')));
       print("Error al insertar/actualizar mediciones: $e");
     }
   }
@@ -442,22 +505,29 @@ Widget build(BuildContext context) {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: texts
-            .map((text) => Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Text(
-                    text,
-                    style: TextStyle(
-                      fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                    ),
+            .map(
+              (text) => Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
                   ),
-                ))
+                ),
+              ),
+            )
             .toList(),
       ),
     );
   }
 
-  Widget tableCellEditable(String tipoPerforacion, String labor, int index,
-      String campo, dynamic valor) {
+  Widget tableCellEditable(
+    String tipoPerforacion,
+    String labor,
+    int index,
+    String campo,
+    dynamic valor,
+  ) {
     final key = '$tipoPerforacion-$labor-$index-$campo';
 
     if (!controllers.containsKey(key)) {
@@ -476,7 +546,8 @@ Widget build(BuildContext context) {
           } else {
             controller.text = valor?.toString() ?? '';
             controller.selection = TextSelection.fromPosition(
-                TextPosition(offset: controller.text.length));
+              TextPosition(offset: controller.text.length),
+            );
           }
         },
         keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -492,14 +563,20 @@ Widget build(BuildContext context) {
     );
   }
 
-  void actualizarValor(String tipoPerforacion, String labor, int index,
-      String campo, String nuevoValor) {
+  void actualizarValor(
+    String tipoPerforacion,
+    String labor,
+    int index,
+    String campo,
+    String nuevoValor,
+  ) {
     setState(() {
       _exploraciones[index][campo] = nuevoValor;
 
       // Guarda la fila completa editada
-      registrosEditados[index] =
-          Map<String, dynamic>.from(_exploraciones[index]);
+      registrosEditados[index] = Map<String, dynamic>.from(
+        _exploraciones[index],
+      );
     });
   }
 
@@ -512,18 +589,16 @@ Widget build(BuildContext context) {
 
   Widget tableCellBold(BuildContext context, String text) {
     double screenWidth = MediaQuery.of(context).size.width;
-    double fontSize =
-        screenWidth < 600 ? 8 : 12; // Ajusta el umbral y tamaños a gusto
+    double fontSize = screenWidth < 600
+        ? 8
+        : 12; // Ajusta el umbral y tamaños a gusto
 
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Center(
         child: Text(
           text,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: fontSize,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize),
         ),
       ),
     );

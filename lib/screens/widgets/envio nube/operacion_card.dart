@@ -8,13 +8,13 @@ class OperacionCard extends StatelessWidget {
   final Color? primaryColor;
 
   const OperacionCard({
-    Key? key,
+    super.key,
     required this.operacion,
     required this.isSelected,
     required this.isEnviado,
     required this.onTap,
     this.primaryColor = const Color(0xFF1B5E6B),
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +29,8 @@ class OperacionCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: isSelected
                 ? [
-                    primaryColor!.withOpacity(0.1),
-                    primaryColor!.withOpacity(0.05),
+                    primaryColor!.withValues(alpha: 0.1),
+                    primaryColor!.withValues(alpha: 0.05),
                   ]
                 : [Colors.white, Colors.grey.shade50],
           ),
@@ -38,13 +38,13 @@ class OperacionCard extends StatelessWidget {
             color: isSelected
                 ? primaryColor!
                 : isEnviado
-                    ? Colors.green.shade200
-                    : Colors.grey.shade200,
+                ? Colors.green.shade200
+                : Colors.grey.shade200,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -64,7 +64,7 @@ class OperacionCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: primaryColor!.withOpacity(0.1),
+                      color: primaryColor!.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -83,7 +83,9 @@ class OperacionCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: _getEstadoColor(operacion['estado']).withOpacity(0.1),
+                      color: _getEstadoColor(
+                        operacion['estado'],
+                      ).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
@@ -140,9 +142,9 @@ class OperacionCard extends StatelessWidget {
                     ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Información principal
               Row(
                 children: [
@@ -159,9 +161,9 @@ class OperacionCard extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               Row(
                 children: [
                   _buildInfoItem(
@@ -177,9 +179,9 @@ class OperacionCard extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               Row(
                 children: [
                   _buildInfoItem(
@@ -195,9 +197,9 @@ class OperacionCard extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Footer con sección
               Container(
                 padding: const EdgeInsets.all(8),
@@ -207,11 +209,7 @@ class OperacionCard extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.category,
-                      size: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    Icon(Icons.category, size: 14, color: Colors.grey.shade600),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -262,10 +260,7 @@ class OperacionCard extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey.shade500,
-                  ),
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
                 ),
                 Text(
                   value,

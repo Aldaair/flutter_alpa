@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 
 class ListaPantalla extends StatefulWidget {
+  const ListaPantalla({super.key});
+
   @override
   _ListaPantallaState createState() => _ListaPantallaState();
 }
 
 class _ListaPantallaState extends State<ListaPantalla> {
   List<Map<String, dynamic>> _mediciones = [];
-  Set<int> _selectedIds = {};
+  final Set<int> _selectedIds = {};
   bool _isInSelectionMode = false;
 
   @override
@@ -31,49 +33,56 @@ class _ListaPantallaState extends State<ListaPantalla> {
     }
   }
 
-Future<void> _eliminarSeleccionadas() async {
-  if (_selectedIds.isEmpty) return;
+  Future<void> _eliminarSeleccionadas() async {
+    if (_selectedIds.isEmpty) return;
 
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text('Confirmar eliminación'),
-      content: Text('¿Estás seguro de que quieres eliminar las ${_selectedIds.length} mediciones seleccionadas?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text('Cancelar'),
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirmar eliminación'),
+        content: Text(
+          '¿Estás seguro de que quieres eliminar las ${_selectedIds.length} mediciones seleccionadas?',
         ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: Text('Eliminar'),
-        ),
-      ],
-    ),
-  );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
 
-  if (confirm == true) {
-    try {
-      // ✅ Eliminar las mediciones seleccionadas
-      await DatabaseHelper().eliminarMultiplesMedicionesLargo(_selectedIds.toList());
+    if (confirm == true) {
+      try {
+        // ✅ Eliminar las mediciones seleccionadas
+        await DatabaseHelper().eliminarMultiplesMedicionesLargo(
+          _selectedIds.toList(),
+        );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${_selectedIds.length} mediciones eliminadas correctamente')),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${_selectedIds.length} mediciones eliminadas correctamente',
+            ),
+          ),
+        );
 
-      _cargarMediciones();
-      setState(() {
-        _selectedIds.clear();
-        _isInSelectionMode = false;
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al eliminar las mediciones: $e')),
-      );
+        _cargarMediciones();
+        setState(() {
+          _selectedIds.clear();
+          _isInSelectionMode = false;
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al eliminar las mediciones: $e')),
+        );
+      }
     }
   }
-}
-
 
   void _toggleSelection(int id) {
     setState(() {
@@ -100,7 +109,7 @@ Future<void> _eliminarSeleccionadas() async {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: _isInSelectionMode 
+        title: _isInSelectionMode
             ? Text('${_selectedIds.length} seleccionadas')
             : Text('Mediciones Taladro Largo'),
         backgroundColor: Color(0xFF21899C),
@@ -149,7 +158,9 @@ Future<void> _eliminarSeleccionadas() async {
                             children: [
                               if (_isInSelectionMode)
                                 Icon(
-                                  isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                                  isSelected
+                                      ? Icons.check_circle
+                                      : Icons.radio_button_unchecked,
                                   color: isSelected ? Colors.blue : Colors.grey,
                                 ),
                               SizedBox(width: 8),
@@ -179,7 +190,10 @@ Future<void> _eliminarSeleccionadas() async {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildInfoItem('toneladas', '${medicion['toneladas']?.toStringAsFixed(2) ?? '0'} m'),
+                              _buildInfoItem(
+                                'toneladas',
+                                '${medicion['toneladas']?.toStringAsFixed(2) ?? '0'} m',
+                              ),
                             ],
                           ),
                           SizedBox(height: 8),

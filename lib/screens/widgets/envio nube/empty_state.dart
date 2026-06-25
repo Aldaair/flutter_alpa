@@ -7,12 +7,12 @@ class EmptyState extends StatelessWidget {
   final Color? color;
 
   const EmptyState({
-    Key? key,
+    super.key,
     required this.mensaje,
     this.subtitulo,
     this.icono = Icons.inbox,
     this.color,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,14 +23,10 @@ class EmptyState extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: (color ?? Colors.grey).withOpacity(0.1),
+              color: (color ?? Colors.grey).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icono,
-              size: 64,
-              color: color ?? Colors.grey.shade400,
-            ),
+            child: Icon(icono, size: 64, color: color ?? Colors.grey.shade400),
           ),
           const SizedBox(height: 16),
           Text(
@@ -45,10 +41,7 @@ class EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               subtitulo!,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               textAlign: TextAlign.center,
             ),
           ],

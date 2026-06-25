@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class LoadingState extends StatelessWidget {
   final String mensaje;
 
-  const LoadingState({
-    Key? key,
-    this.mensaje = 'Cargando registros...',
-  }) : super(key: key);
+  const LoadingState({super.key, this.mensaje = 'Cargando registros...'});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +14,7 @@ class LoadingState extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
+              color: Colors.blue.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const CircularProgressIndicator(),
@@ -25,10 +22,7 @@ class LoadingState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             mensaje,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black54,
-            ),
+            style: const TextStyle(fontSize: 16, color: Colors.black54),
           ),
         ],
       ),

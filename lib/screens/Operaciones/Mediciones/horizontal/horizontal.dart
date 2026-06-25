@@ -5,11 +5,9 @@ import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:i_miner/screens/Operaciones/Mediciones/horizontal/listar_mediciones.dart';
 
 class RegistroExplosivoPagehorizontal extends StatefulWidget {
-    final String zona;
+  final String zona;
 
-  const RegistroExplosivoPagehorizontal({Key? key, required this.zona})
-      : super(key: key);
-
+  const RegistroExplosivoPagehorizontal({super.key, required this.zona});
 
   @override
   _RegistroExplosivoPageHorizontalState createState() =>
@@ -83,13 +81,15 @@ class _RegistroExplosivoPageHorizontalState
 
   void _filtrarExploraciones() {
     // Extraemos los nombres de los tipos de perforación para comparar
-    final nombresTipos =
-        _tiposPerforacion.map((t) => t.nombre.toLowerCase()).toSet();
+    final nombresTipos = _tiposPerforacion
+        .map((t) => t.nombre.toLowerCase())
+        .toSet();
 
     setState(() {
       _exploraciones = _exploracionesSucio.where((exploracion) {
-        final tipoExploracion =
-            exploracion['tipo_perforacion']?.toString().toLowerCase();
+        final tipoExploracion = exploracion['tipo_perforacion']
+            ?.toString()
+            .toLowerCase();
         return tipoExploracion != null &&
             nombresTipos.contains(tipoExploracion);
       }).toList();
@@ -155,7 +155,7 @@ class _RegistroExplosivoPageHorizontalState
                 Flexible(
                   flex: 2,
                   child: DropdownButtonFormField<String>(
-                    value: turnoController.text.isEmpty
+                    initialValue: turnoController.text.isEmpty
                         ? null
                         : turnoController.text,
                     decoration: InputDecoration(
@@ -221,37 +221,49 @@ class _RegistroExplosivoPageHorizontalState
                                     borderRadius: BorderRadius.circular(8),
                                     color: Colors.grey,
                                   ),
-                                   columnWidths: const {
-                                     0: FlexColumnWidth(
-                                         0.8), // Nueva columna para el número de fila
-                                     1: FlexColumnWidth(
-                                         1.2), // FECHA (antes era 0)
-                                     2: FlexColumnWidth(
-                                         1.2), // TURNO (antes era 1)
-                                     3: FlexColumnWidth(
-                                         1.2), // EMPRESA (antes era 2)
-                                     4: FlexColumnWidth(
-                                         1.3), // ZONA (antes era 3)
-                                     5: FlexColumnWidth(
-                                         1.2), // LABOR (antes era 4)
-                                     6: FlexColumnWidth(
-                                         1.5), // VETA (antes era 5)
-                                     7: FlexColumnWidth(
-                                         1.2), // TIPO PERFORACIÓN (antes era 6)
-                                     8: FlexColumnWidth(
-                                         1.2), // AVANCE PROGRAMADO (antes era 8)
-                                     9: FlexColumnWidth(
-                                         1.0), // ANCHO (antes era 9)
-                                     10: FlexColumnWidth(
-                                         1.0), // ALTO (antes era 10)
-                                   },
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(
+                                      0.8,
+                                    ), // Nueva columna para el número de fila
+                                    1: FlexColumnWidth(
+                                      1.2,
+                                    ), // FECHA (antes era 0)
+                                    2: FlexColumnWidth(
+                                      1.2,
+                                    ), // TURNO (antes era 1)
+                                    3: FlexColumnWidth(
+                                      1.2,
+                                    ), // EMPRESA (antes era 2)
+                                    4: FlexColumnWidth(
+                                      1.3,
+                                    ), // ZONA (antes era 3)
+                                    5: FlexColumnWidth(
+                                      1.2,
+                                    ), // LABOR (antes era 4)
+                                    6: FlexColumnWidth(
+                                      1.5,
+                                    ), // VETA (antes era 5)
+                                    7: FlexColumnWidth(
+                                      1.2,
+                                    ), // TIPO PERFORACIÓN (antes era 6)
+                                    8: FlexColumnWidth(
+                                      1.2,
+                                    ), // AVANCE PROGRAMADO (antes era 8)
+                                    9: FlexColumnWidth(
+                                      1.0,
+                                    ), // ANCHO (antes era 9)
+                                    10: FlexColumnWidth(
+                                      1.0,
+                                    ), // ALTO (antes era 10)
+                                  },
                                   children: [
                                     // Encabezados de tabla
                                     TableRow(
                                       decoration: BoxDecoration(
                                         color: Colors.grey[300],
                                         borderRadius: BorderRadius.vertical(
-                                            top: Radius.circular(8)),
+                                          top: Radius.circular(8),
+                                        ),
                                       ),
                                       children: [
                                         tableCellBold(context, 'N°'),
@@ -262,78 +274,100 @@ class _RegistroExplosivoPageHorizontalState
                                         tableCellBold(context, 'LABOR'),
                                         tableCellBold(context, 'VETA'),
                                         tableCellBold(
-                                            context, 'TIPO PERFORACIÓN'),
+                                          context,
+                                          'TIPO PERFORACIÓN',
+                                        ),
                                         tableCellBold(
-                                            context, 'AVANCE PROGRAMADO (m)'),
+                                          context,
+                                          'AVANCE PROGRAMADO (m)',
+                                        ),
                                         tableCellBold(context, 'ANCHO (m)'),
                                         tableCellBold(context, 'ALTO (m)'),
                                       ],
                                     ),
 
                                     // Filas con datos
-                                    for (int i = 0;
-                                        i < _exploraciones.length;
-                                        i++)
-                                      TableRow(children: [
-                                        tableCell((i + 1).toString()),
-                                        tableCell(_exploraciones[i]['fecha']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCell(_exploraciones[i]['turno']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCell(_exploraciones[i]['empresa']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCell(_exploraciones[i]['zona']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCellMulti([
-                                          _exploraciones[i]['tipo_labor']
-                                                  ?.toString() ??
-                                              '',
-                                          _exploraciones[i]['labor']
-                                                  ?.toString() ??
-                                              '',
-                                          _exploraciones[i]['ala']
-                                                  ?.toString() ??
-                                              ''
-                                        ]),
-                                        tableCell(_exploraciones[i]['veta']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCell(_exploraciones[i]
-                                                    ['tipo_perforacion']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCellEditable(
+                                    for (
+                                      int i = 0;
+                                      i < _exploraciones.length;
+                                      i++
+                                    )
+                                      TableRow(
+                                        children: [
+                                          tableCell((i + 1).toString()),
+                                          tableCell(
+                                            _exploraciones[i]['fecha']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            _exploraciones[i]['turno']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            _exploraciones[i]['empresa']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            _exploraciones[i]['zona']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCellMulti([
+                                            _exploraciones[i]['tipo_labor']
+                                                    ?.toString() ??
+                                                '',
+                                            _exploraciones[i]['labor']
+                                                    ?.toString() ??
+                                                '',
+                                            _exploraciones[i]['ala']
+                                                    ?.toString() ??
+                                                '',
+                                          ]),
+                                          tableCell(
+                                            _exploraciones[i]['veta']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            _exploraciones[i]['tipo_perforacion']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCellEditable(
                                             'exploraciones',
                                             'avance_programado',
                                             i, // ✅ usa el índice real aquí
                                             'avance_programado',
-                                            _exploraciones[i]
-                                                ['avance_programado']),
-                                        tableCellEditable(
+                                            _exploraciones[i]['avance_programado'],
+                                          ),
+                                          tableCellEditable(
                                             'exploraciones',
                                             'dimensiones',
                                             i, // ✅ usa el índice real aquí
                                             'ancho',
-                                            _exploraciones[i]['ancho']),
-                                        tableCellEditable(
+                                            _exploraciones[i]['ancho'],
+                                          ),
+                                          tableCellEditable(
                                             'exploraciones',
                                             'dimensiones',
                                             i, // ✅ usa el índice real aquí
                                             'alto',
-                                            _exploraciones[i]['alto']),
-                                      ]),
+                                            _exploraciones[i]['alto'],
+                                          ),
+                                        ],
+                                      ),
                                   ],
                                 ),
                               ),
                               SizedBox(height: 8),
                               // Botones de acción
                               Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
+                                ),
                                 child: Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceEvenly,
@@ -342,7 +376,9 @@ class _RegistroExplosivoPageHorizontalState
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.red,
                                         padding: EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 12),
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
                                       ),
                                       icon: Icon(Icons.delete, size: 18),
                                       onPressed: () {},
@@ -353,7 +389,9 @@ class _RegistroExplosivoPageHorizontalState
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.green,
                                         padding: EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 12),
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
                                       ),
                                       icon: Icon(Icons.send, size: 18),
                                       label: Text('ENVIAR'),
@@ -393,21 +431,20 @@ class _RegistroExplosivoPageHorizontalState
     try {
       for (var registro in registros) {
         int idInsertado = await dbHelper.insertarMedicionHorizontal(registro);
-        print(
-            "Registro insertado con id: $idInsertado");
+        print("Registro insertado con id: $idInsertado");
       }
 
-        // Mostrar mensaje de éxito
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Datos guardados exitosamente')),
-        );
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Datos guardados exitosamente')));
 
-        // Recargar los datos
-        await _recargarDatos();
+      // Recargar los datos
+      await _recargarDatos();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar datos: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al guardar datos: $e')));
       print("Error al insertar/actualizar mediciones: $e");
     }
   }
@@ -478,22 +515,29 @@ class _RegistroExplosivoPageHorizontalState
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: texts
-            .map((text) => Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: Text(
-                    text,
-                    style: TextStyle(
-                      fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                    ),
+            .map(
+              (text) => Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
                   ),
-                ))
+                ),
+              ),
+            )
             .toList(),
       ),
     );
   }
 
-  Widget tableCellEditable(String tipoPerforacion, String labor, int index,
-      String campo, dynamic valor) {
+  Widget tableCellEditable(
+    String tipoPerforacion,
+    String labor,
+    int index,
+    String campo,
+    dynamic valor,
+  ) {
     final key = '$tipoPerforacion-$labor-$index-$campo';
 
     if (!controllers.containsKey(key)) {
@@ -512,7 +556,8 @@ class _RegistroExplosivoPageHorizontalState
           } else {
             controller.text = valor?.toString() ?? '';
             controller.selection = TextSelection.fromPosition(
-                TextPosition(offset: controller.text.length));
+              TextPosition(offset: controller.text.length),
+            );
           }
         },
         keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -528,14 +573,20 @@ class _RegistroExplosivoPageHorizontalState
     );
   }
 
-  void actualizarValor(String tipoPerforacion, String labor, int index,
-      String campo, String nuevoValor) {
+  void actualizarValor(
+    String tipoPerforacion,
+    String labor,
+    int index,
+    String campo,
+    String nuevoValor,
+  ) {
     setState(() {
       _exploraciones[index][campo] = nuevoValor;
 
       // Guarda la fila completa editada
-      registrosEditados[index] =
-          Map<String, dynamic>.from(_exploraciones[index]);
+      registrosEditados[index] = Map<String, dynamic>.from(
+        _exploraciones[index],
+      );
     });
   }
 
@@ -548,18 +599,16 @@ class _RegistroExplosivoPageHorizontalState
 
   Widget tableCellBold(BuildContext context, String text) {
     double screenWidth = MediaQuery.of(context).size.width;
-    double fontSize =
-        screenWidth < 600 ? 8 : 12; // Ajusta el umbral y tamaños a gusto
+    double fontSize = screenWidth < 600
+        ? 8
+        : 12; // Ajusta el umbral y tamaños a gusto
 
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Center(
         child: Text(
           text,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: fontSize,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize),
         ),
       ),
     );

@@ -131,7 +131,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [primaryColor, primaryColor.withOpacity(0.8)],
+                  colors: [primaryColor, primaryColor.withValues(alpha: 0.8)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -145,7 +145,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
@@ -171,7 +171,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
                         Text(
                           'Selecciona los módulos a actualizar',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 13,
                           ),
                         ),
@@ -181,7 +181,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -408,7 +408,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
+                        color: primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -536,11 +536,11 @@ class ProgressDialog extends StatelessWidget {
   final String? subtitulo;
 
   const ProgressDialog({
-    Key? key,
+    super.key,
     required this.message,
     this.progress,
     this.subtitulo,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -554,7 +554,7 @@ class ProgressDialog extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),

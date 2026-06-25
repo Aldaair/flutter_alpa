@@ -8,11 +8,10 @@ import 'package:i_miner/models/medicion_horizontal.dart';
 import 'package:i_miner/services/envio%20nube/Mediciones/api_service_mediciones_horizontal.dart';
 import 'package:i_miner/services/envio%20nube/explosivos/ExploracionService_service.dart';
 
-
 class ListaMedicionesScreen extends StatefulWidget {
   final String tipoPerforacion;
 
-  ListaMedicionesScreen({required this.tipoPerforacion});
+  const ListaMedicionesScreen({super.key, required this.tipoPerforacion});
 
   @override
   _DetalleSeccionScreenState createState() => _DetalleSeccionScreenState();
@@ -39,10 +38,11 @@ class _DetalleSeccionScreenState extends State<ListaMedicionesScreen> {
 
   Future<void> _fetchMedicionesData() async {
     setState(() => isLoading = true);
-    
+
     try {
       DatabaseHelper dbHelper = DatabaseHelper();
-      List<Map<String, dynamic>> data = await dbHelper.obtenerTodasMedicionesHorizontal();
+      List<Map<String, dynamic>> data = await dbHelper
+          .obtenerTodasMedicionesHorizontal();
 
       setState(() {
         medicionesData = data;
@@ -98,7 +98,8 @@ class _DetalleSeccionScreenState extends State<ListaMedicionesScreen> {
     List<Map<String, dynamic>> jsonData = [];
 
     for (var id in selectedItems) {
-      Map<String, dynamic>? medicion = await dbHelper.obtenerMedicionHorizontalPorId(id);
+      Map<String, dynamic>? medicion = await dbHelper
+          .obtenerMedicionHorizontalPorId(id);
 
       if (medicion != null) {
         jsonData.add(medicion);
@@ -108,7 +109,9 @@ class _DetalleSeccionScreenState extends State<ListaMedicionesScreen> {
     await _showConfirmationDialog(jsonData);
   }
 
-  Future<void> _showConfirmationDialog(List<Map<String, dynamic>> jsonData) async {
+  Future<void> _showConfirmationDialog(
+    List<Map<String, dynamic>> jsonData,
+  ) async {
     String prettyJson = const JsonEncoder.withIndent('  ').convert(jsonData);
 
     bool? confirmado = await showDialog<bool>(
@@ -121,14 +124,15 @@ class _DetalleSeccionScreenState extends State<ListaMedicionesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('¿Estás seguro que deseas enviar los siguientes datos a la nube?'),
+                const Text(
+                  '¿Estás seguro que deseas enviar los siguientes datos a la nube?',
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'Mediciones a enviar: ${jsonData.length}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                
               ],
             ),
           ),
@@ -151,61 +155,65 @@ class _DetalleSeccionScreenState extends State<ListaMedicionesScreen> {
     }
   }
 
-Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
-  final medicionService = ApiServiceMedicionesHorizontal();
-  final exploracionService = ExploracionService();
-  bool allSuccess = true;
-  List<String> errores = [];
-  List<int> idsNubeParaMarcar = [];
+  Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
+    final medicionService = ApiServiceMedicionesHorizontal();
+    final exploracionService = ExploracionService();
+    bool allSuccess = true;
+    List<String> errores = [];
+    List<int> idsNubeParaMarcar = [];
 
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => const Center(child: CircularProgressIndicator()),
-  );
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
 
-  try {
-    // Paso 1: Enviar todas las mediciones horizontales
-    for (var medicionMap in jsonData) {
-      try {
-        final medicion = MedicionHorizontal.fromJson(medicionMap);
-        bool success = await medicionService.postMedicionHorizontal(medicion.toApiJson());
+    try {
+      // Paso 1: Enviar todas las mediciones horizontales
+      for (var medicionMap in jsonData) {
+        try {
+          final medicion = MedicionHorizontal.fromJson(medicionMap);
+          bool success = await medicionService.postMedicionHorizontal(
+            medicion.toApiJson(),
+          );
 
-        if (success) {
-          await _actualizarEnvio(medicionMap['id']);
-          
-          // Si tiene idnube, lo agregamos a la lista para marcar
-          if (medicionMap['idnube'] != null) {
-            idsNubeParaMarcar.add(medicionMap['idnube']);
+          if (success) {
+            await _actualizarEnvio(medicionMap['id']);
+
+            // Si tiene idnube, lo agregamos a la lista para marcar
+            if (medicionMap['idnube'] != null) {
+              idsNubeParaMarcar.add(medicionMap['idnube']);
+            }
+          } else {
+            allSuccess = false;
+            errores.add("Error al enviar medición ID: ${medicionMap['id']}");
           }
-        } else {
+        } catch (e) {
           allSuccess = false;
-          errores.add("Error al enviar medición ID: ${medicionMap['id']}");
+          errores.add(
+            "Error procesando medición ID: ${medicionMap['id']} - ${e.toString()}",
+          );
         }
-      } catch (e) {
-        allSuccess = false;
-        errores.add("Error procesando medición ID: ${medicionMap['id']} - ${e.toString()}");
       }
+
+      // Paso 2: Marcar los registros como usados en mediciones (solo si hay ids)
+      if (idsNubeParaMarcar.isNotEmpty) {
+        bool marcadoExitoso = await exploracionService
+            .marcarComoUsadosEnMediciones(idsNubeParaMarcar);
+
+        if (!marcadoExitoso) {
+          allSuccess = false;
+          errores.add("Error al marcar registros como usados en mediciones");
+        }
+      }
+    } catch (e) {
+      allSuccess = false;
+      errores.add("Error inesperado: ${e.toString()}");
     }
 
-    // Paso 2: Marcar los registros como usados en mediciones (solo si hay ids)
-    if (idsNubeParaMarcar.isNotEmpty) {
-      bool marcadoExitoso = await exploracionService.marcarComoUsadosEnMediciones(idsNubeParaMarcar);
-      
-      if (!marcadoExitoso) {
-        allSuccess = false;
-        errores.add("Error al marcar registros como usados en mediciones");
-      }
-    }
-
-  } catch (e) {
-    allSuccess = false;
-    errores.add("Error inesperado: ${e.toString()}");
+    Navigator.of(context).pop();
+    await _showResultDialog(allSuccess, errores);
   }
-
-  Navigator.of(context).pop();
-  await _showResultDialog(allSuccess, errores);
-}
 
   void _confirmarEliminacion() {
     showDialog(
@@ -214,14 +222,18 @@ Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
         return AlertDialog(
           title: const Text('Confirmar eliminación'),
           content: Text(
-              '¿Estás seguro de eliminar los ${selectedItems.length} registros seleccionados?'),
+            '¿Estás seguro de eliminar los ${selectedItems.length} registros seleccionados?',
+          ),
           actions: [
             TextButton(
               child: const Text('Cancelar'),
               onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
-              child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+              child: const Text(
+                'Eliminar',
+                style: TextStyle(color: Colors.red),
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
                 _eliminarRegistrosSeleccionados();
@@ -244,7 +256,9 @@ Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
 
     try {
       DatabaseHelper dbHelper = DatabaseHelper();
-      int deletedCount = await dbHelper.eliminarMultiplesMedicionesHorizontal(selectedItems.toList());
+      int deletedCount = await dbHelper.eliminarMultiplesMedicionesHorizontal(
+        selectedItems.toList(),
+      );
 
       Navigator.of(context).pop();
 
@@ -272,57 +286,57 @@ Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
     }
   }
 
-
-
   Future<int> _actualizarEnvio(int medicionId) async {
     DatabaseHelper dbHelper = DatabaseHelper();
     return await dbHelper.actualizarEnvioMedicionesHorizontal([medicionId]);
   }
 
-Future<void> _showResultDialog(bool success, List<String> errores) async {
-  await showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(success ? 'Éxito' : 'Error'),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              success
-                  ? 'Los datos se enviaron correctamente a la nube y se marcaron los registros correspondientes.'
-                  : 'Ocurrieron algunos errores durante el proceso:',
-            ),
-            if (errores.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Detalles:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+  Future<void> _showResultDialog(bool success, List<String> errores) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(success ? 'Éxito' : 'Error'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                success
+                    ? 'Los datos se enviaron correctamente a la nube y se marcaron los registros correspondientes.'
+                    : 'Ocurrieron algunos errores durante el proceso:',
               ),
-              ...errores.map((e) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text('- $e', style: const TextStyle(fontSize: 14)),
-              )).toList(),
+              if (errores.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Detalles:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                ...errores.map(
+                  (e) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text('- $e', style: const TextStyle(fontSize: 14)),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              if (success) {
+                await _fetchMedicionesData();
+                setState(() => selectedItems.clear());
+              }
+            },
+            child: const Text('Aceptar'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () async {
-            Navigator.of(context).pop();
-            if (success) {
-              await _fetchMedicionesData();
-              setState(() => selectedItems.clear());
-            }
-          },
-          child: const Text('Aceptar'),
-        ),
-      ],
-    ),
-  );
-}
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -352,94 +366,96 @@ Future<void> _showResultDialog(bool success, List<String> errores) async {
                 children: [
                   const CircularProgressIndicator(),
                   const SizedBox(height: 10),
-                  Text(
-                    mensajeUsuario,
-                    style: const TextStyle(fontSize: 16),
-                  ),
+                  Text(mensajeUsuario, style: const TextStyle(fontSize: 16)),
                 ],
               ),
             )
           : medicionesData.isEmpty
-              ? Center(
+          ? Center(
+              child: Text(mensajeUsuario, style: const TextStyle(fontSize: 16)),
+            )
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
                   child: Text(
-                    mensajeUsuario,
-                    style: const TextStyle(fontSize: 16),
+                    "Mediciones encontradas: ${medicionesData.length}",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                )
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        "Mediciones encontradas: ${medicionesData.length}",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    if (selectedItems.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          "${selectedItems.length} elemento(s) seleccionado(s)",
-                          style: TextStyle(color: Colors.blue),
-                        ),
-                      ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: medicionesData.length,
-                        itemBuilder: (context, index) {
-                          final medicion = medicionesData[index];
-                          final isSelected = selectedItems.contains(medicion['id']);
-                          final yaEnviado = medicion['envio'] == 1;
-
-                          return GestureDetector(
-                            onTap: yaEnviado ? null : () => _handleItemTap(index),
-                            child: Card(
-                              margin: const EdgeInsets.all(8),
-                              color: yaEnviado
-                                  ? Colors.grey[300]
-                                  : isSelected
-                                      ? Colors.blue.withOpacity(0.2)
-                                      : null,
-                              child: ListTile(
-                                title: Text("Medición ID: ${medicion['id']}"),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text("Fecha: ${medicion['fecha']}"),
-                                    Text("Turno: ${medicion['turno']}"),
-                                    Text("Zona: ${medicion['zona']} - Labor: ${medicion['labor']}"),
-                                    Text("Veta: ${medicion['veta']}"),
-                                    Text("Avance programado: ${medicion['avance_programado']}m"),
-                                    Text("Dimensiones: ${medicion['ancho']}m x ${medicion['alto']}m"),
-                                    Text("Explosivos: ${medicion['kg_explosivos']}kg"),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (yaEnviado)
-                                      const Icon(Icons.cloud_done, color: Colors.green),
-                                    if (isSelected)
-                                      const Padding(
-                                        padding: EdgeInsets.only(left: 8.0),
-                                        child: Icon(
-                                          Icons.check_circle,
-                                          color: Colors.blue,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
                 ),
+                if (selectedItems.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      "${selectedItems.length} elemento(s) seleccionado(s)",
+                      style: TextStyle(color: Colors.blue),
+                    ),
+                  ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: medicionesData.length,
+                    itemBuilder: (context, index) {
+                      final medicion = medicionesData[index];
+                      final isSelected = selectedItems.contains(medicion['id']);
+                      final yaEnviado = medicion['envio'] == 1;
+
+                      return GestureDetector(
+                        onTap: yaEnviado ? null : () => _handleItemTap(index),
+                        child: Card(
+                          margin: const EdgeInsets.all(8),
+                          color: yaEnviado
+                              ? Colors.grey[300]
+                              : isSelected
+                              ? Colors.blue.withValues(alpha: 0.2)
+                              : null,
+                          child: ListTile(
+                            title: Text("Medición ID: ${medicion['id']}"),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Fecha: ${medicion['fecha']}"),
+                                Text("Turno: ${medicion['turno']}"),
+                                Text(
+                                  "Zona: ${medicion['zona']} - Labor: ${medicion['labor']}",
+                                ),
+                                Text("Veta: ${medicion['veta']}"),
+                                Text(
+                                  "Avance programado: ${medicion['avance_programado']}m",
+                                ),
+                                Text(
+                                  "Dimensiones: ${medicion['ancho']}m x ${medicion['alto']}m",
+                                ),
+                                Text(
+                                  "Explosivos: ${medicion['kg_explosivos']}kg",
+                                ),
+                              ],
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (yaEnviado)
+                                  const Icon(
+                                    Icons.cloud_done,
+                                    color: Colors.green,
+                                  ),
+                                if (isSelected)
+                                  const Padding(
+                                    padding: EdgeInsets.only(left: 8.0),
+                                    child: Icon(
+                                      Icons.check_circle,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }

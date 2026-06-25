@@ -6,6 +6,8 @@ import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:i_miner/screens/Operaciones/Mediciones/horizontal/listar_mediciones.dart';
 
 class RegistroExplosivoPagelargo extends StatefulWidget {
+  const RegistroExplosivoPagelargo({super.key});
+
   @override
   _RegistroExplosivoPagelargoState createState() =>
       _RegistroExplosivoPagelargoState();
@@ -15,17 +17,16 @@ class _RegistroExplosivoPagelargoState
     extends State<RegistroExplosivoPagelargo> {
   List<Map<String, dynamic>> exploraciones = [];
   List<Map<String, dynamic>> exploracionesFiltradas = [];
-    List<Map<String, dynamic>> _exploraciones = [];
-List<TipoPerforacion> _tiposPerforacion = [];
+  List<Map<String, dynamic>> _exploraciones = [];
+  List<TipoPerforacion> _tiposPerforacion = [];
   List<Map<String, dynamic>> _exploracionesSucio = [];
   bool _isLoading = true;
   Map<String, TextEditingController> controllers = {};
 
   Map<int, Map<String, dynamic>> registrosEditados = {};
 
-  
-final TextEditingController fechaController = TextEditingController();
-final TextEditingController turnoController = TextEditingController();
+  final TextEditingController fechaController = TextEditingController();
+  final TextEditingController turnoController = TextEditingController();
   // Función para calcular el número de semana ISO
   int _calcularSemanaISO(DateTime date) {
     final dayOfYear = _diaDelAnio(date);
@@ -56,10 +57,8 @@ final TextEditingController turnoController = TextEditingController();
     'Septiembre',
     'Octubre',
     'Noviembre',
-    'Diciembre'
+    'Diciembre',
   ];
-
-
 
   @override
   void initState() {
@@ -67,64 +66,65 @@ final TextEditingController turnoController = TextEditingController();
     final now = DateTime.now();
     _getTiposPerforacion();
     _cargarExploraciones();
-
-    
   }
-  
 
-Future<void> _getTiposPerforacion() async {
-  try {
-    final dbHelper = DatabaseHelper();
-    _tiposPerforacion = await dbHelper.getTiposPerforacionLargofil();
-    print("Tipos de Perforación obtenidos de la BD local: $_tiposPerforacion");
-    
-    // Después de obtener los tipos, aplicar el filtro si ya tenemos las exploraciones
-    if (_exploracionesSucio.isNotEmpty) {
-      _filtrarExploraciones();
+  Future<void> _getTiposPerforacion() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      _tiposPerforacion = await dbHelper.getTiposPerforacionLargofil();
+      print(
+        "Tipos de Perforación obtenidos de la BD local: $_tiposPerforacion",
+      );
+
+      // Después de obtener los tipos, aplicar el filtro si ya tenemos las exploraciones
+      if (_exploracionesSucio.isNotEmpty) {
+        _filtrarExploraciones();
+      }
+    } catch (e) {
+      print("Error al obtener los tipos de perforación: $e");
     }
-  } catch (e) {
-    print("Error al obtener los tipos de perforación: $e");
   }
-}
 
-Future<void> _cargarExploraciones() async {
-  try {
-    final dbHelper = DatabaseHelper();
-    final exploraciones = await dbHelper.getExploraciones();
+  Future<void> _cargarExploraciones() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final exploraciones = await dbHelper.getExploraciones();
+
+      setState(() {
+        _exploracionesSucio = exploraciones;
+        _isLoading = false;
+      });
+
+      // Si ya tenemos los tipos de perforación, aplicar el filtro
+      if (_tiposPerforacion.isNotEmpty) {
+        _filtrarExploraciones();
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar exploraciones: $e')),
+      );
+    }
+  }
+
+  void _filtrarExploraciones() {
+    // Extraemos los nombres de los tipos de perforación para comparar
+    final nombresTipos = _tiposPerforacion
+        .map((t) => t.nombre.toLowerCase())
+        .toSet();
 
     setState(() {
-      _exploracionesSucio = exploraciones;
-      _isLoading = false;
+      _exploraciones = _exploracionesSucio.where((exploracion) {
+        final tipoExploracion = exploracion['tipo_perforacion']
+            ?.toString()
+            .toLowerCase();
+        return tipoExploracion != null &&
+            nombresTipos.contains(tipoExploracion);
+      }).toList();
     });
-    
-    // Si ya tenemos los tipos de perforación, aplicar el filtro
-    if (_tiposPerforacion.isNotEmpty) {
-      _filtrarExploraciones();
-    }
-  } catch (e) {
-    setState(() {
-      _isLoading = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error al cargar exploraciones: $e')),
-    );
   }
-}
-
-
-
-void _filtrarExploraciones() {
-  // Extraemos los nombres de los tipos de perforación para comparar
-  final nombresTipos = _tiposPerforacion.map((t) => t.nombre.toLowerCase()).toSet();
-  
-  setState(() {
-    _exploraciones = _exploracionesSucio.where((exploracion) {
-      final tipoExploracion = exploracion['tipo_perforacion']?.toString().toLowerCase();
-      return tipoExploracion != null && nombresTipos.contains(tipoExploracion);
-    }).toList();
-  });
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -136,13 +136,13 @@ void _filtrarExploraciones() {
           IconButton(
             icon: Icon(Icons.list),
             onPressed: () async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => ListaPantalla()),
-    );
-    // Esta línea se ejecutará cuando regreses de ListaPantalla
-    _recargarDatos();
-  },
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ListaPantalla()),
+              );
+              // Esta línea se ejecutará cuando regreses de ListaPantalla
+              _recargarDatos();
+            },
           ),
         ],
       ),
@@ -152,73 +152,72 @@ void _filtrarExploraciones() {
           children: [
             // Filtros
             Row(
-  children: [
-    // Selector de fecha
-    Flexible(
-      flex: 3,
-      child: TextField(
-        controller: fechaController,
-        readOnly: true,
-        decoration: InputDecoration(
-          labelText: 'Fecha',
-          border: OutlineInputBorder(),
-          isDense: true,
-        ),
-        onTap: () async {
-          DateTime? pickedDate = await showDatePicker(
-            context: context,
-            initialDate: DateTime.now(),
-            firstDate: DateTime(2000),
-            lastDate: DateTime(2100),
-          );
-          if (pickedDate != null) {
-            setState(() {
-              fechaController.text =
-                  "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
-            });
-          }
-        },
-      ),
-    ),
-    SizedBox(width: 8),
-    // Dropdown para turno
-    Flexible(
-      flex: 2,
-      child: DropdownButtonFormField<String>(
-        value: turnoController.text.isEmpty ? null : turnoController.text,
-        decoration: InputDecoration(
-          labelText: 'Turno',
-          border: OutlineInputBorder(),
-          isDense: true,
-        ),
-        items: ['Día', 'Noche'].map((String turno) {
-          return DropdownMenuItem<String>(
-            value: turno,
-            child: Text(turno),
-          );
-        }).toList(),
-        onChanged: (String? newValue) {
-          setState(() {
-            turnoController.text = newValue ?? '';
-          });
-        },
-      ),
-    ),
-    SizedBox(width: 8),
-    // Botón Buscar
-    ElevatedButton.icon(
-      icon: Icon(Icons.search, size: 20),
-      label: Text('Buscar'),
-      onPressed: () {
-        
-      }
-      ,
-      style: ElevatedButton.styleFrom(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      ),
-    ),
-  ],
-),
+              children: [
+                // Selector de fecha
+                Flexible(
+                  flex: 3,
+                  child: TextField(
+                    controller: fechaController,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'Fecha',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onTap: () async {
+                      DateTime? pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (pickedDate != null) {
+                        setState(() {
+                          fechaController.text =
+                              "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+                        });
+                      }
+                    },
+                  ),
+                ),
+                SizedBox(width: 8),
+                // Dropdown para turno
+                Flexible(
+                  flex: 2,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: turnoController.text.isEmpty
+                        ? null
+                        : turnoController.text,
+                    decoration: InputDecoration(
+                      labelText: 'Turno',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: ['Día', 'Noche'].map((String turno) {
+                      return DropdownMenuItem<String>(
+                        value: turno,
+                        child: Text(turno),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        turnoController.text = newValue ?? '';
+                      });
+                    },
+                  ),
+                ),
+                SizedBox(width: 8),
+                // Botón Buscar
+                ElevatedButton.icon(
+                  icon: Icon(Icons.search, size: 20),
+                  label: Text('Buscar'),
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
 
             SizedBox(height: 20),
 
@@ -252,25 +251,25 @@ void _filtrarExploraciones() {
                                     borderRadius: BorderRadius.circular(8),
                                     color: Colors.grey,
                                   ),
-                                   columnWidths: const {
-                                     0: FlexColumnWidth(
-                                         0.8),
-                                     1: FlexColumnWidth(1.2),
-                                     2: FlexColumnWidth(1.2),
-                                     3: FlexColumnWidth(1.2),
-                                     4: FlexColumnWidth(1.4),
-                                     5: FlexColumnWidth(1.2),
-                                     6: FlexColumnWidth(1.3),
-                                     7: FlexColumnWidth(1.4),
-                                     8: FlexColumnWidth(1.3),
-                                   },
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(0.8),
+                                    1: FlexColumnWidth(1.2),
+                                    2: FlexColumnWidth(1.2),
+                                    3: FlexColumnWidth(1.2),
+                                    4: FlexColumnWidth(1.4),
+                                    5: FlexColumnWidth(1.2),
+                                    6: FlexColumnWidth(1.3),
+                                    7: FlexColumnWidth(1.4),
+                                    8: FlexColumnWidth(1.3),
+                                  },
                                   children: [
                                     // Encabezados de tabla
                                     TableRow(
                                       decoration: BoxDecoration(
                                         color: Colors.grey[300],
                                         borderRadius: BorderRadius.vertical(
-                                            top: Radius.circular(8)),
+                                          top: Radius.circular(8),
+                                        ),
                                       ),
                                       children: [
                                         tableCellBold(context, 'N°'),
@@ -281,54 +280,70 @@ void _filtrarExploraciones() {
                                         tableCellBold(context, 'LABOR'),
                                         tableCellBold(context, 'VETA'),
                                         tableCellBold(
-                                            context, 'TIPO PERFORACIÓN'),
-                                        tableCellBold(
-                                            context, 'TONELADAS'),
+                                          context,
+                                          'TIPO PERFORACIÓN',
+                                        ),
+                                        tableCellBold(context, 'TONELADAS'),
                                       ],
                                     ),
 
                                     // Filas con datos
-                                    for (int i = 0;
-                                        i < _exploraciones.length;
-                                        i++)
-                                      TableRow(children: [
-                                        tableCell((i + 1).toString()),
-                                        tableCell(_exploraciones[i]['fecha']
-                                                ?.toString() ??
-                                            ''),
-                                            tableCell(_exploraciones[i]['turno']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCell(_exploraciones[i]['empresa']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCell(_exploraciones[i]['zona']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCellMulti([
-                                          _exploraciones[i]['tipo_labor']
-                                                  ?.toString() ??
-                                              '',
-                                          _exploraciones[i]['labor']
-                                                  ?.toString() ??
-                                              '',
-                                          _exploraciones[i]['ala']
-                                                  ?.toString() ??
-                                              ''
-                                        ]),
-                                        tableCell(_exploraciones[i]['veta']
-                                                ?.toString() ??
-                                            ''),
-                                        tableCell(_exploraciones[i]
-                                                    ['tipo_perforacion']
-                                                ?.toString() ??
-                                            ''),
-                                            tableCell(_exploraciones[i]
-                                                    ['toneladas']
-                                                ?.toString() ??
-                                            ''),
-                                        
-                                      ]),
+                                    for (
+                                      int i = 0;
+                                      i < _exploraciones.length;
+                                      i++
+                                    )
+                                      TableRow(
+                                        children: [
+                                          tableCell((i + 1).toString()),
+                                          tableCell(
+                                            _exploraciones[i]['fecha']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            _exploraciones[i]['turno']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            _exploraciones[i]['empresa']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            _exploraciones[i]['zona']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCellMulti([
+                                            _exploraciones[i]['tipo_labor']
+                                                    ?.toString() ??
+                                                '',
+                                            _exploraciones[i]['labor']
+                                                    ?.toString() ??
+                                                '',
+                                            _exploraciones[i]['ala']
+                                                    ?.toString() ??
+                                                '',
+                                          ]),
+                                          tableCell(
+                                            _exploraciones[i]['veta']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            _exploraciones[i]['tipo_perforacion']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                          tableCell(
+                                            _exploraciones[i]['toneladas']
+                                                    ?.toString() ??
+                                                '',
+                                          ),
+                                        ],
+                                      ),
                                   ],
                                 ),
                               ),
@@ -349,7 +364,7 @@ void _filtrarExploraciones() {
                               //         ),
                               //         icon: Icon(Icons.delete, size: 18),
                               //         onPressed: () {
-                                        
+
                               //         },
                               //         label: Text('BORRAR'),
                               //       ),
@@ -385,115 +400,122 @@ void _filtrarExploraciones() {
     );
   }
 
-Future<void> insertarYActualizarMedicionesLargo() async {
-  List<Map<String, dynamic>> registros = obtenerDatosEditadosFormateados();
+  Future<void> insertarYActualizarMedicionesLargo() async {
+    List<Map<String, dynamic>> registros = obtenerDatosEditadosFormateados();
 
-  if (registros.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('No hay registros con datos válidos (toneladas > 0)')),
-    );
-    return;
-  }
-
-  final dbHelper = DatabaseHelper();
-  int registrosInsertados = 0;
-
-  try {
-    for (var registro in registros) {
-      int idInsertado = await dbHelper.insertarMedicionLargo(registro);
-      print("✅ Registro insertado con id: $idInsertado");
-      registrosInsertados++;
+    if (registros.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No hay registros con datos válidos (toneladas > 0)'),
+        ),
+      );
+      return;
     }
+
+    final dbHelper = DatabaseHelper();
+    int registrosInsertados = 0;
+
+    try {
+      for (var registro in registros) {
+        int idInsertado = await dbHelper.insertarMedicionLargo(registro);
+        print("✅ Registro insertado con id: $idInsertado");
+        registrosInsertados++;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$registrosInsertados registros guardados exitosamente')),
+        SnackBar(
+          content: Text(
+            '$registrosInsertados registros guardados exitosamente',
+          ),
+        ),
       );
-      
+
       await _recargarDatos();
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error al guardar datos: ${e.toString()}')),
-    );
-    print("❌ Error al insertar/actualizar mediciones: $e");
-  }
-}
-
-List<Map<String, dynamic>> obtenerDatosEditadosFormateados() {
-  List<Map<String, dynamic>> listaDatos = [];
-
-  for (var exploracion in _exploraciones) {
-    double toneladas = double.tryParse(exploracion['toneladas']?.toString() ?? '0.0') ?? 0.0;
-
-    // ✅ Cambio clave: Ahora verificamos específicamente que toneladas > 0
-    // (kgExplosivos puede ser 0 o mayor)
-    if (toneladas > 0) {
-      String tipoLaborLaborAla = [
-        exploracion['tipo_labor']?.toString() ?? '',
-        exploracion['labor']?.toString() ?? '',
-        exploracion['ala']?.toString() ?? ''
-      ].where((part) => part.isNotEmpty).join(' ').trim();
-
-      Map<String, dynamic> datos = {
-        'id_explosivo': exploracion['id'],
-        'fecha': exploracion['fecha'],
-        'turno': exploracion['turno'],
-        'empresa': exploracion['empresa'],
-        'zona': exploracion['zona'],
-        'labor': tipoLaborLaborAla,
-        'veta': exploracion['veta'],
-        'tipo_perforacion': exploracion['tipo_perforacion'],
-        'toneladas': toneladas.toStringAsFixed(2),
-        'idnube': exploracion['idnube'] ?? 0,
-      };
-
-      listaDatos.add(datos);
-      print("✅ Registro válido agregado - Toneladas: $toneladas");
-    } else {
-      print("⛔ Registro omitido - Toneladas: $toneladas");
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al guardar datos: ${e.toString()}')),
+      );
+      print("❌ Error al insertar/actualizar mediciones: $e");
     }
   }
 
-  return listaDatos;
-}
+  List<Map<String, dynamic>> obtenerDatosEditadosFormateados() {
+    List<Map<String, dynamic>> listaDatos = [];
 
+    for (var exploracion in _exploraciones) {
+      double toneladas =
+          double.tryParse(exploracion['toneladas']?.toString() ?? '0.0') ?? 0.0;
 
-Future<void> _recargarDatos() async {
-  setState(() {
-    _isLoading = true;
-  });
-  
-  // Limpia los datos existentes y los controladores
-  _limpiarControladores();
-  _exploracionesSucio = [];
-  _exploraciones = [];
-  registrosEditados = {};
-  
-  // Vuelve a cargar todos los datos
-  await _getTiposPerforacion();
-  await _cargarExploraciones();
-  
-  setState(() {
-    _isLoading = false;
-  });
-}
+      // ✅ Cambio clave: Ahora verificamos específicamente que toneladas > 0
+      // (kgExplosivos puede ser 0 o mayor)
+      if (toneladas > 0) {
+        String tipoLaborLaborAla = [
+          exploracion['tipo_labor']?.toString() ?? '',
+          exploracion['labor']?.toString() ?? '',
+          exploracion['ala']?.toString() ?? '',
+        ].where((part) => part.isNotEmpty).join(' ').trim();
 
-void _limpiarControladores() {
-  // Disponse de todos los controladores existentes
-  controllers.forEach((key, controller) {
-    controller.dispose();
-  });
-  // Limpia el mapa de controladores
-  controllers.clear();
-}
+        Map<String, dynamic> datos = {
+          'id_explosivo': exploracion['id'],
+          'fecha': exploracion['fecha'],
+          'turno': exploracion['turno'],
+          'empresa': exploracion['empresa'],
+          'zona': exploracion['zona'],
+          'labor': tipoLaborLaborAla,
+          'veta': exploracion['veta'],
+          'tipo_perforacion': exploracion['tipo_perforacion'],
+          'toneladas': toneladas.toStringAsFixed(2),
+          'idnube': exploracion['idnube'] ?? 0,
+        };
 
-Widget tableCellMulti(List<String> texts, {bool isBold = false}) {
-  return Padding(
-    padding: const EdgeInsets.all(8.0),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: texts
-          .map((text) => Padding(
+        listaDatos.add(datos);
+        print("✅ Registro válido agregado - Toneladas: $toneladas");
+      } else {
+        print("⛔ Registro omitido - Toneladas: $toneladas");
+      }
+    }
+
+    return listaDatos;
+  }
+
+  Future<void> _recargarDatos() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Limpia los datos existentes y los controladores
+    _limpiarControladores();
+    _exploracionesSucio = [];
+    _exploraciones = [];
+    registrosEditados = {};
+
+    // Vuelve a cargar todos los datos
+    await _getTiposPerforacion();
+    await _cargarExploraciones();
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  void _limpiarControladores() {
+    // Disponse de todos los controladores existentes
+    controllers.forEach((key, controller) {
+      controller.dispose();
+    });
+    // Limpia el mapa de controladores
+    controllers.clear();
+  }
+
+  Widget tableCellMulti(List<String> texts, {bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: texts
+            .map(
+              (text) => Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: Text(
                   text,
@@ -501,24 +523,29 @@ Widget tableCellMulti(List<String> texts, {bool isBold = false}) {
                     fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
-              ))
-          .toList(),
-    ),
-  );
-}
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
 
-
-    void actualizarValor(String tipoPerforacion, String labor, int index,
-      String campo, String nuevoValor) {
+  void actualizarValor(
+    String tipoPerforacion,
+    String labor,
+    int index,
+    String campo,
+    String nuevoValor,
+  ) {
     setState(() {
       _exploraciones[index][campo] = nuevoValor;
 
       // Guarda la fila completa editada
-      registrosEditados[index] =
-          Map<String, dynamic>.from(_exploraciones[index]);
+      registrosEditados[index] = Map<String, dynamic>.from(
+        _exploraciones[index],
+      );
     });
   }
-
 
   Widget tableCell(String text) {
     return Padding(
@@ -529,18 +556,16 @@ Widget tableCellMulti(List<String> texts, {bool isBold = false}) {
 
   Widget tableCellBold(BuildContext context, String text) {
     double screenWidth = MediaQuery.of(context).size.width;
-    double fontSize =
-        screenWidth < 600 ? 8 : 12; // Ajusta el umbral y tamaños a gusto
+    double fontSize = screenWidth < 600
+        ? 8
+        : 12; // Ajusta el umbral y tamaños a gusto
 
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Center(
         child: Text(
           text,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: fontSize,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize),
         ),
       ),
     );

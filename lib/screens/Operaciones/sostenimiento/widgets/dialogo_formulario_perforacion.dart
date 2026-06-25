@@ -11,14 +11,14 @@ class DialogoFormularioEmpernador extends StatefulWidget {
   final Function(Map<String, dynamic>) onGuardar;
 
   const DialogoFormularioEmpernador({
-    Key? key,
+    super.key,
     required this.operacionId,
     required this.estadoId,
     this.datosIniciales,
     required this.estado,
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
-  }) : super(key: key);
+  });
 
   @override
   State<DialogoFormularioEmpernador> createState() =>
@@ -154,8 +154,8 @@ class _DialogoFormularioEmpernadorState
       Set<String> laboresFiltrados = {};
       for (var plan in planesCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
+            (plan.labor.isNotEmpty ?? false)) {
+          laboresFiltrados.add(plan.labor);
         }
       }
       filteredLabores = laboresFiltrados.toList()..sort();
@@ -169,8 +169,8 @@ class _DialogoFormularioEmpernadorState
       for (var plan in planesCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
+            (plan.ala.isNotEmpty ?? false)) {
+          alasFiltrados.add(plan.ala);
         }
       }
       filteredAlas = alasFiltrados.toList()..sort();
@@ -192,8 +192,8 @@ class _DialogoFormularioEmpernadorState
             alaSeleccionado!.isEmpty ||
             plan.ala == alaSeleccionado;
 
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
+        if (coincideBase && coincideAla && (plan.nivel.isNotEmpty ?? false)) {
+          nivelesFiltrados.add(plan.nivel);
         }
       }
 
@@ -403,7 +403,7 @@ class _DialogoFormularioEmpernadorState
                                 keyboardType: TextInputType.number,
                               ),
                               const SizedBox(width: 8),
-                              Container(
+                              SizedBox(
                                 width: 1,
                                 child: const SizedBox.shrink(),
                               ),
@@ -449,7 +449,7 @@ class _DialogoFormularioEmpernadorState
                                 icon: Icons.timeline,
                               ),
                               const SizedBox(width: 8),
-                              Container(
+                              SizedBox(
                                 width: 1,
                                 child: const SizedBox.shrink(),
                               ),
@@ -482,7 +482,7 @@ class _DialogoFormularioEmpernadorState
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: widget.primaryColor.withOpacity(0.1),
+                color: widget.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Icon(Icons.note_alt, size: 14, color: widget.primaryColor),
@@ -522,7 +522,7 @@ class _DialogoFormularioEmpernadorState
                 child: Icon(
                   Icons.comment,
                   size: 16,
-                  color: widget.primaryColor.withOpacity(0.7),
+                  color: widget.primaryColor.withValues(alpha: 0.7),
                 ),
               ),
               border: InputBorder.none,
@@ -553,7 +553,7 @@ class _DialogoFormularioEmpernadorState
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: widget.primaryColor.withOpacity(0.1),
+                color: widget.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Icon(icon, size: 14, color: widget.primaryColor),
@@ -599,7 +599,7 @@ class _DialogoFormularioEmpernadorState
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
             ),
             child: const Icon(Icons.build, color: Colors.white, size: 18),
@@ -625,8 +625,8 @@ class _DialogoFormularioEmpernadorState
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isEditable
-            ? Colors.green.withOpacity(0.2)
-            : Colors.grey.withOpacity(0.2),
+            ? Colors.green.withValues(alpha: 0.2)
+            : Colors.grey.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEditable ? Colors.green : Colors.grey,
