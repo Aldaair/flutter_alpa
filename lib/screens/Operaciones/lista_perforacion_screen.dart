@@ -12,6 +12,7 @@ import 'package:i_miner/core/checklist_helper.dart';
 // ======== CONFIG CLASS ========
 class OperacionScreenConfig {
   final String proceso;
+  final int procesoId;
   final String dbSuffix;
   final String operacionNombreDb;
   final bool hasChecklistTelemando;
@@ -21,6 +22,7 @@ class OperacionScreenConfig {
 
   const OperacionScreenConfig({
     required this.proceso,
+    required this.procesoId,
     required this.dbSuffix,
     required this.operacionNombreDb,
     this.hasChecklistTelemando = false,
@@ -34,10 +36,10 @@ class OperacionScreenConfig {
 typedef DialogoRegistroBuilder =
     Future<Map<String, dynamic>?> Function(
       BuildContext context,
-      List<Map<String, String>> codigoOperativos,
       String turno,
       String estado,
-      Map<String, List<Map<String, String>>> datadialog,
+      int procesoId,
+      int categoriaId,
       String? ultimaHora,
       Map<String, dynamic>? existingRecord,
     );
@@ -85,7 +87,7 @@ typedef CheckImagenBuilder =
     );
 
 typedef BotonesEstadoBuilder =
-    Widget Function(Function(String) onEstadoSeleccionado);
+    Widget Function(Function(String, int) onEstadoSeleccionado);
 
 typedef TablaOperacionesBuilder =
     Widget Function(
@@ -185,14 +187,6 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     'FUERA DE PLAN': const Color(0xFFF44336),
   };
 
-  final Map<String, List<Map<String, String>>> datadialog = {
-    'OPERATIVO': [],
-    'DEMORA': [],
-    'MANTENIMIENTO': [],
-    'RESERVA': [],
-    'FUERA DE PLAN': [],
-  };
-
   @override
   void initState() {
     super.initState();
@@ -207,15 +201,24 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
   String get _tableName {
     switch (_s) {
-      case 'Horizontal':   return 'Operacion_tal_horizontal';
-      case 'Dumper':       return 'Operacion_dumper';
-      case 'Carguio':      return 'Operacion_carguio';
-      case 'Scissor':      return 'Operacion_scissor';
-      case 'Anfochanger':  return 'Operacion_anfochanger';
-      case 'Empernador':   return 'Operacion_empernador';
-      case 'RompeBaco':    return 'Operacion_rompe_baco';
-      case 'Scalamin':     return 'Operacion_scalamin';
-      default:             return 'Operacion_tal_largo';
+      case 'Horizontal':
+        return 'Operacion_tal_horizontal';
+      case 'Dumper':
+        return 'Operacion_dumper';
+      case 'Carguio':
+        return 'Operacion_carguio';
+      case 'Scissor':
+        return 'Operacion_scissor';
+      case 'Anfochanger':
+        return 'Operacion_anfochanger';
+      case 'Empernador':
+        return 'Operacion_empernador';
+      case 'RompeBaco':
+        return 'Operacion_rompe_baco';
+      case 'Scalamin':
+        return 'Operacion_scalamin';
+      default:
+        return 'Operacion_tal_largo';
     }
   }
 
@@ -223,10 +226,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     _turnosCatalogo = await _db.getDimTurnos();
     selectedTurno = _resolverTurnoActual();
     if (widget.dniUsuario != null) {
-      final puedeSeleccionar = await _db.userHasCargo(
-        widget.dniUsuario!,
-        ['JEFE DE GUARDIA', 'SUPERVISOR'],
-      );
+      final puedeSeleccionar = await _db.userHasCargo(widget.dniUsuario!, [
+        'JEFE DE GUARDIA',
+        'SUPERVISOR',
+      ]);
       if (!mounted) return;
       setState(() {
         _canSelectOperators = puedeSeleccionar;
@@ -253,12 +256,24 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
   String _normalizarClave(String? value) {
     if (value == null) return '';
     const replacements = {
-      'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U', 'Ü': 'U',
-      'á': 'A', 'é': 'E', 'í': 'I', 'ó': 'O', 'ú': 'U', 'ü': 'U',
+      'Á': 'A',
+      'É': 'E',
+      'Í': 'I',
+      'Ó': 'O',
+      'Ú': 'U',
+      'Ü': 'U',
+      'á': 'A',
+      'é': 'E',
+      'í': 'I',
+      'ó': 'O',
+      'ú': 'U',
+      'ü': 'U',
     };
     final buffer = StringBuffer();
     for (final rune in value.trim().runes) {
-      buffer.write(replacements[String.fromCharCode(rune)] ?? String.fromCharCode(rune));
+      buffer.write(
+        replacements[String.fromCharCode(rune)] ?? String.fromCharCode(rune),
+      );
     }
     return buffer.toString().toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
   }
@@ -282,9 +297,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       masterOperators = operators;
       selectedOperatorId =
           currentOperatorId ??
-          (operators.isNotEmpty
-              ? operators.first['id'] as int?
-              : null);
+          (operators.isNotEmpty ? operators.first['id'] as int? : null);
     });
   }
 
@@ -355,7 +368,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
             operadorId: operadorId,
           );
         }
-        return _db.getOperacionTalHorizontalByTurnoAndFechaMaster(turnoId, fecha);
+        return _db.getOperacionTalHorizontalByTurnoAndFechaMaster(
+          turnoId,
+          fecha,
+        );
       case 'Dumper':
         if (operadorId != null) {
           return _db.getOperacionDumperByTurnoAndFecha(
@@ -443,154 +459,138 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       case 'TalHorizontal':
         await _db.insertOperacionTalHorizontal(
           data['fecha'],
-          data['turno'],
+          data['turno'] ?? '',
           data['seccion'] ?? '',
-          data['operador'],
-          data['jefeGuardia'],
-          data['equipo'],
-          data['codigo'],
-          data['modelo'],
+          data['operador'] ?? '',
+          data['jefeGuardia'] ?? '',
+          data['equipo'] ?? '',
+          data['codigo'] ?? '',
+          data['modelo'] ?? '',
           equipoId: data['equipo_id'] as int?,
-          actorDni: data['actor_dni'] as String?,
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
           registradorUsuarioId: data['registrador_usuario_id'] as int?,
-          registradorNombre: data['registrador_nombre'] as String?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
       case 'Dumper':
         await _db.insertOperacionDumper(
           data['fecha'],
-          data['turno'],
+          data['turno'] ?? '',
           data['seccion'] ?? '',
-          data['operador'],
-          data['jefe_guardia'],
-          data['equipo'],
-          data['n_equipo'],
+          data['operador'] ?? '',
+          data['jefe_guardia'] ?? '',
+          data['equipo'] ?? '',
+          data['n_equipo'] ?? '',
           data['capacidad'] ?? '',
           data['tipo_equipo'] ?? '',
           equipoId: data['equipo_id'] as int?,
-          actorDni: data['actor_dni'] as String?,
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
           registradorUsuarioId: data['registrador_usuario_id'] as int?,
-          registradorNombre: data['registrador_nombre'] as String?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
       case 'Carguio':
         await _db.insertOperacionCarguio(
           data['fecha'],
-          data['turno'],
+          data['turno'] ?? '',
           data['seccion'] ?? '',
-          data['operador'],
-          data['jefe_guardia'],
-          data['equipo'],
-          data['n_equipo'],
+          data['operador'] ?? '',
+          data['jefe_guardia'] ?? '',
+          data['equipo'] ?? '',
+          data['n_equipo'] ?? '',
           data['capacidad'] ?? '',
           data['tipo_equipo'] ?? '',
           equipoId: data['equipo_id'] as int?,
-          actorDni: data['actor_dni'] as String?,
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
           registradorUsuarioId: data['registrador_usuario_id'] as int?,
-          registradorNombre: data['registrador_nombre'] as String?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
       case 'Empernador':
         await _db.insertOperacionEmpernador(
           data['fecha'],
-          data['turno'],
+          data['turno'] ?? '',
           data['seccion'] ?? '',
-          data['operador'],
-          data['jefeGuardia'],
-          data['equipo'],
-          data['codigo'],
+          data['operador'] ?? '',
+          data['jefeGuardia'] ?? '',
+          data['equipo'] ?? '',
+          data['codigo'] ?? '',
           data['modelo'] ?? '',
           equipoId: data['equipo_id'] as int?,
-          actorDni: data['actor_dni'] as String?,
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
           registradorUsuarioId: data['registrador_usuario_id'] as int?,
-          registradorNombre: data['registrador_nombre'] as String?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
       case 'RompeBaco':
         await _db.insertOperacionRompeBaco(
           data['fecha'],
-          data['turno'],
-          data['operador'],
-          data['jefeGuardia'],
-          data['equipo'],
-          data['codigo'],
+          data['turno'] ?? '',
+          data['operador'] ?? '',
+          data['jefeGuardia'] ?? '',
+          data['equipo'] ?? '',
+          data['codigo'] ?? '',
           equipoId: data['equipo_id'] as int?,
-          actorDni: data['actor_dni'] as String?,
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
           registradorUsuarioId: data['registrador_usuario_id'] as int?,
-          registradorNombre: data['registrador_nombre'] as String?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
       case 'Scalamin':
         await _db.insertOperacionScalamin(
           data['fecha'],
-          data['turno'],
-          data['operador'],
-          data['jefeGuardia'],
-          data['equipo'],
-          data['codigo'],
+          data['turno'] ?? '',
+          data['operador'] ?? '',
+          data['jefeGuardia'] ?? '',
+          data['equipo'] ?? '',
+          data['codigo'] ?? '',
           equipoId: data['equipo_id'] as int?,
-          actorDni: data['actor_dni'] as String?,
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
           registradorUsuarioId: data['registrador_usuario_id'] as int?,
-          registradorNombre: data['registrador_nombre'] as String?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
       case 'Scissor':
         await _db.insertOperacionScissor(
           data['fecha'],
-          data['turno'],
-          data['operador'],
-          data['jefeGuardia'],
-          data['equipo'],
-          data['codigo'],
+          data['turno'] ?? '',
+          data['operador'] ?? '',
+          data['jefeGuardia'] ?? '',
+          data['equipo'] ?? '',
+          data['codigo'] ?? '',
           equipoId: data['equipo_id'] as int?,
-          actorDni: data['actor_dni'] as String?,
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
           registradorUsuarioId: data['registrador_usuario_id'] as int?,
-          registradorNombre: data['registrador_nombre'] as String?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
       case 'Anfochanger':
         await _db.insertOperacionAnfochanger(
           data['fecha'],
-          data['turno'],
-          data['operador'],
-          data['jefeGuardia'],
-          data['equipo'],
-          data['codigo'],
+          data['turno'] ?? '',
+          data['operador'] ?? '',
+          data['jefeGuardia'] ?? '',
+          data['equipo'] ?? '',
+          data['codigo'] ?? '',
           equipoId: data['equipo_id'] as int?,
-          actorDni: data['actor_dni'] as String?,
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
           registradorUsuarioId: data['registrador_usuario_id'] as int?,
-          registradorNombre: data['registrador_nombre'] as String?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
@@ -648,20 +648,64 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
   }
 
   Future<bool> _updateHoraFinalDispatch(int opId, int estId, String horaFinal) {
-    return _db.updateHoraFinal(
-      opId,
-      estId,
-      horaFinal,
-      tableName: _tableName,
-    );
+    return _db.updateHoraFinal(opId, estId, horaFinal, tableName: _tableName);
   }
 
   Future<bool> _deleteEstadoDispatch(int opId, int estId) {
-    return _db.deleteEstado(
-      opId,
-      estId,
-      tableName: _tableName,
-    );
+    return _db.deleteEstado(opId, estId, tableName: _tableName);
+  }
+
+  Future<Map<String, dynamic>> _getHorometrosData(int operacionId) {
+    switch (_n) {
+      case 'TalLargo':
+        return _db.getHorometrosByOperacionId(operacionId);
+      case 'TalHorizontal':
+        return _db.getHorometrosByOperacionIdHorizontal(operacionId);
+      case 'Dumper':
+        return _db.getHorometrosByOperacionIdDumper(operacionId);
+      case 'Carguio':
+        return _db.getHorometrosByOperacionIdCarguio(operacionId);
+      case 'Scissor':
+        return _db.getHorometrosByOperacionIdScissor(operacionId);
+      case 'Anfochanger':
+        return _db.getHorometrosByOperacionIdAnfochanger(operacionId);
+      case 'Empernador':
+        return _db.getHorometrosByOperacionIdEmpernador(operacionId);
+      case 'RompeBaco':
+        return _db.getHorometrosByOperacionIdRompeBaco(operacionId);
+      case 'Scalamin':
+        return _db.getHorometrosByOperacionIdScalamin(operacionId);
+      default:
+        throw Exception('Unknown operacionNombreDb for horometros: $_n');
+    }
+  }
+
+  Future<bool> _updateHorometrosDispatch(
+    int operacionId,
+    Map<String, dynamic> horometros,
+  ) {
+    switch (_n) {
+      case 'TalLargo':
+        return _db.updateHorometros(operacionId, horometros);
+      case 'TalHorizontal':
+        return _db.updateHorometrosHorizontal(operacionId, horometros);
+      case 'Dumper':
+        return _db.updateHorometrosDumper(operacionId, horometros);
+      case 'Carguio':
+        return _db.updateHorometrosCarguio(operacionId, horometros);
+      case 'Scissor':
+        return _db.updateHorometrosScissor(operacionId, horometros);
+      case 'Anfochanger':
+        return _db.updateHorometrosAnfochanger(operacionId, horometros);
+      case 'Empernador':
+        return _db.updateHorometrosEmpernador(operacionId, horometros);
+      case 'RompeBaco':
+        return _db.updateHorometrosRompeBaco(operacionId, horometros);
+      case 'Scalamin':
+        return _db.updateHorometrosScalamin(operacionId, horometros);
+      default:
+        throw Exception('Unknown operacionNombreDb for horometros: $_n');
+    }
   }
 
   // ======== FETCH OPERACION DATA ========
@@ -702,18 +746,24 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
     print("Operaciones encontradas: $data");
 
-    print("🔍 _fetchOperacionData: data.length=${data.length}, selectedTurno=$selectedTurno, turnoId=$turnoId, fechaActual=$fechaActual");
+    print(
+      "🔍 _fetchOperacionData: data.length=${data.length}, selectedTurno=$selectedTurno, turnoId=$turnoId, fechaActual=$fechaActual",
+    );
     setState(() {
       operaciones = data;
       if (data.isNotEmpty) {
         operacionActual = data.first;
         operacionId = data.first['id'];
-        print("✅ ID de operación guardado: $operacionId, turno=${data.first['turno_id']}, fecha=${data.first['fecha']}");
+        print(
+          "✅ ID de operación guardado: $operacionId, turno=${data.first['turno_id']}, fecha=${data.first['fecha']}",
+        );
       } else {
         operacionActual = null;
         operacionId = null;
         operacionesTabla = [];
-        print("❌ No se encontraron operaciones para turno=$selectedTurno (id=$turnoId), fecha=$fechaActual");
+        print(
+          "❌ No se encontraron operaciones para turno=$selectedTurno (id=$turnoId), fecha=$fechaActual",
+        );
       }
     });
 
@@ -814,7 +864,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                 proceso: widget.config.proceso,
                 mostrarModelo: widget.config.mostrarModelo,
                 usarAutorizacion: widget.config.usarAutorizacion,
-                soloIds: widget.config.operacionNombreDb == 'TalLargo',
+                soloIds: true,
               ),
             ),
 
@@ -1065,8 +1115,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
   // ======== DIALOGO ESTADO ========
 
-  void _mostrarDialogoEstado(String estado) async {
-    print("🔴 _mostrarDialogoEstado: operacionActual=$operacionActual, estado=$estado, _tableName=$_tableName");
+  void _mostrarDialogoEstado(String estado, int categoriaId) async {
+    print(
+      "🔴 _mostrarDialogoEstado: operacionActual=$operacionActual, estado=$estado, _tableName=$_tableName",
+    );
     if (operacionActual == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1132,10 +1184,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
     final result = await widget.onShowDialogoRegistro(
       context,
-      codigosOperativos,
       operacionActual!['turno'] ?? selectedTurno ?? 'DÍA',
       estado,
-      datadialog,
+      widget.config.procesoId,
+      categoriaId,
       ultimaHora,
       null,
     );
@@ -1150,26 +1202,22 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
   void _verDetalleOperacion(Map<String, dynamic> operacion) async {
     if (operacionActual == null) return;
 
-    List<Map<String, String>> codigosOperativos = operaciones
-        .where((op) => op['estado'] == operacion['estado'])
-        .map(
-          (op) => {
-            'id': op['id'].toString(),
-            'numero': op['numero']?.toString() ?? '0',
-            'codigo': op['codigo']?.toString() ?? '',
-            'hora_inicio': op['hora_inicio']?.toString() ?? '',
-            'hora_final': op['hora_final']?.toString() ?? '',
-            'estado': op['estado']?.toString() ?? '',
-          },
-        )
-        .toList();
+    final estadoNombre = (operacion['estado'] ?? 'OPERATIVO')
+        .toString()
+        .toUpperCase();
+    final cats = await DatabaseHelper().getCategoriasEstados();
+    final catMatch = cats.firstWhere(
+      (c) => (c['nombre']?.toString() ?? '').toUpperCase() == estadoNombre,
+      orElse: () => {'id': 0},
+    );
+    final categoriaId = catMatch['id'] as int;
 
     final result = await widget.onShowDialogoRegistro(
       context,
-      codigosOperativos,
       operacionActual!['turno'] ?? selectedTurno ?? 'DÍA',
-      operacion['estado'] ?? 'OPERATIVO',
-      datadialog,
+      estadoNombre,
+      widget.config.procesoId,
+      categoriaId,
       null,
       {
         'id': operacion['id'].toString(),
@@ -1195,7 +1243,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       if (operacionActual == null) return;
 
       List<Map<String, dynamic>> todosLosEstados = await DatabaseHelper()
-          .getEstadosByOperacionId(operacionActual!['id'], tableName: _tableName);
+          .getEstadosByOperacionId(
+            operacionActual!['id'],
+            tableName: _tableName,
+          );
 
       DateTime? parseHoraCompleta(String horaStr) {
         try {
@@ -1308,7 +1359,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       }
 
       List<Map<String, dynamic>> todosLosEstados = await DatabaseHelper()
-          .getEstadosByOperacionId(operacionActual!['id'], tableName: _tableName);
+          .getEstadosByOperacionId(
+            operacionActual!['id'],
+            tableName: _tableName,
+          );
 
       todosLosEstados.sort((a, b) {
         DateTime? horaA = parseHoraCompleta(a['hora_inicio']);
@@ -1398,7 +1452,11 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
   Future<void> _abrirDialogoPerforacion(int estadoId) async {
     Map<String, dynamic> datosPerforacion = await DatabaseHelper()
-        .getOperacionByEstadoId(operacionActual!['id'], estadoId, tableName: _tableName);
+        .getOperacionByEstadoId(
+          operacionActual!['id'],
+          estadoId,
+          tableName: _tableName,
+        );
 
     showDialog(
       context: context,
@@ -1481,7 +1539,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
     if (turnoId != null && operadorId != null && fecha != null) {
       final yaExiste = await dbHelper.existeOperacionEnTurno(
-        tableName: widget.config.operacionNombreDb,
+        tableName: _tableName,
         turnoId: turnoId,
         fecha: fecha,
         operadorId: operadorId,
@@ -1540,7 +1598,11 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
   Future<void> _editarOperacionOperativo(Map<String, dynamic> operacion) async {
     Map<String, dynamic> datosPerforacion = await DatabaseHelper()
-        .getOperacionByEstadoId(operacionActual!['id'], operacion['id'], tableName: _tableName);
+        .getOperacionByEstadoId(
+          operacionActual!['id'],
+          operacion['id'],
+          tableName: _tableName,
+        );
 
     showDialog(
       context: context,
@@ -1580,7 +1642,11 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     String estado,
   ) async {
     Map<String, dynamic> datosNoOperativo = await DatabaseHelper()
-        .getOperacionByEstadoId(operacionActual!['id'], operacion['id'], tableName: _tableName);
+        .getOperacionByEstadoId(
+          operacionActual!['id'],
+          operacion['id'],
+          tableName: _tableName,
+        );
 
     showDialog(
       context: context,
@@ -1710,8 +1776,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       return;
     }
 
-    Map<String, dynamic> horometrosData = await DatabaseHelper()
-        .getHorometrosByOperacionId(operacionId);
+    Map<String, dynamic> horometrosData = await _getHorometrosData(operacionId);
 
     final tipos = await DatabaseHelper().getEquipoHorometroTiposByEquipoId(
       equipoId,
@@ -1735,7 +1800,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           horometrosData: horometrosData,
           primaryColor: primaryColor,
           horometroDefs: horometroDefs,
-          onSave: (id, map) => DatabaseHelper().updateHorometros(id, map),
+          onSave: _updateHorometrosDispatch,
         );
       },
     );
@@ -1764,7 +1829,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
           try {
             var ultimoEstado = await DatabaseHelper()
-                .getUltimoEstadoByOperacionId(operacionActual!['id'], tableName: _tableName);
+                .getUltimoEstadoByOperacionId(
+                  operacionActual!['id'],
+                  tableName: _tableName,
+                );
 
             if (ultimoEstado == null) {
               Navigator.pop(parentContext);
@@ -1790,7 +1858,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
             }
 
             List<Map<String, dynamic>> todosLosEstados = await DatabaseHelper()
-                .getEstadosByOperacionId(operacionActual!['id'], tableName: _tableName);
+                .getEstadosByOperacionId(
+                  operacionActual!['id'],
+                  tableName: _tableName,
+                );
 
             int newNumber = todosLosEstados.isNotEmpty
                 ? (todosLosEstados.last['numero'] as int) + 1
@@ -1808,7 +1879,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
               tableName: _tableName,
             );
 
-            await DatabaseHelper().cerrarOperacion(operacionActual!['id'], tableName: _tableName);
+            await DatabaseHelper().cerrarOperacion(
+              operacionActual!['id'],
+              tableName: _tableName,
+            );
 
             if (mounted) Navigator.pop(parentContext);
 
@@ -1932,7 +2006,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       if (operacionActual == null) return;
 
       List<Map<String, dynamic>> todosLosEstados = await DatabaseHelper()
-          .getEstadosByOperacionId(operacionActual!['id'], tableName: _tableName);
+          .getEstadosByOperacionId(
+            operacionActual!['id'],
+            tableName: _tableName,
+          );
 
       int horaToMinutes(String? hora) {
         if (hora == null || hora.isEmpty) return 0;

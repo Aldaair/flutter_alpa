@@ -13,26 +13,20 @@ import 'package:i_miner/screens/widgets/dialog_check_imagen.dart';
 // SCISSOR widgets
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/SCISSOR/widgets/dialogo_formulario_perforacion.dart'
     as sc;
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/SCISSOR/widgets/registro_operacion_dialog.dart'
-    as sc;
 
 // AnfoChanger widgets
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/AnfoChanger/widgets/dialogo_formulario_perforacion.dart'
-    as ac;
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/AnfoChanger/widgets/registro_operacion_dialog.dart'
     as ac;
 
 // Rompebancos widgets
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Rompebancos/widgets/dialogo_formulario_perforacion.dart'
     as rb;
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Rompebancos/widgets/registro_operacion_dialog.dart'
-    as rb;
 
 // Scalamin widgets
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_formulario_perforacion.dart'
     as sm;
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/registro_operacion_dialog.dart'
-    as sm;
+
+import 'package:i_miner/shared/widgets/registro_operacion_dialog.dart';
 
 class ServiciosAuxiliaresScreen extends StatelessWidget {
   final String? rolUsuario;
@@ -149,7 +143,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                         //             rolUsuario: rolUsuario,
                         //             dniUsuario: dniUsuario,
                         //             config: OperacionScreenConfig(proceso: 'ROMPEBANCOS', dbSuffix: 'Rompebancos', operacionNombreDb: 'Rompebancos'),
-                        //             onShowDialogoRegistro: (c, co, t, e, dd, uh, er) => showRegistroOperacionDialog(context: c, dialog: rb.RegistroOperacionDialog(codigoOperativos: co, turno: t, selectedState: e, datadialog: dd, ultimaHoraRegistrada: uh, existingRecord: er?.map((k, v) => MapEntry(k, v.toString())), onConfirm: (data) => Navigator.of(context).pop(data))),
+                        //             onShowDialogoRegistro: (c, t, e, pi, ci, uh, er) => showRegistroOperacionDialog(context: c, dialog: RegistroOperacionDialog(turno: t, selectedState: e, procesoId: pi, categoriaId: ci, ultimaHoraRegistrada: uh, existingRecord: er?.map((k, v) => MapEntry(k, v.toString())), onConfirm: (data) => Navigator.of(context).pop(data))),
                         //             onBuildDialogoPerforacion: (c, oi, ei, di, f, t, pc, og) => rb.DialogoFormularioRompebanco(operacionId: oi, estadoId: ei, datosIniciales: di, estado: 'OPERATIVO', fecha: f, turno: t, primaryColor: pc, onGuardar: og),
                         //             onBuildDialogoNoOperativo: (c, oi, ei, e, pc, og, di) => DialogoFormularioNoOperativo(operacionId: oi, estadoId: ei, estado: e, datosIniciales: di, primaryColor: pc, onGuardar: og),
                         //             onBuildConfirmarCierre: (pc, oc) => DialogoConfirmarCierreRegistros(primaryColor: pc, onConfirmar: oc),
@@ -181,25 +175,26 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                     dniUsuario: dniUsuario,
                                     config: const OperacionScreenConfig(
                                       proceso: 'ANFO CHANGER',
+                                      procesoId: 7,
                                       dbSuffix: 'AnfoChanger',
                                       operacionNombreDb: 'AnfoChanger',
                                     ),
                                     onShowDialogoRegistro:
                                         (
                                           context,
-                                          codigoOperativos,
                                           turno,
                                           estado,
-                                          datadialog,
+                                          procesoId,
+                                          categoriaId,
                                           ultimaHora,
                                           existingRecord,
                                         ) => showRegistroOperacionDialog(
                                           context: context,
-                                          dialog: ac.RegistroOperacionDialog(
-                                            codigoOperativos: codigoOperativos,
+                                          dialog: RegistroOperacionDialog(
                                             turno: turno,
                                             selectedState: estado,
-                                            datadialog: datadialog,
+                                            procesoId: procesoId,
+                                            categoriaId: categoriaId,
                                             ultimaHoraRegistrada: ultimaHora,
                                             existingRecord: existingRecord?.map(
                                               (k, v) =>
@@ -347,25 +342,26 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                     dniUsuario: dniUsuario,
                                     config: const OperacionScreenConfig(
                                       proceso: 'SCISSOR',
+                                      procesoId: 8,
                                       dbSuffix: 'Scissor',
                                       operacionNombreDb: 'Scissor',
                                     ),
                                     onShowDialogoRegistro:
                                         (
                                           context,
-                                          codigoOperativos,
                                           turno,
                                           estado,
-                                          datadialog,
+                                          procesoId,
+                                          categoriaId,
                                           ultimaHora,
                                           existingRecord,
                                         ) => showRegistroOperacionDialog(
                                           context: context,
-                                          dialog: sc.RegistroOperacionDialog(
-                                            codigoOperativos: codigoOperativos,
+                                          dialog: RegistroOperacionDialog(
                                             turno: turno,
                                             selectedState: estado,
-                                            datadialog: datadialog,
+                                            procesoId: procesoId,
+                                            categoriaId: categoriaId,
                                             ultimaHoraRegistrada: ultimaHora,
                                             existingRecord: existingRecord?.map(
                                               (k, v) =>
@@ -513,25 +509,26 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                     dniUsuario: dniUsuario,
                                     config: const OperacionScreenConfig(
                                       proceso: 'SCALAMISTA',
+                                      procesoId: 9,
                                       dbSuffix: 'Scalamist',
                                       operacionNombreDb: 'Scalamist',
                                     ),
                                     onShowDialogoRegistro:
                                         (
                                           context,
-                                          codigoOperativos,
                                           turno,
                                           estado,
-                                          datadialog,
+                                          procesoId,
+                                          categoriaId,
                                           ultimaHora,
                                           existingRecord,
                                         ) => showRegistroOperacionDialog(
                                           context: context,
-                                          dialog: sm.RegistroOperacionDialog(
-                                            codigoOperativos: codigoOperativos,
+                                          dialog: RegistroOperacionDialog(
                                             turno: turno,
                                             selectedState: estado,
-                                            datadialog: datadialog,
+                                            procesoId: procesoId,
+                                            categoriaId: categoriaId,
                                             ultimaHoraRegistrada: ultimaHora,
                                             existingRecord: existingRecord?.map(
                                               (k, v) =>

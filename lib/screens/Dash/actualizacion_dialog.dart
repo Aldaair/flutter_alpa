@@ -42,6 +42,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
     'Sistema': [
       'Jefes Guardia',
       'Estados',
+      'Categorías Estados',
       'Checklist',
       'Checklist Carguio',
       'Usuarios',

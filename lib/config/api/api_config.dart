@@ -45,6 +45,7 @@ class ApiConfig {
   static const String turnosEndpoint = '/planes/turnos';
   static const String procesosEndpoint = '/procesos';
   static const String cargosEndpoint = '/cargos';
+  static const String categoriasEstadosEndpoint = '/categorias-estados';
   static const String usuarioDirectorioEndpoint = '/usuarios';
 
   // API v2 — operaciones

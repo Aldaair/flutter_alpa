@@ -35,6 +35,7 @@ import 'package:i_miner/services/get%20nube/llamadas/api_service_dim_turnos.dart
 import 'package:i_miner/services/get%20nube/llamadas/api_service_cargos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_directorio.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_procesos.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_categoria_estado.dart';
 
 class ActualizacionService {
   final BuildContext context;
@@ -77,6 +78,7 @@ class ActualizacionService {
       "Autorizaciones": refreshOfflineAuthorizationSnapshot,
       "Cargos": fetchCargos,
       "Usuarios": fetchUsuarios,
+      "Categorías Estados": fetchCategoriasEstados,
     };
   }
 
@@ -232,12 +234,19 @@ class ActualizacionService {
       final estados = await apiService.fetchEstados(token);
 
       print("✅ Estados guardados en SQLite:");
-
-      for (var estado in estados) {
-        print("Estado: ${estado.estadoPrincipal}");
-      }
     } catch (e) {
       print("❌ Error al actualizar estados: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchCategoriasEstados() async {
+    final apiService = ApiServiceCategoriaEstado();
+    try {
+      final categorias = await apiService.fetchCategoriasEstados(token);
+      print("✅ Categorías de estados guardadas: ${categorias.length}");
+    } catch (e) {
+      print("❌ Error al actualizar categorías de estados: $e");
       throw e;
     }
   }
@@ -731,5 +740,4 @@ class ActualizacionService {
       throw e;
     }
   }
-
 }

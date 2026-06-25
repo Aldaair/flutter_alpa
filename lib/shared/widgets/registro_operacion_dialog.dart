@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:i_miner/config/data/database_helper.dart';
 
 class RegistroOperacionDialog extends StatefulWidget {
-  final List<Map<String, String>> codigoOperativos;
   final String turno;
   final String selectedState;
+  final int procesoId;
+  final int categoriaId;
   final Map<String, String>? existingRecord;
-  final Map<String, List<Map<String, String>>> datadialog;
-  final String? ultimaHoraRegistrada; // Nueva variable
+  final String? ultimaHoraRegistrada;
   final Function(Map<String, dynamic>) onConfirm;
 
   const RegistroOperacionDialog({
     super.key,
-    required this.codigoOperativos,
     required this.turno,
     required this.selectedState,
+    required this.procesoId,
+    required this.categoriaId,
     this.existingRecord,
-    required this.datadialog,
-    this.ultimaHoraRegistrada, // Nuevo parámetro
+    this.ultimaHoraRegistrada,
     required this.onConfirm,
   });
 
@@ -29,8 +30,36 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
   String? selectedCodigo;
   String? selectedTime;
   late bool isEditing;
+  List<Map<String, dynamic>> _estadosCatalogo = [];
+  bool _loadingEstados = true;
 
-  // Función auxiliar para comparar tiempos
+  @override
+  void initState() {
+    super.initState();
+    isEditing = widget.existingRecord != null;
+
+    if (isEditing && widget.existingRecord != null) {
+      selectedCodigo = widget.existingRecord!['codigo'];
+      selectedTime = widget.existingRecord!['hora_inicio'];
+    }
+
+    _cargarEstados();
+  }
+
+  Future<void> _cargarEstados() async {
+    print("🔍 _cargarEstados: procesoId=${widget.procesoId}, categoriaId=${widget.categoriaId}");
+    final estados = await DatabaseHelper().getEstadosByProcesoAndCategoria(
+      widget.procesoId,
+      widget.categoriaId,
+    );
+    print("🔍 _cargarEstados: encontrados ${estados.length} estados");
+    if (!mounted) return;
+    setState(() {
+      _estadosCatalogo = estados;
+      _loadingEstados = false;
+    });
+  }
+
   int _convertToShiftMinutes(String time) {
     final parts = time.split(':').map(int.parse).toList();
     int hour = parts[0];
@@ -38,10 +67,9 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
 
     int totalMinutes = hour * 60 + minute;
 
-    // 🔥 CLAVE: ajustar para turno noche
     if (widget.turno != "DÍA") {
       if (hour < 7) {
-        totalMinutes += 24 * 60; // sumar 24h
+        totalMinutes += 24 * 60;
       }
     }
 
@@ -56,25 +84,19 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     }
   }
 
-  // Función para generar intervalos de tiempo cada 5 minutos
   List<String> _generateTimeIntervals(String turno) {
     List<String> times = [];
 
     if (turno == "DÍA") {
-      // Turno día: 07:00 - 17:25
       for (int hour = 7; hour <= 17; hour++) {
         for (int minute = 0; minute < 60; minute += 5) {
           if (hour == 17 && minute > 25) break;
-
           times.add(
             "${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}",
           );
         }
       }
     } else {
-      // Turno noche: 19:00 - 05:25
-
-      // Parte 1: 19:00 - 23:55
       for (int hour = 19; hour < 24; hour++) {
         for (int minute = 0; minute < 60; minute += 5) {
           times.add(
@@ -83,11 +105,9 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
         }
       }
 
-      // Parte 2: 00:00 - 05:25
       for (int hour = 0; hour <= 5; hour++) {
         for (int minute = 0; minute < 60; minute += 5) {
           if (hour == 5 && minute > 25) break;
-
           times.add(
             "${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}",
           );
@@ -98,13 +118,11 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     return times;
   }
 
-  // Función para obtener el rango de horas válidas al editar
-  List<String> _getValidTimeRangeForEdit() {
+  List<String> _getValidTimeRangeForEdit(List<Map<String, dynamic>> codigoOperativos) {
     if (!isEditing || widget.existingRecord == null) return [];
 
-    // Encontrar el índice del registro actual
-    int currentIndex = widget.codigoOperativos.indexWhere(
-      (item) => item["id"] == widget.existingRecord!["id"],
+    int currentIndex = codigoOperativos.indexWhere(
+      (item) => item["id"].toString() == widget.existingRecord!["id"],
     );
 
     if (currentIndex == -1) return [];
@@ -112,26 +130,22 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     String? minTime;
     String? maxTime;
 
-    // Si hay registro anterior, su hora_inicio es el límite inferior
     if (currentIndex > 0) {
-      minTime = widget.codigoOperativos[currentIndex - 1]["hora_inicio"];
+      minTime = codigoOperativos[currentIndex - 1]["hora_inicio"]?.toString();
       if (minTime?.contains(' ') == true) {
         minTime = minTime!.split(' ')[1];
       }
     }
 
-    // Si hay registro siguiente, su hora_inicio es el límite superior
-    if (currentIndex < widget.codigoOperativos.length - 1) {
-      maxTime = widget.codigoOperativos[currentIndex + 1]["hora_inicio"];
+    if (currentIndex < codigoOperativos.length - 1) {
+      maxTime = codigoOperativos[currentIndex + 1]["hora_inicio"]?.toString();
       if (maxTime?.contains(' ') == true) {
         maxTime = maxTime!.split(' ')[1];
       }
     }
 
-    // Generar todas las opciones de tiempo
     List<String> allTimes = _generateTimeIntervals(widget.turno);
 
-    // Filtrar según los límites
     return allTimes.where((time) {
       if (minTime != null && _compareTimes(time, minTime) <= 0) return false;
       if (maxTime != null && _compareTimes(time, maxTime) >= 0) return false;
@@ -144,11 +158,9 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
       final hour = int.parse(time.split(':')[0]);
       final minute = int.parse(time.split(':')[1]);
       if (shift == "DÍA") {
-        // Validar entre 7:00 y 18:55
         if (hour < 7 || hour > 18) return false;
         if (hour == 18 && minute > 55) return false;
       } else {
-        // Validar entre 19:00-23:55 y 00:00-06:55
         if (hour > 6 && hour < 19) return false;
         if (hour == 6 && minute > 55) return false;
       }
@@ -158,13 +170,13 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     }
   }
 
-  List<DropdownMenuItem<String>> _obtenerOpcionesUnicas(
-    List<Map<String, dynamic>> data,
-  ) {
+  List<DropdownMenuItem<String>> _obtenerOpcionesUnicas() {
     final seen = <String>{};
-    return data.where((e) => seen.add(e["Código"] as String? ?? "")).map((e) {
-      String codigo = e["Código"] as String? ?? "";
-      String tipoEstado = e["Nombre"] as String? ?? "";
+    return _estadosCatalogo
+        .where((e) => seen.add(e["codigo"] as String? ?? ""))
+        .map((e) {
+      String codigo = e["codigo"] as String? ?? "";
+      String tipoEstado = e["tipo_estado"] as String? ?? "";
       return DropdownMenuItem<String>(
         value: codigo,
         child: Text(
@@ -175,7 +187,7 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     }).toList();
   }
 
-  bool _validateSelection() {
+  bool _validateSelection(List<Map<String, dynamic>> codigoOperativos) {
     if (selectedCodigo == null || selectedTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -187,16 +199,17 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
       return false;
     }
 
-    // Validar hora duplicada
-    bool horaExiste = widget.codigoOperativos
+    bool horaExiste = codigoOperativos
         .where(
-          (item) => !isEditing || item["id"] != widget.existingRecord!["id"],
+          (item) =>
+              !isEditing ||
+              item["id"].toString() != widget.existingRecord!["id"],
         )
         .any((item) {
-          String horaItem = item["hora_inicio"] ?? '';
-          if (horaItem.contains(' ')) horaItem = horaItem.split(' ')[1];
-          return horaItem == selectedTime;
-        });
+      String horaItem = item["hora_inicio"]?.toString() ?? '';
+      if (horaItem.contains(' ')) horaItem = horaItem.split(' ')[1];
+      return horaItem == selectedTime;
+    });
 
     if (horaExiste) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -220,8 +233,8 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
       return false;
     }
 
-    // Validación específica para edición
-    if (isEditing && !_getValidTimeRangeForEdit().contains(selectedTime!)) {
+    if (isEditing &&
+        !_getValidTimeRangeForEdit(codigoOperativos).contains(selectedTime!)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -234,7 +247,6 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
       return false;
     }
 
-    // Para creación nueva, validar que sea posterior a la última hora registrada
     if (!isEditing && widget.ultimaHoraRegistrada != null) {
       if (_compareTimes(selectedTime!, widget.ultimaHoraRegistrada!) <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -253,10 +265,9 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     return true;
   }
 
-  void _handleConfirm() {
-    if (!_validateSelection()) return;
+  void _handleConfirm(List<Map<String, dynamic>> codigoOperativos) {
+    if (!_validateSelection(codigoOperativos)) return;
 
-    // Preparar los datos para enviar al padre
     final data = {
       'codigo': selectedCodigo,
       'hora_inicio': selectedTime,
@@ -282,27 +293,23 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    isEditing = widget.existingRecord != null;
-
-    if (isEditing && widget.existingRecord != null) {
-      selectedCodigo = widget.existingRecord!['codigo'];
-      selectedTime = widget.existingRecord!['hora_inicio'];
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    List<Map<String, String>> currentDataDialog =
-        widget.datadialog[widget.selectedState] ?? [];
+    if (_loadingEstados) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: const SizedBox(
+          height: 100,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
     List<String> timeOptions = _generateTimeIntervals(widget.turno);
 
-    // Filtrar horas disponibles
     List<String> availableTimeOptions;
 
     if (isEditing) {
-      availableTimeOptions = _getValidTimeRangeForEdit();
+      availableTimeOptions = _getValidTimeRangeForEdit(_estadosCatalogo);
       if (selectedTime != null &&
           !availableTimeOptions.contains(selectedTime)) {
         availableTimeOptions = List.from(availableTimeOptions)
@@ -310,11 +317,9 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
         availableTimeOptions.sort((a, b) => _compareTimes(a, b));
       }
     } else {
-      // Para creación nueva, mostrar solo horas posteriores a la última registrada
       availableTimeOptions = timeOptions.where((hora) {
         if (!_isValidTimeForShift(hora, widget.turno)) return false;
 
-        // Si hay última hora registrada, debe ser posterior
         if (widget.ultimaHoraRegistrada != null) {
           return _compareTimes(hora, widget.ultimaHoraRegistrada!) > 0;
         }
@@ -348,7 +353,6 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Información del estado
               Container(
                 padding: const EdgeInsets.all(8),
                 margin: const EdgeInsets.only(bottom: 16),
@@ -377,8 +381,6 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                   ],
                 ),
               ),
-
-              // Dropdown de Código
               DropdownButtonFormField<String>(
                 isExpanded: true,
                 decoration: const InputDecoration(
@@ -390,7 +392,7 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                   border: OutlineInputBorder(),
                 ),
                 value: selectedCodigo,
-                items: _obtenerOpcionesUnicas(currentDataDialog),
+                items: _obtenerOpcionesUnicas(),
                 onChanged: (value) {
                   setState(() {
                     selectedCodigo = value;
@@ -398,8 +400,6 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Dropdown de Hora
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   labelText: "Hora Inicio (*)",
@@ -417,7 +417,10 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                     .map(
                       (time) => DropdownMenuItem(
                         value: time,
-                        child: Text(time, style: const TextStyle(fontSize: 14)),
+                        child: Text(
+                          time,
+                          style: const TextStyle(fontSize: 14),
+                        ),
                       ),
                     )
                     .toList(),
@@ -428,8 +431,6 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                 },
                 menuMaxHeight: 200,
               ),
-
-              // Mensaje informativo sobre la última hora
               if (!isEditing && widget.ultimaHoraRegistrada != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -454,10 +455,7 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                     ],
                   ),
                 ),
-
               const SizedBox(height: 24),
-
-              // Botones de acción
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -475,11 +473,10 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _handleConfirm,
+                      onPressed: () => _handleConfirm(_estadosCatalogo),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isEditing
-                            ? Colors.orange
-                            : Colors.green,
+                        backgroundColor:
+                            isEditing ? Colors.orange : Colors.green,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -489,8 +486,6 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                 ],
               ),
               const SizedBox(height: 16),
-
-              // Nota de campos obligatorios
               const Text(
                 "(*) Los campos con asterisco son obligatorios.",
                 style: TextStyle(fontSize: 12, color: Colors.grey),

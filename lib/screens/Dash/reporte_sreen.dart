@@ -21,30 +21,22 @@ import 'package:i_miner/screens/widgets/dialog_check_imagen.dart';
 // Tal largo widgets
 import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_formulario_perforacion.dart'
     as tl;
-import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/registro_operacion_dialog.dart'
-    as tl;
 
 // Tal horizontal widgets
 import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/dialogo_formulario_perforacion.dart'
-    as th;
-import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/registro_operacion_dialog.dart'
     as th;
 
 // Sostenimiento widgets
 import 'package:i_miner/screens/Operaciones/sostenimiento/widgets/dialogo_formulario_perforacion.dart'
     as so;
-import 'package:i_miner/screens/Operaciones/sostenimiento/widgets/registro_operacion_dialog.dart'
-    as so;
 
 import 'package:i_miner/screens/Operaciones/Acarreo/Dumper/widgets/dialogo_formulario_perforacion.dart'
-    as ad;
-import 'package:i_miner/screens/Operaciones/Acarreo/Dumper/widgets/registro_operacion_dialog.dart'
     as ad;
 
 import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_formulario_perforacion.dart'
     as cs;
-import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/registro_operacion_dialog.dart'
-    as cs;
+
+import 'package:i_miner/shared/widgets/registro_operacion_dialog.dart';
 import 'package:i_miner/services/get%20nube/actualizacion_service.dart';
 import 'package:provider/provider.dart';
 import 'package:i_miner/services/get%20nube/registros%20nube/ApiServiceExploracion.dart';
@@ -551,27 +543,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
             builder: (context) => OperacionListScreen(
               rolUsuario: '${rol}',
               dniUsuario: '${widget.dni}',
-              config: const OperacionScreenConfig(
-                proceso: 'PERFORACIÓN TALADROS LARGOS',
-                dbSuffix: '',
-                operacionNombreDb: 'TalLargo',
-              ),
+                config: const OperacionScreenConfig(
+                  proceso: 'PERFORACIÓN TALADROS LARGOS',
+                  procesoId: 1,
+                  dbSuffix: '',
+                  operacionNombreDb: 'TalLargo',
+                ),
               onShowDialogoRegistro:
                   (
                     context,
-                    codigoOperativos,
                     turno,
                     estado,
-                    datadialog,
+                    procesoId,
+                    categoriaId,
                     ultimaHora,
                     existingRecord,
                   ) => showRegistroOperacionDialog(
                     context: context,
-                    dialog: tl.RegistroOperacionDialog(
-                      codigoOperativos: codigoOperativos,
+                    dialog: RegistroOperacionDialog(
                       turno: turno,
                       selectedState: estado,
-                      datadialog: datadialog,
+                      procesoId: procesoId,
+                      categoriaId: categoriaId,
                       ultimaHoraRegistrada: ultimaHora,
                       existingRecord: existingRecord?.map(
                         (k, v) => MapEntry(k, v.toString()),
@@ -689,25 +682,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
               dniUsuario: '${widget.dni}',
               config: const OperacionScreenConfig(
                 proceso: 'PERFORACIÓN HORIZONTAL',
+                procesoId: 2,
                 dbSuffix: 'Horizontal',
                 operacionNombreDb: 'TalHorizontal',
               ),
               onShowDialogoRegistro:
                   (
                     context,
-                    codigoOperativos,
                     turno,
                     estado,
-                    datadialog,
+                    procesoId,
+                    categoriaId,
                     ultimaHora,
                     existingRecord,
                   ) => showRegistroOperacionDialog(
                     context: context,
-                    dialog: th.RegistroOperacionDialog(
-                      codigoOperativos: codigoOperativos,
+                    dialog: RegistroOperacionDialog(
                       turno: turno,
                       selectedState: estado,
-                      datadialog: datadialog,
+                      procesoId: procesoId,
+                      categoriaId: categoriaId,
                       ultimaHoraRegistrada: ultimaHora,
                       existingRecord: existingRecord?.map(
                         (k, v) => MapEntry(k, v.toString()),
@@ -825,25 +819,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
               dniUsuario: '${widget.dni}',
               config: const OperacionScreenConfig(
                 proceso: 'SOSTENIMIENTO',
+                procesoId: 3,
                 dbSuffix: 'Empernador',
                 operacionNombreDb: 'Empernador',
               ),
               onShowDialogoRegistro:
                   (
                     context,
-                    codigoOperativos,
                     turno,
                     estado,
-                    datadialog,
+                    procesoId,
+                    categoriaId,
                     ultimaHora,
                     existingRecord,
                   ) => showRegistroOperacionDialog(
                     context: context,
-                    dialog: so.RegistroOperacionDialog(
-                      codigoOperativos: codigoOperativos,
+                    dialog: RegistroOperacionDialog(
                       turno: turno,
                       selectedState: estado,
-                      datadialog: datadialog,
+                      procesoId: procesoId,
+                      categoriaId: categoriaId,
                       ultimaHoraRegistrada: ultimaHora,
                       existingRecord: existingRecord?.map(
                         (k, v) => MapEntry(k, v.toString()),
@@ -959,6 +954,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               dniUsuario: '${widget.dni}',
               config: const OperacionScreenConfig(
                 proceso: 'SCOOP',
+                procesoId: 4,
                 dbSuffix: 'Scoop',
                 operacionNombreDb: 'Scoop',
                 hasChecklistTelemando: true,
@@ -967,19 +963,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onShowDialogoRegistro:
                   (
                     context,
-                    codigoOperativos,
                     turno,
                     estado,
-                    datadialog,
+                    procesoId,
+                    categoriaId,
                     ultimaHora,
                     existingRecord,
                   ) => showRegistroOperacionDialog(
                     context: context,
-                    dialog: cs.RegistroOperacionDialog(
-                      codigoOperativos: codigoOperativos,
+                    dialog: RegistroOperacionDialog(
                       turno: turno,
                       selectedState: estado,
-                      datadialog: datadialog,
+                      procesoId: procesoId,
+                      categoriaId: categoriaId,
                       ultimaHoraRegistrada: ultimaHora,
                       existingRecord: existingRecord?.map(
                         (k, v) => MapEntry(k, v.toString()),
@@ -1095,6 +1091,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               dniUsuario: '${widget.dni}',
               config: const OperacionScreenConfig(
                 proceso: 'ACARREO',
+                procesoId: 5,
                 dbSuffix: 'Dumper',
                 operacionNombreDb: 'Dumper',
                 hasChecklistTelemando: true,
@@ -1103,19 +1100,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onShowDialogoRegistro:
                   (
                     context,
-                    codigoOperativos,
                     turno,
                     estado,
-                    datadialog,
+                    procesoId,
+                    categoriaId,
                     ultimaHora,
                     existingRecord,
                   ) => showRegistroOperacionDialog(
                     context: context,
-                    dialog: ad.RegistroOperacionDialog(
-                      codigoOperativos: codigoOperativos,
+                    dialog: RegistroOperacionDialog(
                       turno: turno,
                       selectedState: estado,
-                      datadialog: datadialog,
+                      procesoId: procesoId,
+                      categoriaId: categoriaId,
                       ultimaHoraRegistrada: ultimaHora,
                       existingRecord: existingRecord?.map(
                         (k, v) => MapEntry(k, v.toString()),

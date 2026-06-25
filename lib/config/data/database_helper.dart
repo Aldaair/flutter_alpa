@@ -33,7 +33,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 22;
+  static const int _sharedCatalogDbVersion = 24;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -494,7 +494,16 @@ CREATE TABLE IF NOT EXISTS estados (
   codigo TEXT NOT NULL,
   tipo_estado TEXT NOT NULL,
   categoria TEXT NOT NULL,
-  proceso TEXT NOT NULL
+  proceso TEXT NOT NULL,
+  proceso_id INTEGER,
+  categoria_id INTEGER
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS categorias_estados (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL
 )
 ''');
   }
@@ -989,6 +998,26 @@ CREATE TABLE usuario_directorio (
   updated_at TEXT NOT NULL
 )
 ''');
+    }
+
+    if (oldVersion < 23) {
+      if (!await _tablaExiste(db, 'categorias_estados')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS categorias_estados (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT NOT NULL
+)
+''');
+      }
+    }
+
+    if (oldVersion < 24) {
+      if (!await _columnaExiste(db, 'estados', 'proceso_id')) {
+        await db.execute('ALTER TABLE estados ADD COLUMN proceso_id INTEGER');
+      }
+      if (!await _columnaExiste(db, 'estados', 'categoria_id')) {
+        await db.execute('ALTER TABLE estados ADD COLUMN categoria_id INTEGER');
+      }
     }
   }
 
@@ -2376,13 +2405,196 @@ CREATE TABLE UsuarioEquipo (
     if (registradorUsuarioId != null) {
       insertData['registrador_usuario_id'] = registradorUsuarioId;
     }
-    if (registradorNombre != null && registradorNombre.trim().isNotEmpty) {
-      insertData['registrador_nombre'] = registradorNombre.trim();
-    }
     if (laborId != null) insertData['labor_id'] = laborId;
     if (labor != null && labor.trim().isNotEmpty) {
       insertData['labor'] = labor.trim();
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _queryAndHydrateOperations(
+    String tableName,
+    int turnoId,
+    String fecha, {
+    int? operadorId,
+    bool onlyActive = false,
+  }) async {
+    final db = await database;
+
+    late final String where;
+    late final List<dynamic> whereArgs;
+    if (onlyActive) {
+      where = operadorId != null
+          ? 'turno_id = ? AND fecha = ? AND operador_id = ? AND estado IN (?, ?)'
+          : 'turno_id = ? AND fecha = ? AND estado IN (?, ?)';
+      whereArgs = operadorId != null
+          ? [turnoId, fecha, operadorId, 'activo', 'parciales']
+          : [turnoId, fecha, 'activo', 'parciales'];
+    } else {
+      where = operadorId != null
+          ? 'turno_id = ? AND fecha = ? AND operador_id = ?'
+          : 'turno_id = ? AND fecha = ?';
+      whereArgs = operadorId != null
+          ? [turnoId, fecha, operadorId]
+          : [turnoId, fecha];
+    }
+
+    final rows = await db.query(tableName, where: where, whereArgs: whereArgs);
+    return _hydrateOperationHeaderRows(rows);
+  }
+
+  Future<List<Map<String, dynamic>>> _hydrateOperationHeaderRows(
+    List<Map<String, dynamic>> rows,
+  ) async {
+    if (rows.isEmpty) return rows;
+
+    final sharedDb = await sharedCatalogDatabase;
+    final turnoIds = <int>{};
+    final equipoIds = <int>{};
+    final operadorIds = <int>{};
+    final jefeGuardiaIds = <int>{};
+    final registradorIds = <int>{};
+
+    for (final row in rows) {
+      _collectIntId(turnoIds, row['turno_id']);
+      _collectIntId(equipoIds, row['equipo_id']);
+      _collectIntId(operadorIds, row['operador_id']);
+      _collectIntId(jefeGuardiaIds, row['jefe_guardia_id']);
+      _collectIntId(registradorIds, row['registrador_usuario_id']);
+    }
+
+    final turnos = await _loadLookupRowsByIds(
+      sharedDb,
+      'dim_turno',
+      'turno_id',
+      turnoIds,
+    );
+    final equipos = await _loadLookupRowsByIds(
+      sharedDb,
+      'Equipo',
+      'id',
+      equipoIds,
+    );
+    final usuarios = await _loadLookupRowsByIds(
+      sharedDb,
+      'usuario_directorio',
+      'id',
+      {...operadorIds, ...registradorIds},
+    );
+    final jefesGuardia = await _loadLookupRowsByIds(
+      sharedDb,
+      'jefe_guardias',
+      'id',
+      jefeGuardiaIds,
+    );
+
+    return rows.map((row) {
+      final hydrated = Map<String, dynamic>.from(row);
+
+      final turno = turnos[_asInt(row['turno_id'])];
+      if (turno != null) {
+        hydrated['turno'] = turno['nombre'] ?? hydrated['turno'];
+      }
+
+      final equipo = equipos[_asInt(row['equipo_id'])];
+      if (equipo != null) {
+        hydrated['equipo'] = equipo['nombre'] ?? hydrated['equipo'];
+
+        final codigo = equipo['codigo'];
+        if (codigo != null && codigo.toString().trim().isNotEmpty) {
+          hydrated['n_equipo'] = codigo;
+          hydrated['codigo'] = codigo;
+        }
+
+        final modelo = equipo['modelo'];
+        if (modelo != null && modelo.toString().trim().isNotEmpty) {
+          hydrated['modelo_equipo'] = modelo;
+          hydrated['modelo'] = modelo;
+        }
+
+        final capacidad = _formatCapacityValue(equipo['capacidadYd3']);
+        if (capacidad != null) {
+          hydrated['capacidad'] = capacidad;
+        }
+      }
+
+      final operador = usuarios[_asInt(row['operador_id'])];
+      final operadorNombre = _buildFullName(operador);
+      if (operadorNombre != null) {
+        hydrated['operador'] = operadorNombre;
+      }
+
+      final registrador = usuarios[_asInt(row['registrador_usuario_id'])];
+      final registradorNombre = _buildFullName(registrador);
+      if (registradorNombre != null) {
+        hydrated['registrador_nombre'] = registradorNombre;
+      }
+
+      final jefeGuardia = jefesGuardia[_asInt(row['jefe_guardia_id'])];
+      final jefeGuardiaNombre = _buildFullName(jefeGuardia);
+      if (jefeGuardiaNombre != null) {
+        hydrated['jefe_guardia'] = jefeGuardiaNombre;
+        hydrated['jefeGuardia'] = jefeGuardiaNombre;
+      }
+
+      return hydrated;
+    }).toList();
+  }
+
+  Future<Map<int, Map<String, dynamic>>> _loadLookupRowsByIds(
+    Database db,
+    String tableName,
+    String idColumn,
+    Set<int> ids,
+  ) async {
+    if (ids.isEmpty) return const <int, Map<String, dynamic>>{};
+
+    final whereArgs = ids.toList(growable: false);
+    final placeholders = List.filled(whereArgs.length, '?').join(', ');
+    final rows = await db.query(
+      tableName,
+      where: '$idColumn IN ($placeholders)',
+      whereArgs: whereArgs,
+    );
+
+    final result = <int, Map<String, dynamic>>{};
+    for (final row in rows) {
+      final id = _asInt(row[idColumn]);
+      if (id != null) {
+        result[id] = Map<String, dynamic>.from(row);
+      }
+    }
+    return result;
+  }
+
+  void _collectIntId(Set<int> target, dynamic value) {
+    final id = _asInt(value);
+    if (id != null) {
+      target.add(id);
+    }
+  }
+
+  int? _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  String? _buildFullName(Map<String, dynamic>? row) {
+    if (row == null) return null;
+    final nombre = '${row['nombres'] ?? ''} ${row['apellidos'] ?? ''}'.trim();
+    return nombre.isEmpty ? null : nombre;
+  }
+
+  String? _formatCapacityValue(dynamic rawCapacity) {
+    if (rawCapacity == null) return null;
+    final value = rawCapacity is num
+        ? rawCapacity.toDouble()
+        : double.tryParse(rawCapacity.toString());
+    if (value == null) return null;
+    if (value == value.floorToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toStringAsFixed(2);
   }
 
   static const _sharedTables = {
@@ -2764,6 +2976,24 @@ CREATE TABLE UsuarioEquipo (
     return List.generate(maps.length, (i) => DimTurno.fromJson(maps[i]));
   }
 
+  Future<List<Map<String, dynamic>>> getEstadosByProcesoAndCategoria(
+    int procesoId,
+    int categoriaId,
+  ) async {
+    final db = await sharedCatalogDatabase;
+    return await db.query(
+      'estados',
+      where: 'proceso_id = ? AND categoria_id = ?',
+      whereArgs: [procesoId, categoriaId],
+      orderBy: 'codigo ASC',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getCategoriasEstados() async {
+    final db = await sharedCatalogDatabase;
+    return await db.query('categorias_estados', orderBy: 'nombre ASC');
+  }
+
   Future<List<Map<String, dynamic>>> getProcesos() async {
     final db = await sharedCatalogDatabase;
     return await db.query('procesos', orderBy: 'nombre ASC');
@@ -2920,15 +3150,12 @@ CREATE TABLE UsuarioEquipo (
     int turnoId,
     String fecha,
   ) async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_tal_largo',
-      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
+      turnoId,
+      fecha,
+      onlyActive: true,
     );
-
-    return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionTalLargoByTurnoAndFecha(
@@ -2936,25 +3163,12 @@ CREATE TABLE UsuarioEquipo (
     String fecha, {
     int? operadorId,
   }) async {
-    final db = await database;
-
-    late final String where;
-    late final List<dynamic> whereArgs;
-    if (operadorId != null) {
-      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turnoId, fecha, operadorId];
-    } else {
-      where = 'turno_id = ? AND fecha = ?';
-      whereArgs = [turnoId, fecha];
-    }
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_tal_largo',
-      where: where,
-      whereArgs: whereArgs,
+      turnoId,
+      fecha,
+      operadorId: operadorId,
     );
-
-    return result;
   }
 
   Future<bool> existeOperacionEnTurno({
@@ -3816,19 +4030,12 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'turno': turno,
       'seccion': seccion,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'n_equipo': nEquipo,
-      'modelo_equipo': modeloEquipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorDni != null) insertData['actor_dni'] = actorDni;
     if (actorOperadorId != null)
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
@@ -3856,15 +4063,12 @@ CREATE TABLE UsuarioEquipo (
     int turnoId,
     String fecha,
   ) async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_tal_horizontal',
-      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
+      turnoId,
+      fecha,
+      onlyActive: true,
     );
-
-    return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionTalHorizontalByTurnoAndFecha(
@@ -3872,25 +4076,12 @@ CREATE TABLE UsuarioEquipo (
     String fecha, {
     int? operadorId,
   }) async {
-    final db = await database;
-
-    late final String where;
-    late final List<dynamic> whereArgs;
-    if (operadorId != null) {
-      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turnoId, fecha, operadorId];
-    } else {
-      where = 'turno_id = ? AND fecha = ?';
-      whereArgs = [turnoId, fecha];
-    }
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_tal_horizontal',
-      where: where,
-      whereArgs: whereArgs,
+      turnoId,
+      fecha,
+      operadorId: operadorId,
     );
-
-    return result;
   }
 
   // Función para obtener todos los estados de una operación
@@ -4317,19 +4508,13 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'turno': turno,
       'seccion': seccion,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'n_equipo': nEquipo,
       'tipo_equipo': tipoEquipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorDni != null) insertData['actor_dni'] = actorDni;
     if (actorOperadorId != null)
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
@@ -4354,15 +4539,12 @@ CREATE TABLE UsuarioEquipo (
 
   Future<List<Map<String, dynamic>>>
   getOperacionEmpernadorByTurnoAndFechaMaster(int turnoId, String fecha) async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_empernador',
-      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
+      turnoId,
+      fecha,
+      onlyActive: true,
     );
-
-    return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionEmpernadorByTurnoAndFecha(
@@ -4370,25 +4552,12 @@ CREATE TABLE UsuarioEquipo (
     String fecha, {
     int? operadorId,
   }) async {
-    final db = await database;
-
-    late final String where;
-    late final List<dynamic> whereArgs;
-    if (operadorId != null) {
-      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turnoId, fecha, operadorId];
-    } else {
-      where = 'turno_id = ? AND fecha = ?';
-      whereArgs = [turnoId, fecha];
-    }
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_empernador',
-      where: where,
-      whereArgs: whereArgs,
+      turnoId,
+      fecha,
+      operadorId: operadorId,
     );
-
-    return result;
   }
 
   // Función para obtener todos los estados de una operación
@@ -4822,13 +4991,7 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'turno': turno,
       'seccion': seccion,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'n_equipo': nEquipo,
-      'capacidad': capacidad,
       'tipo_equipo': tipoEquipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
@@ -4837,7 +5000,6 @@ CREATE TABLE UsuarioEquipo (
       'check_list_telemando': checkListTelemandoStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorDni != null) insertData['actor_dni'] = actorDni;
     if (actorOperadorId != null)
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
@@ -4864,15 +5026,12 @@ CREATE TABLE UsuarioEquipo (
     int turnoId,
     String fecha,
   ) async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_carguio',
-      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
+      turnoId,
+      fecha,
+      onlyActive: true,
     );
-
-    return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionCarguioByTurnoAndFecha(
@@ -4880,25 +5039,12 @@ CREATE TABLE UsuarioEquipo (
     String fecha, {
     int? operadorId,
   }) async {
-    final db = await database;
-
-    late final String where;
-    late final List<dynamic> whereArgs;
-    if (operadorId != null) {
-      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turnoId, fecha, operadorId];
-    } else {
-      where = 'turno_id = ? AND fecha = ?';
-      whereArgs = [turnoId, fecha];
-    }
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_carguio',
-      where: where,
-      whereArgs: whereArgs,
+      turnoId,
+      fecha,
+      operadorId: operadorId,
     );
-
-    return result;
   }
 
   // Función para obtener todos los estados de una operación
@@ -5423,13 +5569,7 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'turno': turno,
       'seccion': seccion,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'n_equipo': nEquipo,
-      'capacidad': capacidad,
       'tipo_equipo': tipoEquipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
@@ -5438,7 +5578,6 @@ CREATE TABLE UsuarioEquipo (
       'check_list_telemando': checkListTelemandoStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorDni != null) insertData['actor_dni'] = actorDni;
     if (actorOperadorId != null)
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
@@ -5465,15 +5604,12 @@ CREATE TABLE UsuarioEquipo (
     int turnoId,
     String fecha,
   ) async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_Dumper',
-      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
+      turnoId,
+      fecha,
+      onlyActive: true,
     );
-
-    return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionDumperByTurnoAndFecha(
@@ -5481,25 +5617,12 @@ CREATE TABLE UsuarioEquipo (
     String fecha, {
     int? operadorId,
   }) async {
-    final db = await database;
-
-    late final String where;
-    late final List<dynamic> whereArgs;
-    if (operadorId != null) {
-      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turnoId, fecha, operadorId];
-    } else {
-      where = 'turno_id = ? AND fecha = ?';
-      whereArgs = [turnoId, fecha];
-    }
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_Dumper',
-      where: where,
-      whereArgs: whereArgs,
+      turnoId,
+      fecha,
+      operadorId: operadorId,
     );
-
-    return result;
   }
 
   // Función para obtener todos los estados de una operación
@@ -6041,11 +6164,6 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'n_equipo': nEquipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
@@ -6053,7 +6171,6 @@ CREATE TABLE UsuarioEquipo (
       'estado': 'activo',
       'envio': 0,
     };
-    if (actorDni != null) insertData['actor_dni'] = actorDni;
     if (actorOperadorId != null)
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
@@ -6080,15 +6197,12 @@ CREATE TABLE UsuarioEquipo (
     int turnoId,
     String fecha,
   ) async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_rompebanco',
-      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
+      turnoId,
+      fecha,
+      onlyActive: true,
     );
-
-    return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionRompeBacoByTurnoAndFecha(
@@ -6096,25 +6210,12 @@ CREATE TABLE UsuarioEquipo (
     String fecha, {
     int? operadorId,
   }) async {
-    final db = await database;
-
-    late final String where;
-    late final List<dynamic> whereArgs;
-    if (operadorId != null) {
-      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turnoId, fecha, operadorId];
-    } else {
-      where = 'turno_id = ? AND fecha = ?';
-      whereArgs = [turnoId, fecha];
-    }
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_rompebanco',
-      where: where,
-      whereArgs: whereArgs,
+      turnoId,
+      fecha,
+      operadorId: operadorId,
     );
-
-    return result;
   }
 
   // Función para obtener todos los estados de una operación
@@ -6538,11 +6639,6 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'n_equipo': nEquipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
@@ -6550,7 +6646,6 @@ CREATE TABLE UsuarioEquipo (
       'estado': 'activo',
       'envio': 0,
     };
-    if (actorDni != null) insertData['actor_dni'] = actorDni;
     if (actorOperadorId != null) {
       insertData['actor_operador_id'] = actorOperadorId;
     }
@@ -6578,15 +6673,12 @@ CREATE TABLE UsuarioEquipo (
     int turnoId,
     String fecha,
   ) async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_Scalamin',
-      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
+      turnoId,
+      fecha,
+      onlyActive: true,
     );
-
-    return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionScalaminByTurnoAndFecha(
@@ -6594,25 +6686,12 @@ CREATE TABLE UsuarioEquipo (
     String fecha, {
     int? operadorId,
   }) async {
-    final db = await database;
-
-    late final String where;
-    late final List<dynamic> whereArgs;
-    if (operadorId != null) {
-      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turnoId, fecha, operadorId];
-    } else {
-      where = 'turno_id = ? AND fecha = ?';
-      whereArgs = [turnoId, fecha];
-    }
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_Scalamin',
-      where: where,
-      whereArgs: whereArgs,
+      turnoId,
+      fecha,
+      operadorId: operadorId,
     );
-
-    return result;
   }
 
   // Función para obtener todos los estados de una operación
@@ -7029,11 +7108,6 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'n_equipo': nEquipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
@@ -7041,7 +7115,6 @@ CREATE TABLE UsuarioEquipo (
       'estado': 'activo',
       'envio': 0,
     };
-    if (actorDni != null) insertData['actor_dni'] = actorDni;
     if (actorOperadorId != null)
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
@@ -7068,15 +7141,12 @@ CREATE TABLE UsuarioEquipo (
     int turnoId,
     String fecha,
   ) async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_scissor',
-      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
+      turnoId,
+      fecha,
+      onlyActive: true,
     );
-
-    return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionScissorByTurnoAndFecha(
@@ -7084,25 +7154,12 @@ CREATE TABLE UsuarioEquipo (
     String fecha, {
     int? operadorId,
   }) async {
-    final db = await database;
-
-    late final String where;
-    late final List<dynamic> whereArgs;
-    if (operadorId != null) {
-      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turnoId, fecha, operadorId];
-    } else {
-      where = 'turno_id = ? AND fecha = ?';
-      whereArgs = [turnoId, fecha];
-    }
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_scissor',
-      where: where,
-      whereArgs: whereArgs,
+      turnoId,
+      fecha,
+      operadorId: operadorId,
     );
-
-    return result;
   }
 
   // Función para obtener todos los estados de una operación
@@ -7529,11 +7586,6 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'n_equipo': nEquipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
@@ -7541,7 +7593,6 @@ CREATE TABLE UsuarioEquipo (
       'estado': 'activo',
       'envio': 0,
     };
-    if (actorDni != null) insertData['actor_dni'] = actorDni;
     if (actorOperadorId != null)
       insertData['actor_operador_id'] = actorOperadorId;
     if (operadorId != null) insertData['operador_id'] = operadorId;
@@ -7570,15 +7621,12 @@ CREATE TABLE UsuarioEquipo (
     int turnoId,
     String fecha,
   ) async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_anfochanger',
-      where: 'turno_id = ? AND fecha = ? AND estado IN (?, ?)',
-      whereArgs: [turnoId, fecha, 'activo', 'parciales'],
+      turnoId,
+      fecha,
+      onlyActive: true,
     );
-
-    return result;
   }
 
   Future<List<Map<String, dynamic>>> getOperacionAnfochangerByTurnoAndFecha(
@@ -7586,25 +7634,12 @@ CREATE TABLE UsuarioEquipo (
     String fecha, {
     int? operadorId,
   }) async {
-    final db = await database;
-
-    late final String where;
-    late final List<dynamic> whereArgs;
-    if (operadorId != null) {
-      where = 'turno_id = ? AND fecha = ? AND operador_id = ?';
-      whereArgs = [turnoId, fecha, operadorId];
-    } else {
-      where = 'turno_id = ? AND fecha = ?';
-      whereArgs = [turnoId, fecha];
-    }
-
-    final List<Map<String, dynamic>> result = await db.query(
+    return _queryAndHydrateOperations(
       'Operacion_anfochanger',
-      where: where,
-      whereArgs: whereArgs,
+      turnoId,
+      fecha,
+      operadorId: operadorId,
     );
-
-    return result;
   }
 
   // Función para obtener todos los estados de una operación

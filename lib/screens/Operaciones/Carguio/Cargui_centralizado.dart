@@ -13,14 +13,12 @@ import 'package:i_miner/screens/widgets/dialog_check_imagen.dart';
 // Carguio Scoop widgets
 import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_formulario_perforacion.dart'
     as cs;
-import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/registro_operacion_dialog.dart'
-    as cs;
 
 // Carguio Dumper widgets
 import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/dialogo_formulario_perforacion.dart'
     as cd;
-import 'package:i_miner/screens/Operaciones/Carguio/Dumper/widgets/registro_operacion_dialog.dart'
-    as cd;
+
+import 'package:i_miner/shared/widgets/registro_operacion_dialog.dart';
 
 class CarguioScreen extends StatelessWidget {
   final String? rolUsuario;
@@ -154,8 +152,8 @@ class CarguioScreen extends StatelessWidget {
       builder: (_) => OperacionListScreen(
         rolUsuario: rolUsuario,
         dniUsuario: dniUsuario,
-        config: const OperacionScreenConfig(proceso: 'CARGUÍO', dbSuffix: 'Dumper', operacionNombreDb: 'Dumper', hasChecklistTelemando: true, hasProgramaTrabajo: true),
-        onShowDialogoRegistro: (context, codigoOperativos, turno, estado, datadialog, ultimaHora, existingRecord) => showRegistroOperacionDialog(context: context, dialog: cd.RegistroOperacionDialog(codigoOperativos: codigoOperativos, turno: turno, selectedState: estado, datadialog: datadialog, ultimaHoraRegistrada: ultimaHora, existingRecord: existingRecord?.map((k, v) => MapEntry(k, v.toString())), onConfirm: (data) => Navigator.of(context).pop(data))),
+        config: const OperacionScreenConfig(proceso: 'CARGUÍO', procesoId: 6, dbSuffix: 'Dumper', operacionNombreDb: 'Dumper', hasChecklistTelemando: true, hasProgramaTrabajo: true),
+        onShowDialogoRegistro: (context, turno, estado, procesoId, categoriaId, ultimaHora, existingRecord) => showRegistroOperacionDialog(context: context, dialog: RegistroOperacionDialog(turno: turno, selectedState: estado, procesoId: procesoId, categoriaId: categoriaId, ultimaHoraRegistrada: ultimaHora, existingRecord: existingRecord?.map((k, v) => MapEntry(k, v.toString())), onConfirm: (data) => Navigator.of(context).pop(data))),
         onBuildDialogoPerforacion: (context, operacionId, estadoId, datosIniciales, fecha, turno, primaryColor, onGuardar) => cd.DialogoFormularioPerforacion(operacionId: operacionId, estadoId: estadoId, datosIniciales: datosIniciales, estado: "OPERATIVO", fecha: fecha, turno: turno, primaryColor: primaryColor, onGuardar: onGuardar),
         onBuildDialogoNoOperativo: (context, operacionId, estadoId, estado, primaryColor, onGuardar, datosIniciales) => DialogoFormularioNoOperativo(operacionId: operacionId, estadoId: estadoId, estado: estado, datosIniciales: datosIniciales, primaryColor: primaryColor, onGuardar: onGuardar),
         onBuildConfirmarCierre: (primaryColor, onConfirmar) => DialogoConfirmarCierreRegistros(primaryColor: primaryColor, onConfirmar: onConfirmar),
@@ -190,6 +188,7 @@ class CarguioScreen extends StatelessWidget {
                                     dniUsuario: dniUsuario,
                                     config: const OperacionScreenConfig(
                                       proceso: 'SCOOP',
+                                      procesoId: 4,
                                       dbSuffix: 'Scoop',
                                       operacionNombreDb: 'Scoop',
                                       hasChecklistTelemando: true,
@@ -198,19 +197,19 @@ class CarguioScreen extends StatelessWidget {
                                     onShowDialogoRegistro:
                                         (
                                           context,
-                                          codigoOperativos,
                                           turno,
                                           estado,
-                                          datadialog,
+                                          procesoId,
+                                          categoriaId,
                                           ultimaHora,
                                           existingRecord,
                                         ) => showRegistroOperacionDialog(
                                           context: context,
-                                          dialog: cs.RegistroOperacionDialog(
-                                            codigoOperativos: codigoOperativos,
+                                           dialog: RegistroOperacionDialog(
                                             turno: turno,
                                             selectedState: estado,
-                                            datadialog: datadialog,
+                                            procesoId: procesoId,
+                                            categoriaId: categoriaId,
                                             ultimaHoraRegistrada: ultimaHora,
                                             existingRecord: existingRecord?.map(
                                               (k, v) =>
