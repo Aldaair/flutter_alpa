@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/models/DimAla.dart';
 import 'package:i_miner/models/DimLabor.dart';
+import 'package:i_miner/models/DimNivel.dart';
+import 'package:i_miner/models/DimTipoLabor.dart';
 import 'package:i_miner/models/assigned_labor.dart';
-import 'package:i_miner/models/PlanMensual.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
+import 'package:i_miner/models/plan_avance_th.dart';
 import 'package:i_miner/services/mis_labores_service.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
@@ -57,24 +60,17 @@ class _DialogoFormularioPerforacionState
   String? tipoPerforacionSeleccionado;
 
   // Opciones para los dropdowns (ahora vienen de la BD)
-  List<String> opcionesNivel = [];
-  List<String> opcionesTipoLabor = [];
-  List<String> opcionesLabor = [];
-  List<String> opcionesAla = [];
   List<String> opcionesTipoPerforacion = [];
-
-  // Listas filtradas para la selección en cascada
-  List<String> filteredTiposLabor = [];
-  List<String> filteredLabores = [];
-  List<String> filteredAlas = [];
-  List<String> filteredNiveles = [];
 
   List<String> opcionesLongitudBarras = [];
   String? longitudBarraSeleccionada;
 
   // Almacenar objetos completos para referencia
-  List<PlanMensual> planesCompletos = [];
+  List<PlanAvanceTH> planesAvanceCompletos = [];
   List<TipoPerforacion> tiposPerforacionCompletos = [];
+  List<DimTipoLabor> tiposLaborCatalogo = [];
+  List<DimNivel> nivelesCatalogo = [];
+  List<DimAla> alasCatalogo = [];
   List<DimLabor> laboresCatalogo = [];
   List<AssignedLabor> laboresAsignadas = [];
   AssignedLabor? laborAsignadaSeleccionada;
@@ -96,7 +92,8 @@ class _DialogoFormularioPerforacionState
         _cargarTiposPerforacion(),
         _cargarLongitudBarras(),
         _cargarMisLabores(),
-        _cargarLaboresCatalogo(),
+        _cargarCatalogos(),
+        _cargarPlanAvanceTH(),
       ]);
     } catch (e) {
       print("Error cargando datos: $e");
@@ -169,7 +166,9 @@ class _DialogoFormularioPerforacionState
   void _aplicarLaborAsignada(AssignedLabor labor) {
     final ala = labor.ala.isNotEmpty
         ? labor.ala
-        : _resolverAlaPlanificada(labor);
+        : (widget.datosIniciales?['ala']?.toString().isNotEmpty == true
+              ? widget.datosIniciales!['ala'].toString()
+              : null);
     setState(() {
       tipoLaborSeleccionado = labor.tipoLabor.isEmpty ? null : labor.tipoLabor;
       laborSeleccionado = labor.laborNombre.isEmpty ? null : labor.laborNombre;
@@ -177,27 +176,6 @@ class _DialogoFormularioPerforacionState
       alaSeleccionado = ala;
       laborAsignadaSeleccionada = labor;
     });
-  }
-
-  String? _resolverAlaPlanificada(AssignedLabor labor) {
-    final alas = <String>{};
-
-    for (final plan in planesCompletos) {
-      if (plan.tipoLabor == labor.tipoLabor &&
-          plan.labor == labor.laborNombre &&
-          plan.nivel == labor.nivel &&
-          (plan.ala.isNotEmpty ?? false)) {
-        alas.add(plan.ala);
-      }
-    }
-
-    if (alas.length == 1) {
-      return alas.first;
-    }
-
-    return widget.datosIniciales?['ala']?.toString().isNotEmpty == true
-        ? widget.datosIniciales!['ala'].toString()
-        : null;
   }
 
   Future<void> _cargarLongitudBarras() async {
@@ -222,15 +200,23 @@ class _DialogoFormularioPerforacionState
     }
   }
 
-  Future<void> _cargarLaboresCatalogo() async {
+  Future<void> _cargarCatalogos() async {
     try {
       final dbHelper = DatabaseHelper();
-      final labores = await dbHelper.getLabores();
+      final results = await Future.wait([
+        dbHelper.getTiposLabor(),
+        dbHelper.getNiveles(),
+        dbHelper.getAlas(),
+        dbHelper.getLabores(),
+      ]);
 
       if (!mounted) return;
 
       setState(() {
-        laboresCatalogo = labores;
+        tiposLaborCatalogo = results[0] as List<DimTipoLabor>;
+        nivelesCatalogo = results[1] as List<DimNivel>;
+        alasCatalogo = results[2] as List<DimAla>;
+        laboresCatalogo = results[3] as List<DimLabor>;
         if (selectedLaborFromCatalogo == null && laborSeleccionado != null) {
           selectedLaborFromCatalogo = _resolveSelectedLaborFromCatalog(
             laborSeleccionado,
@@ -238,7 +224,20 @@ class _DialogoFormularioPerforacionState
         }
       });
     } catch (e) {
-      print('Error cargando labores catálogo: $e');
+      print('Error cargando catálogos: $e');
+    }
+  }
+
+  Future<void> _cargarPlanAvanceTH() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final data = await dbHelper.getPlanesAvanceTH();
+      setState(() {
+        planesAvanceCompletos = data;
+      });
+      print('🔍 _cargarPlanAvanceTH → ${data.length} registros');
+    } catch (e) {
+      print('Error cargando PlanAvanceTH: $e');
     }
   }
 
@@ -276,26 +275,6 @@ class _DialogoFormularioPerforacionState
     }
   }
 
-  void _onTipoLaborChanged(String? nuevoTipoLabor) {
-    setState(() {
-      tipoLaborSeleccionado = nuevoTipoLabor;
-      laborSeleccionado = null;
-      alaSeleccionado = null;
-      nivelSeleccionado = null;
-      _actualizarFiltros();
-    });
-  }
-
-  void _onLaborChanged(String? nuevoLabor) {
-    setState(() {
-      laborSeleccionado = nuevoLabor;
-      alaSeleccionado = null;
-      nivelSeleccionado = null;
-      selectedLaborFromCatalogo = _resolveSelectedLaborFromCatalog(nuevoLabor);
-      _actualizarFiltros();
-    });
-  }
-
   DimLabor? _resolveSelectedLaborFromCatalog(String? laborNombre) {
     if (laborNombre == null || laborNombre.isEmpty) return null;
 
@@ -308,80 +287,36 @@ class _DialogoFormularioPerforacionState
     return null;
   }
 
-  void _onAlaChanged(String? nuevoAla) {
+  String? _resolveTipoLaborNombre(DimLabor labor) {
+    final tipoLabor = tiposLaborCatalogo.cast<DimTipoLabor?>().firstWhere(
+      (item) => item?.tipoLaborId == labor.tipoLaborId,
+      orElse: () => null,
+    );
+    return tipoLabor?.nombre;
+  }
+
+  String? _resolveNivelNombre(DimLabor labor) {
+    final nivel = nivelesCatalogo.cast<DimNivel?>().firstWhere(
+      (item) => item?.nivelId == labor.nivelId,
+      orElse: () => null,
+    );
+    return nivel?.nombre;
+  }
+
+  void _onLaborFromCatalogSelected(DimLabor labor) {
     setState(() {
-      alaSeleccionado = nuevoAla;
-      nivelSeleccionado = null;
-      _actualizarFiltros();
+      tipoLaborSeleccionado = _resolveTipoLaborNombre(labor);
+      laborSeleccionado = labor.nombreLabor;
+      nivelSeleccionado = _resolveNivelNombre(labor);
+      alaSeleccionado = null;
+      selectedLaborFromCatalogo = labor;
     });
   }
 
-  void _actualizarFiltros() {
-    // Filtrar Labores basado en Tipo Labor
-    if (tipoLaborSeleccionado != null) {
-      Set<String> laboresFiltrados = {};
-      for (var plan in planesCompletos) {
-        if (plan.tipoLabor == tipoLaborSeleccionado &&
-            (plan.labor.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor);
-        }
-      }
-      filteredLabores = laboresFiltrados.toList()..sort();
-    } else {
-      filteredLabores = List.from(opcionesLabor);
-    }
-
-    // Filtrar Alas basado en Tipo Labor y Labor
-    if (tipoLaborSeleccionado != null && laborSeleccionado != null) {
-      Set<String> alasFiltrados = {};
-      for (var plan in planesCompletos) {
-        if (plan.tipoLabor == tipoLaborSeleccionado &&
-            plan.labor == laborSeleccionado &&
-            (plan.ala.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala);
-        }
-      }
-      filteredAlas = alasFiltrados.toList()..sort();
-    } else {
-      filteredAlas = List.from(opcionesAla);
-    }
-
-    // Filtrar Niveles (INTERNO, NO VISIBLE)
-    if (tipoLaborSeleccionado != null && laborSeleccionado != null) {
-      Set<String> nivelesFiltrados = {};
-
-      for (var plan in planesCompletos) {
-        bool coincideBase =
-            plan.tipoLabor == tipoLaborSeleccionado &&
-            plan.labor == laborSeleccionado;
-
-        bool coincideAla =
-            alaSeleccionado == null ||
-            alaSeleccionado!.isEmpty ||
-            plan.ala == alaSeleccionado;
-
-        if (coincideBase && coincideAla && (plan.nivel.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel);
-        }
-      }
-
-      filteredNiveles = nivelesFiltrados.toList()..sort();
-
-      // Auto seleccionar nivel internamente
-      if (filteredNiveles.isNotEmpty) {
-        if (nivelSeleccionado == null ||
-            !filteredNiveles.contains(nivelSeleccionado)) {
-          nivelSeleccionado = filteredNiveles.first;
-        }
-      } else {
-        nivelSeleccionado = null;
-      }
-    } else {
-      filteredNiveles = List.from(opcionesNivel);
-      if (tipoLaborSeleccionado == null || laborSeleccionado == null) {
-        nivelSeleccionado = null;
-      }
-    }
+  void _onAlaChanged(String? nuevoAla) {
+    setState(() {
+      alaSeleccionado = nuevoAla;
+    });
   }
 
   void _cargarDatosIniciales() {
@@ -413,11 +348,6 @@ class _DialogoFormularioPerforacionState
         numBarrasController.text = widget.datosIniciales!['num_barras'] ?? '';
         observacionesController.text =
             widget.datosIniciales!['observaciones'] ?? '';
-      });
-
-      // Después de cargar, actualizar filtros
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _actualizarFiltros();
       });
     }
   }
@@ -546,7 +476,7 @@ class _DialogoFormularioPerforacionState
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // SECCIÓN 1: Ubicación (con datos de PlanMensual)
+                          // SECCIÓN 1: Ubicación (con datos de Plan Avance)
                           _buildSeccionCompacta(
                             icon: Icons.location_on,
                             titulo: 'Ubicación',
@@ -592,50 +522,7 @@ class _DialogoFormularioPerforacionState
                                         laboresAsignadas.isNotEmpty)
                                       _buildPlannedFrontSelector()
                                     else
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: _buildCompactDropdownField(
-                                              label: 'Tipo Labor',
-                                              value: tipoLaborSeleccionado,
-                                              items: filteredTiposLabor,
-                                              onChanged: isEditable
-                                                  ? _onTipoLaborChanged
-                                                  : null,
-                                              icon: Icons.construction,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: _buildCompactDropdownField(
-                                              label: 'Labor',
-                                              value: laborSeleccionado,
-                                              items: filteredLabores,
-                                              onChanged:
-                                                  (tipoLaborSeleccionado !=
-                                                          null &&
-                                                      isEditable)
-                                                  ? _onLaborChanged
-                                                  : null,
-                                              icon: Icons.factory,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: _buildCompactDropdownField(
-                                              label: 'Ala',
-                                              value: alaSeleccionado,
-                                              items: filteredAlas,
-                                              onChanged:
-                                                  (laborSeleccionado != null &&
-                                                      isEditable)
-                                                  ? _onAlaChanged
-                                                  : null,
-                                              icon: Icons.compare_arrows,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                      _buildManualFrontSelectors(),
                                   ],
                                 ),
                               ),
@@ -1119,6 +1006,60 @@ class _DialogoFormularioPerforacionState
     );
   }
 
+  Widget _buildManualFrontSelectors() {
+    final planLaborIds = planesAvanceCompletos.map((p) => p.laborId).toSet();
+    final laboresFiltradas =
+        laboresCatalogo.where((l) => planLaborIds.contains(l.laborId)).toList()
+          ..sort((a, b) => a.nombreLabor.compareTo(b.nombreLabor));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<int>(
+          initialValue: selectedLaborFromCatalogo?.laborId,
+          decoration: const InputDecoration(
+            labelText: 'Seleccionar labor',
+            border: OutlineInputBorder(),
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+          items: laboresFiltradas.map((labor) {
+            return DropdownMenuItem<int>(
+              value: labor.laborId,
+              child: Text(labor.nombreLabor, overflow: TextOverflow.ellipsis),
+            );
+          }).toList(),
+          onChanged: isEditable
+              ? (laborId) {
+                  final match = laboresCatalogo.cast<DimLabor?>().firstWhere(
+                    (l) => l?.laborId == laborId,
+                    orElse: () => null,
+                  );
+                  if (match != null) {
+                    _onLaborFromCatalogSelected(match);
+                  }
+                }
+              : null,
+        ),
+        if (selectedLaborFromCatalogo != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            '${tipoLaborSeleccionado ?? '-'} / Nivel ${nivelSeleccionado ?? '-'}',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          _buildCompactDropdownField(
+            label: 'Ala',
+            value: alaSeleccionado,
+            items: _uniqueSorted(alasCatalogo.map((a) => a.nombre)),
+            onChanged: isEditable ? _onAlaChanged : null,
+            icon: Icons.compare_arrows,
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildPlannedFrontSelector() {
     final selected = laborAsignadaSeleccionada;
     return Column(
@@ -1154,7 +1095,7 @@ class _DialogoFormularioPerforacionState
         if (selected != null) ...[
           const SizedBox(height: 8),
           Text(
-            'Hoy tienes planificado: ${selected.estructuraMineral} / Nivel ${selected.nivel} / ${selected.laborNombre}${alaSeleccionado?.isNotEmpty == true ? ' / Ala $alaSeleccionado' : ''}',
+            'Hoy tienes planificado: ${selected.estructuraMineral} / Nivel ${selected.nivel} / ${selected.tipoLabor} / ${selected.laborNombre}${alaSeleccionado?.isNotEmpty == true ? ' / Ala $alaSeleccionado' : ''}',
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
           if (selected.valorPlanificado > 0)
@@ -1165,5 +1106,14 @@ class _DialogoFormularioPerforacionState
         ],
       ],
     );
+  }
+
+  List<String> _uniqueSorted(Iterable<String> values) {
+    final unique = values
+        .where((value) => value.trim().isNotEmpty)
+        .toSet()
+        .toList();
+    unique.sort();
+    return unique;
   }
 }

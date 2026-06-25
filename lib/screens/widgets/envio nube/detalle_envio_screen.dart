@@ -86,6 +86,13 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
       );
       return;
     }
+    if (item['estado'] == 'activo') {
+      _mostrarAdvertencia(
+        'Registro no cerrado',
+        'Este registro no está cerrado.',
+      );
+      return;
+    }
 
     if (widget.isItemExportable != null && !widget.isItemExportable!(item)) {
       _mostrarAdvertencia(

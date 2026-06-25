@@ -14,6 +14,7 @@ import 'package:i_miner/models/DimLabor.dart';
 import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
 import 'package:i_miner/models/PlanMetrajeTL.dart';
+import 'package:i_miner/models/plan_avance_th.dart';
 import 'package:i_miner/models/zona.dart';
 
 import 'package:bcrypt/bcrypt.dart';
@@ -3094,6 +3095,14 @@ CREATE TABLE UsuarioEquipo (
     return List.generate(maps.length, (i) => PlanMetrajeTL.fromJson(maps[i]));
   }
 
+  Future<List<PlanAvanceTH>> getPlanesAvanceTH() async {
+    final db = await sharedCatalogDatabase;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'planes_metrajes_avances',
+    );
+    return List.generate(maps.length, (i) => PlanAvanceTH.fromJson(maps[i]));
+  }
+
   Future<List<Map<String, dynamic>>> getLongitudBarrasPorProceso(
     String proceso,
   ) async {
@@ -3750,7 +3759,7 @@ CREATE TABLE UsuarioEquipo (
   }
 
   // Actualizar control de llantas de una operación
-  Future<bool> updateControlLlantas(
+  Future<bool> updateControlLlantasTLargos(
     int operacionId,
     Map<String, dynamic> controlLlantas,
   ) async {
@@ -8117,7 +8126,7 @@ CREATE TABLE UsuarioEquipo (
 
     final List<Map<String, dynamic>> result = await db.query(
       'Operacion_tal_largo',
-      orderBy: 'id DESC', // opcional, para ver las más recientes primero
+      orderBy: 'id DESC',
     );
 
     return result;

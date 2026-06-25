@@ -53,8 +53,6 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
           _db,
         ).prepararDatosParaExportar('tal_horizontal', ids, data),
         formatearJson: (data) => ExportarService(_db).formatearJson(data),
-        isItemExportable: (item) =>
-            item['identity_version'] == 2 && item['syncable'] == 1,
       ),
 
       "SOSTENIMIENTO": (context) => DetalleEnvioScreen(

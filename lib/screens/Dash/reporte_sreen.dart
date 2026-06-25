@@ -739,7 +739,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         controlLlantasData: controlLlantasData ?? {},
                         primaryColor: primaryColor,
                         onSave: (id, datos) => DatabaseHelper()
-                            .updateControlLlantasHorizontal(id, datos),
+                            .updateControlLlantasTLargos(id, datos),
                       ),
               buildBotonesEstado: (onEstadoSeleccionado) =>
                   BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
@@ -875,8 +875,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         estado: estado,
                         controlLlantasData: controlLlantasData ?? {},
                         primaryColor: primaryColor,
-                        onSave: (id, datos) =>
-                            DatabaseHelper().updateControlLlantas(id, datos),
+                        onSave: (id, datos) => DatabaseHelper()
+                            .updateControlLlantasHorizontal(id, datos),
                       ),
               buildBotonesEstado: (onEstadoSeleccionado) =>
                   BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),

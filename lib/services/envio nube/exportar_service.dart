@@ -21,8 +21,6 @@ class ExportarService {
       );
       if (op.isEmpty) continue;
 
-      if (tipo == 'tal_horizontal' && !_isSyncableV2(op)) continue;
-
       final map = _buildOperationMap(tipo, op, id);
       results.add(map);
     }
@@ -232,15 +230,6 @@ class ExportarService {
         operacion: opDetalle != null ? detalleFactory(opDetalle) : null,
       );
     }).toList();
-  }
-
-  bool _isSyncableV2(Map<String, dynamic> op) {
-    if (op.isEmpty) return false;
-    return op['identity_version'] == 2 &&
-        op['syncable'] == 1 &&
-        op['operador_id'] != null &&
-        op['equipo_id'] != null &&
-        op['jefe_guardia_id'] != null;
   }
 
   Map<String, dynamic> _decodeMap(dynamic value) {
