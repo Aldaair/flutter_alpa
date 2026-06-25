@@ -17,6 +17,9 @@ class OperacionCard extends StatefulWidget {
   final String? dniUsuario;
   final String? selectedOperatorName;
   final int? selectedOperatorId;
+  final List<Map<String, dynamic>> operators;
+  final bool canSelectOperators;
+  final ValueChanged<int?>? onSelectedOperatorChanged;
   final Map<String, dynamic>? operacionExistente;
 
   final String fechaActual;
@@ -37,6 +40,9 @@ class OperacionCard extends StatefulWidget {
     this.dniUsuario,
     this.selectedOperatorName,
     this.selectedOperatorId,
+    this.operators = const [],
+    this.canSelectOperators = false,
+    this.onSelectedOperatorChanged,
     this.primaryColor = const Color(0xFF1B5E6B),
   });
 
@@ -113,6 +119,23 @@ class _OperacionCardState extends State<OperacionCard> {
 
   void _syncDisplayedOperator({String? fallbackName}) {
     operador = widget.selectedOperatorName ?? fallbackName ?? operadorEjemplo;
+  }
+
+  String _operatorLabel(Map<String, dynamic> operator) {
+    final dni = operator['codigo_dni']?.toString() ?? '';
+    final nombres = operator['nombres']?.toString() ?? '';
+    final apellidos = operator['apellidos']?.toString() ?? '';
+    final label = '$apellidos $nombres'.trim();
+    return dni.isEmpty ? label : '$label - $dni';
+  }
+
+  Map<String, dynamic>? _selectedOperator() {
+    for (final operator in widget.operators) {
+      if (operator['id'] == widget.selectedOperatorId) {
+        return operator;
+      }
+    }
+    return null;
   }
 
   Future<void> _cargarOperadorPorDni() async {
@@ -795,6 +818,68 @@ class _OperacionCardState extends State<OperacionCard> {
   }
 
   Widget _buildOperadorField() {
+    if (widget.canSelectOperators) {
+      final selectedOperator = _selectedOperator();
+      final selectedValue = selectedOperator != null
+          ? selectedOperator['id'] as int?
+          : null;
+
+      return DropdownButtonFormField<int>(
+        value: selectedValue,
+        decoration: InputDecoration(
+          labelText: 'Operador',
+          labelStyle: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          prefixIcon: Icon(
+            Icons.person_outline,
+            size: 16,
+            color: widget.primaryColor,
+          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.grey[300]!),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: widget.primaryColor, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
+          isDense: true,
+        ),
+        items: widget.operators.map((operator) {
+          final operatorId = operator['id'] as int?;
+          return DropdownMenuItem<int>(
+            value: operatorId,
+            child: Text(
+              _operatorLabel(operator),
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13),
+            ),
+          );
+        }).toList(),
+        onChanged: widget.operators.isEmpty
+            ? null
+            : (value) {
+                widget.onSelectedOperatorChanged?.call(value);
+              },
+        hint: Text(
+          widget.operators.isEmpty
+              ? 'Aun no hay operadores conocidos en este dispositivo'
+              : 'Seleccionar operador',
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ),
+        icon: Icon(
+          Icons.keyboard_arrow_down,
+          size: 18,
+          color: widget.primaryColor,
+        ),
+        isExpanded: true,
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(

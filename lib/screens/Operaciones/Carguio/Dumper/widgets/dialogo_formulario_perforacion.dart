@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/PlanMetraje.dart';
 import 'package:i_miner/models/PlanProduccion.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
@@ -21,12 +20,14 @@ class DialogoFormularioPerforacion extends StatefulWidget {
     this.primaryColor = const Color(0xFF1B5E6B),
     required this.onGuardar,
   }) : super(key: key);
-  
+
   @override
-  State<DialogoFormularioPerforacion> createState() => _DialogoFormularioPerforacionState();
+  State<DialogoFormularioPerforacion> createState() =>
+      _DialogoFormularioPerforacionState();
 }
 
-class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforacion> {
+class _DialogoFormularioPerforacionState
+    extends State<DialogoFormularioPerforacion> {
   bool isEditable = false;
   bool isLoading = true;
 
@@ -41,7 +42,7 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
 
   // Variable para DESTINO (viene de tabla origen_destino)
   String? ubicacionDestinoSeleccionado;
-  int? ubicacionDestinoId;  // Guardar el ID del destino seleccionado
+  int? ubicacionDestinoId; // Guardar el ID del destino seleccionado
 
   // Número de cucharas
   final TextEditingController nCucharasController = TextEditingController();
@@ -51,7 +52,7 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
   List<String> opcionesTipoLabor = [];
   List<String> opcionesLabor = [];
   List<String> opcionesAla = [];
-  
+
   // Opciones para ubicación destino (desde tabla origen_destino)
   List<Map<String, dynamic>> destinosDisponibles = [];
   List<String> opcionesUbicacionDestino = [];
@@ -64,7 +65,6 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
   // Almacenar objetos completos para referencia
   List<PlanMensual> planesMensualCompletos = [];
   List<PlanProduccion> planesProduccionCompletos = [];
-  List<PlanMetraje> planesMetrajeCompletos = [];
 
   @override
   void initState() {
@@ -76,10 +76,10 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
 
   Future<void> _cargarDatosDesdeBD() async {
     setState(() => isLoading = true);
-    
+
     try {
       await Future.wait([
-        _cargarDestinosDUMPER(),     // Para ubicación DESTINO
+        _cargarDestinosDUMPER(), // Para ubicación DESTINO
       ]);
     } catch (e) {
       print("Error cargando datos: $e");
@@ -88,43 +88,41 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
     }
   }
 
-
   Future<void> _cargarDestinosDUMPER() async {
-  try {
-    final dbHelper = DatabaseHelper();
+    try {
+      final dbHelper = DatabaseHelper();
 
-    destinosDisponibles = await dbHelper.getOrigenDestino(
-      'DUMPER',
-      'DESTINO',
-    );
+      destinosDisponibles = await dbHelper.getOrigenDestino(
+        'DUMPER',
+        'DESTINO',
+      );
 
-    setState(() {
-      opcionesUbicacionDestino = destinosDisponibles
-          .map((destino) => destino['nombre'] as String)
-          .toList();
-    });
+      setState(() {
+        opcionesUbicacionDestino = destinosDisponibles
+            .map((destino) => destino['nombre'] as String)
+            .toList();
+      });
 
-    print("Destinos DUMPER cargados: ${destinosDisponibles.length}");
-  } catch (e) {
-    print("Error cargando destinos DUMPER: $e");
-    setState(() {
-      opcionesUbicacionDestino = [];
-    });
+      print("Destinos DUMPER cargados: ${destinosDisponibles.length}");
+    } catch (e) {
+      print("Error cargando destinos DUMPER: $e");
+      setState(() {
+        opcionesUbicacionDestino = [];
+      });
+    }
   }
-}
 
   // Cargar planes mensuales y construir opciones únicas
   Future<void> _cargarPlanesCombinados() async {
     try {
       final dbHelper = DatabaseHelper();
-      
+
       // Cargar las tres tablas en paralelo
       final results = await Future.wait([
         dbHelper.getOrigenDestino('DUMPER', 'ORIGEN'),
       ]);
-      
-      final origenes = results[0] as List<Map<String, dynamic>>;
 
+      final origenes = results[0] as List<Map<String, dynamic>>;
 
       Set<String> nivelesSet = {};
       Set<String> tiposLaborSet = {};
@@ -134,7 +132,8 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
       // Procesar PlanMensual
       for (var plan in planesMensualCompletos) {
         if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
+        if (plan.tipoLabor?.isNotEmpty ?? false)
+          tiposLaborSet.add(plan.tipoLabor!);
         if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
         if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
       }
@@ -142,24 +141,18 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
       // Procesar PlanProduccion
       for (var plan in planesProduccionCompletos) {
         if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
-        if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      // Procesar PlanMetraje
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor?.isNotEmpty ?? false) tiposLaborSet.add(plan.tipoLabor!);
+        if (plan.tipoLabor?.isNotEmpty ?? false)
+          tiposLaborSet.add(plan.tipoLabor!);
         if (plan.labor?.isNotEmpty ?? false) laboresSet.add(plan.labor!);
         if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
       }
 
       for (var origen in origenes) {
-  if (origen['nombre'] != null && origen['nombre'].toString().isNotEmpty) {
-    nivelesSet.add(origen['nombre']);
-  }
-}
+        if (origen['nombre'] != null &&
+            origen['nombre'].toString().isNotEmpty) {
+          nivelesSet.add(origen['nombre']);
+        }
+      }
 
       setState(() {
         opcionesNivel = nivelesSet.toList()..sort();
@@ -172,7 +165,6 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
         filteredLaboresInicio = List.from(opcionesLabor);
         filteredAlasInicio = List.from(opcionesAla);
       });
-
     } catch (e) {
       print("Error cargando planes combinados: $e");
       // Fallback con datos de ejemplo
@@ -181,7 +173,7 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
         opcionesTipoLabor = ['Galería', 'Crucero', 'Rampa', 'Chimenea'];
         opcionesLabor = ['Labor 01', 'Labor 02', 'Labor 03', 'Labor 04'];
         opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
-        
+
         filteredTiposLaborInicio = List.from(opcionesTipoLabor);
         filteredLaboresInicio = List.from(opcionesLabor);
         filteredAlasInicio = List.from(opcionesAla);
@@ -194,105 +186,82 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
     // Filtrar tipos de labor basados en nivel seleccionado
     if (nivelInicioSeleccionado != null) {
       Set<String> tiposLaborFiltrados = {};
-      
+
       // Buscar en PlanMensual
       for (var plan in planesMensualCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado && (plan.tipoLabor?.isNotEmpty ?? false)) {
+        if (plan.nivel == nivelInicioSeleccionado &&
+            (plan.tipoLabor?.isNotEmpty ?? false)) {
           tiposLaborFiltrados.add(plan.tipoLabor!);
         }
       }
-      
+
       // Buscar en PlanProduccion
       for (var plan in planesProduccionCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado && (plan.tipoLabor?.isNotEmpty ?? false)) {
+        if (plan.nivel == nivelInicioSeleccionado &&
+            (plan.tipoLabor?.isNotEmpty ?? false)) {
           tiposLaborFiltrados.add(plan.tipoLabor!);
         }
       }
-      
-      // Buscar en PlanMetraje
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado && (plan.tipoLabor?.isNotEmpty ?? false)) {
-          tiposLaborFiltrados.add(plan.tipoLabor!);
-        }
-      }
-      
+
       filteredTiposLaborInicio = tiposLaborFiltrados.toList()..sort();
     } else {
       filteredTiposLaborInicio = List.from(opcionesTipoLabor);
     }
 
     // Filtrar labores basados en nivel y tipo labor
-    if (nivelInicioSeleccionado != null && tipoLaborInicioSeleccionado != null) {
+    if (nivelInicioSeleccionado != null &&
+        tipoLaborInicioSeleccionado != null) {
       Set<String> laboresFiltrados = {};
-      
+
       // Buscar en PlanMensual
       for (var plan in planesMensualCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado && 
-            plan.tipoLabor == tipoLaborInicioSeleccionado && 
+        if (plan.nivel == nivelInicioSeleccionado &&
+            plan.tipoLabor == tipoLaborInicioSeleccionado &&
             (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
+
       // Buscar en PlanProduccion
       for (var plan in planesProduccionCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado && 
-            plan.tipoLabor == tipoLaborInicioSeleccionado && 
+        if (plan.nivel == nivelInicioSeleccionado &&
+            plan.tipoLabor == tipoLaborInicioSeleccionado &&
             (plan.labor?.isNotEmpty ?? false)) {
           laboresFiltrados.add(plan.labor!);
         }
       }
-      
-      // Buscar en PlanMetraje
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado && 
-            plan.tipoLabor == tipoLaborInicioSeleccionado && 
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
-        }
-      }
-      
+
       filteredLaboresInicio = laboresFiltrados.toList()..sort();
     } else {
       filteredLaboresInicio = List.from(opcionesLabor);
     }
 
     // Filtrar alas basados en nivel, tipo labor y labor
-    if (nivelInicioSeleccionado != null && 
-        tipoLaborInicioSeleccionado != null && 
+    if (nivelInicioSeleccionado != null &&
+        tipoLaborInicioSeleccionado != null &&
         laborInicioSeleccionado != null) {
       Set<String> alasFiltrados = {};
-      
+
       // Buscar en PlanMensual
       for (var plan in planesMensualCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado && 
-            plan.tipoLabor == tipoLaborInicioSeleccionado && 
-            plan.labor == laborInicioSeleccionado && 
+        if (plan.nivel == nivelInicioSeleccionado &&
+            plan.tipoLabor == tipoLaborInicioSeleccionado &&
+            plan.labor == laborInicioSeleccionado &&
             (plan.ala?.isNotEmpty ?? false)) {
           alasFiltrados.add(plan.ala!);
         }
       }
-      
+
       // Buscar en PlanProduccion
       for (var plan in planesProduccionCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado && 
-            plan.tipoLabor == tipoLaborInicioSeleccionado && 
-            plan.labor == laborInicioSeleccionado && 
+        if (plan.nivel == nivelInicioSeleccionado &&
+            plan.tipoLabor == tipoLaborInicioSeleccionado &&
+            plan.labor == laborInicioSeleccionado &&
             (plan.ala?.isNotEmpty ?? false)) {
           alasFiltrados.add(plan.ala!);
         }
       }
-      
-      // Buscar en PlanMetraje
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado && 
-            plan.tipoLabor == tipoLaborInicioSeleccionado && 
-            plan.labor == laborInicioSeleccionado && 
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
-        }
-      }
-      
+
       filteredAlasInicio = alasFiltrados.toList()..sort();
     } else {
       filteredAlasInicio = List.from(opcionesAla);
@@ -303,30 +272,37 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
     if (widget.datosIniciales != null) {
       setState(() {
         // Campos de INICIO
-        nivelInicioSeleccionado = widget.datosIniciales!['nivel_inicio']?.isNotEmpty == true 
-            ? widget.datosIniciales!['nivel_inicio'] 
+        nivelInicioSeleccionado =
+            widget.datosIniciales!['nivel_inicio']?.isNotEmpty == true
+            ? widget.datosIniciales!['nivel_inicio']
             : null;
-        tipoLaborInicioSeleccionado = widget.datosIniciales!['tipo_labor_inicio']?.isNotEmpty == true 
-            ? widget.datosIniciales!['tipo_labor_inicio'] 
+        tipoLaborInicioSeleccionado =
+            widget.datosIniciales!['tipo_labor_inicio']?.isNotEmpty == true
+            ? widget.datosIniciales!['tipo_labor_inicio']
             : null;
-        laborInicioSeleccionado = widget.datosIniciales!['labor_inicio']?.isNotEmpty == true 
-            ? widget.datosIniciales!['labor_inicio'] 
+        laborInicioSeleccionado =
+            widget.datosIniciales!['labor_inicio']?.isNotEmpty == true
+            ? widget.datosIniciales!['labor_inicio']
             : null;
-        alaInicioSeleccionado = widget.datosIniciales!['ala_inicio']?.isNotEmpty == true 
-            ? widget.datosIniciales!['ala_inicio'] 
+        alaInicioSeleccionado =
+            widget.datosIniciales!['ala_inicio']?.isNotEmpty == true
+            ? widget.datosIniciales!['ala_inicio']
             : null;
 
         // Ubicación destino (desde tabla origen_destino)
         ubicacionDestinoId = widget.datosIniciales!['ubicacion_destino_id'];
-        ubicacionDestinoSeleccionado = widget.datosIniciales!['ubicacion_destino'];
-        
+        ubicacionDestinoSeleccionado =
+            widget.datosIniciales!['ubicacion_destino'];
+
         // Número de cucharas
-        nCucharasController.text = widget.datosIniciales!['n_cucharas']?.toString() ?? '0';
-        
+        nCucharasController.text =
+            widget.datosIniciales!['n_cucharas']?.toString() ?? '0';
+
         // Observaciones
-        observacionesController.text = widget.datosIniciales!['observaciones'] ?? '';
+        observacionesController.text =
+            widget.datosIniciales!['observaciones'] ?? '';
       });
-      
+
       // Después de cargar, actualizar filtros
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _actualizarFiltrosInicio();
@@ -344,21 +320,21 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
       );
       destinoId = destinoEncontrado['id'];
     }
-    
+
     Map<String, dynamic> datosFormulario = {
       // Campos de INICIO
       'nivel_inicio': nivelInicioSeleccionado ?? '',
       'tipo_labor_inicio': tipoLaborInicioSeleccionado ?? '',
       'labor_inicio': laborInicioSeleccionado ?? '',
       'ala_inicio': alaInicioSeleccionado ?? '',
-      
+
       // Ubicación destino (guardamos ID y nombre)
       'ubicacion_destino_id': destinoId ?? 0,
       'ubicacion_destino': ubicacionDestinoSeleccionado ?? '',
-      
+
       // Número de cucharas
       'n_cucharas': int.tryParse(nCucharasController.text) ?? 0,
-      
+
       // Observaciones
       'observaciones': observacionesController.text,
     };
@@ -389,14 +365,10 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 1000,
-        constraints: const BoxConstraints(
-          maxHeight: 700,
-        ),
+        constraints: const BoxConstraints(maxHeight: 700),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: Colors.white,
@@ -407,7 +379,7 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildHeader(),
-                  
+
                   Expanded(
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(16),
@@ -416,26 +388,26 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
                         children: [
                           // SECCIÓN 1: Ubicación INICIO
                           _buildSeccionUbicacionInicio(),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           // SECCIÓN 2: Ubicación DESTINO (desde tabla origen_destino)
                           _buildSeccionUbicacionDestino(),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           // SECCIÓN 3: Número de Cucharas
                           _buildSeccionCucharas(),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           // SECCIÓN 4: Observaciones
                           _buildSeccionObservaciones(),
                         ],
                       ),
                     ),
                   ),
-                  
+
                   _buildFooter(),
                 ],
               ),
@@ -462,7 +434,11 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
                   color: Colors.green.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Icon(Icons.play_circle_outline, size: 14, color: Colors.green),
+                child: const Icon(
+                  Icons.play_circle_outline,
+                  size: 14,
+                  color: Colors.green,
+                ),
               ),
               const SizedBox(width: 6),
               const Text(
@@ -483,15 +459,17 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
                   label: 'Nivel',
                   value: nivelInicioSeleccionado,
                   items: opcionesNivel,
-                  onChanged: isEditable ? (value) {
-                    setState(() {
-                      nivelInicioSeleccionado = value;
-                      tipoLaborInicioSeleccionado = null;
-                      laborInicioSeleccionado = null;
-                      alaInicioSeleccionado = null;
-                      _actualizarFiltrosInicio();
-                    });
-                  } : null,
+                  onChanged: isEditable
+                      ? (value) {
+                          setState(() {
+                            nivelInicioSeleccionado = value;
+                            tipoLaborInicioSeleccionado = null;
+                            laborInicioSeleccionado = null;
+                            alaInicioSeleccionado = null;
+                            _actualizarFiltrosInicio();
+                          });
+                        }
+                      : null,
                   icon: Icons.stairs,
                 ),
               ),
@@ -501,7 +479,7 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
                   label: 'Tipo Labor',
                   value: tipoLaborInicioSeleccionado,
                   items: filteredTiposLaborInicio,
-                  onChanged: (nivelInicioSeleccionado != null && isEditable) 
+                  onChanged: (nivelInicioSeleccionado != null && isEditable)
                       ? (value) {
                           setState(() {
                             tipoLaborInicioSeleccionado = value;
@@ -509,7 +487,7 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
                             alaInicioSeleccionado = null;
                             _actualizarFiltrosInicio();
                           });
-                        } 
+                        }
                       : null,
                   icon: Icons.construction,
                 ),
@@ -520,14 +498,14 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
                   label: 'Labor',
                   value: laborInicioSeleccionado,
                   items: filteredLaboresInicio,
-                  onChanged: (tipoLaborInicioSeleccionado != null && isEditable) 
+                  onChanged: (tipoLaborInicioSeleccionado != null && isEditable)
                       ? (value) {
                           setState(() {
                             laborInicioSeleccionado = value;
                             alaInicioSeleccionado = null;
                             _actualizarFiltrosInicio();
                           });
-                        } 
+                        }
                       : null,
                   icon: Icons.factory,
                 ),
@@ -538,8 +516,8 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
                   label: 'Ala',
                   value: alaInicioSeleccionado,
                   items: filteredAlasInicio,
-                  onChanged: (laborInicioSeleccionado != null && isEditable) 
-                      ? (value) => setState(() => alaInicioSeleccionado = value) 
+                  onChanged: (laborInicioSeleccionado != null && isEditable)
+                      ? (value) => setState(() => alaInicioSeleccionado = value)
                       : null,
                   icon: Icons.compare_arrows,
                 ),
@@ -570,7 +548,11 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
                   color: Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Icon(Icons.location_on, size: 14, color: Colors.orange),
+                child: const Icon(
+                  Icons.location_on,
+                  size: 14,
+                  color: Colors.orange,
+                ),
               ),
               const SizedBox(width: 6),
               const Text(
@@ -605,7 +587,10 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
             label: 'Seleccionar destino',
             value: ubicacionDestinoSeleccionado,
             items: opcionesUbicacionDestino,
-            onChanged: isEditable ? (value) => setState(() => ubicacionDestinoSeleccionado = value) : null,
+            onChanged: isEditable
+                ? (value) =>
+                      setState(() => ubicacionDestinoSeleccionado = value)
+                : null,
             icon: Icons.flag,
           ),
           if (opcionesUbicacionDestino.isEmpty && !isLoading)
@@ -767,9 +752,14 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isEditable ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+        color: isEditable
+            ? Colors.green.withOpacity(0.2)
+            : Colors.grey.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isEditable ? Colors.green : Colors.grey, width: 0.5),
+        border: Border.all(
+          color: isEditable ? Colors.green : Colors.grey,
+          width: 0.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -805,7 +795,7 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
   }) {
     bool valueExists = value != null && items.contains(value);
     bool isEnabled = onChanged != null && isEditable;
-    
+
     return Container(
       height: 42,
       decoration: BoxDecoration(
@@ -827,7 +817,9 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
                   items.isEmpty ? 'Cargando...' : label,
                   style: TextStyle(
                     fontSize: 11,
-                    color: isEnabled ? Colors.grey.shade600 : Colors.grey.shade400,
+                    color: isEnabled
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade400,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -835,7 +827,11 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
             ],
           ),
           isExpanded: true,
-          icon: Icon(Icons.arrow_drop_down, size: 18, color: widget.primaryColor),
+          icon: Icon(
+            Icons.arrow_drop_down,
+            size: 18,
+            color: widget.primaryColor,
+          ),
           style: const TextStyle(fontSize: 12, color: Colors.black87),
           dropdownColor: Colors.white,
           borderRadius: BorderRadius.circular(6),
@@ -887,10 +883,7 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
             ),
             child: Text(
               'Cancelar',
-              style: TextStyle(
-                color: Colors.grey.shade700,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
             ),
           ),
           const SizedBox(width: 8),
@@ -900,7 +893,10 @@ class _DialogoFormularioPerforacionState extends State<DialogoFormularioPerforac
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 minimumSize: Size.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),

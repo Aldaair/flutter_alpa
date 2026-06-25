@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/PlanMetraje.dart';
 import 'package:i_miner/models/PlanProduccion.dart';
 
 class DialogoFormularioRompebanco extends StatefulWidget {
@@ -68,7 +67,6 @@ class _DialogoFormularioRompebancoState
   // Almacenar objetos completos
   List<PlanMensual> planesMensualCompletos = [];
   List<PlanProduccion> planesProduccionCompletos = [];
-  List<PlanMetraje> planesMetrajeCompletos = [];
 
   @override
   void initState() {
@@ -124,13 +122,6 @@ class _DialogoFormularioRompebancoState
         }
       }
 
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
-        }
-      }
-
       filteredOrigenLabores = laboresFiltrados.toList()..sort();
     } else {
       filteredOrigenLabores = List.from(opcionesLabor);
@@ -156,15 +147,6 @@ class _DialogoFormularioRompebancoState
           alasFiltrados.add(plan.ala!);
         }
       }
-
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-            plan.labor == origenLaborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
-        }
-      }
-
       filteredOrigenAlas = alasFiltrados.toList()..sort();
     } else {
       filteredOrigenAlas = List.from(opcionesAla);
@@ -189,19 +171,6 @@ class _DialogoFormularioRompebancoState
       }
 
       for (var plan in planesProduccionCompletos) {
-        bool coincideBase =
-            plan.tipoLabor == origenTipoLaborSeleccionado &&
-            plan.labor == origenLaborSeleccionado;
-        bool coincideAla =
-            origenAlaSeleccionado == null ||
-            origenAlaSeleccionado!.isEmpty ||
-            plan.ala == origenAlaSeleccionado;
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
-        }
-      }
-
-      for (var plan in planesMetrajeCompletos) {
         bool coincideBase =
             plan.tipoLabor == origenTipoLaborSeleccionado &&
             plan.labor == origenLaborSeleccionado;
@@ -280,13 +249,6 @@ class _DialogoFormularioRompebancoState
         }
       }
 
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.tipoLabor == destTipoLaborSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
-        }
-      }
-
       filteredDestinoLabores = laboresFiltrados.toList()..sort();
     } else {
       filteredDestinoLabores = List.from(opcionesLabor);
@@ -305,14 +267,6 @@ class _DialogoFormularioRompebancoState
       }
 
       for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == destTipoLaborSeleccionado &&
-            plan.labor == destinoLaborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
-        }
-      }
-
-      for (var plan in planesMetrajeCompletos) {
         if (plan.tipoLabor == destTipoLaborSeleccionado &&
             plan.labor == destinoLaborSeleccionado &&
             (plan.ala?.isNotEmpty ?? false)) {
@@ -343,19 +297,6 @@ class _DialogoFormularioRompebancoState
       }
 
       for (var plan in planesProduccionCompletos) {
-        bool coincideBase =
-            plan.tipoLabor == destTipoLaborSeleccionado &&
-            plan.labor == destinoLaborSeleccionado;
-        bool coincideAla =
-            destinoAlaSeleccionado == null ||
-            destinoAlaSeleccionado!.isEmpty ||
-            plan.ala == destinoAlaSeleccionado;
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
-        }
-      }
-
-      for (var plan in planesMetrajeCompletos) {
         bool coincideBase =
             plan.tipoLabor == destTipoLaborSeleccionado &&
             plan.labor == destinoLaborSeleccionado;

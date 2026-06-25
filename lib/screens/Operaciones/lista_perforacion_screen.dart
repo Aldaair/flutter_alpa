@@ -4,7 +4,6 @@ import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/screens/widgets/dialogo_checklist.dart';
 import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
-import 'package:i_miner/screens/widgets/operator_selector_card.dart';
 import 'package:i_miner/screens/widgets/operacion_card.dart';
 import 'package:i_miner/screens/widgets/operacion_card_config.dart';
 import 'package:i_miner/core/checklist_helper.dart';
@@ -827,26 +826,20 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            if (_isMaster) ...[
-              OperatorSelectorCard(
-                operators: masterOperators,
-                selectedOperatorId: selectedOperatorId,
-                onChanged: (value) async {
-                  setState(() {
-                    selectedOperatorId = value;
-                  });
-                  await _fetchOperacionData();
-                },
-                primaryColor: primaryColor,
-              ),
-              const SizedBox(height: 16),
-            ],
             OperacionCard(
               fechaActual: fechaActual,
               selectedTurno: selectedTurno,
               dniUsuario: widget.dniUsuario,
               selectedOperatorName: _isMaster ? _selectedOperatorName() : null,
               selectedOperatorId: _isMaster ? selectedOperatorId : null,
+              operators: _isMaster ? masterOperators : const [],
+              canSelectOperators: _isMaster,
+              onSelectedOperatorChanged: (value) async {
+                setState(() {
+                  selectedOperatorId = value;
+                });
+                await _fetchOperacionData();
+              },
               operacionExistente: operacionActual,
               onTurnoChanged: (value) {
                 setState(() {

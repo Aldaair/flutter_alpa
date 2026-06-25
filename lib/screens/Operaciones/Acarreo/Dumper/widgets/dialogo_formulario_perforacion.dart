@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/PlanMetraje.dart';
 import 'package:i_miner/models/PlanProduccion.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
@@ -70,7 +69,6 @@ class _DialogoFormularioPerforacionState
   // Almacenar objetos completos
   List<PlanMensual> planesMensualCompletos = [];
   List<PlanProduccion> planesProduccionCompletos = [];
-  List<PlanMetraje> planesMetrajeCompletos = [];
 
   @override
   void initState() {

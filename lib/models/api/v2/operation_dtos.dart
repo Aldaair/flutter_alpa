@@ -132,7 +132,7 @@ class RegistroOperacionTalLargoDetalleRequest {
     metrosPerforadosAlivio: _toDouble(json['metros_perforados_alivio']),
     nTaladrosRepaso: json['n_taladros_repaso'],
     metrosPerforadosRepaso: _toDouble(json['metros_perforados_repaso']),
-    longBarras: json['long_barras'],
+    longBarras: _toDouble(json['long_barras']),
     numBarras: json['num_barras'],
     tipoPerforacionId: json['tipo_perforacion_id'],
     observaciones: json['observaciones'],

@@ -33,7 +33,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 24;
+  static const int _sharedCatalogDbVersion = 25;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -490,7 +490,6 @@ CREATE TABLE mallas (
     await db.execute('''
 CREATE TABLE IF NOT EXISTS estados (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  estado_principal TEXT NOT NULL,
   codigo TEXT NOT NULL,
   tipo_estado TEXT NOT NULL,
   categoria TEXT NOT NULL,
@@ -955,7 +954,6 @@ CREATE TABLE mallas (
         await db.execute('''
 CREATE TABLE estados (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  estado_principal TEXT NOT NULL,
   codigo TEXT NOT NULL,
   tipo_estado TEXT NOT NULL,
   categoria TEXT NOT NULL,
@@ -1019,6 +1017,27 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
         await db.execute('ALTER TABLE estados ADD COLUMN categoria_id INTEGER');
       }
     }
+
+    if (oldVersion < 25) {
+      await _resetEstadosTable(db);
+    }
+  }
+
+  Future<void> _resetEstadosTable(Database db) async {
+    await db.transaction((txn) async {
+      await txn.execute('DROP TABLE IF EXISTS estados');
+      await txn.execute('''
+CREATE TABLE estados (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  codigo TEXT NOT NULL,
+  tipo_estado TEXT NOT NULL,
+  categoria TEXT NOT NULL,
+  proceso TEXT NOT NULL,
+  proceso_id INTEGER,
+  categoria_id INTEGER
+)
+''');
+    });
   }
 
   // Método de creación de tablas

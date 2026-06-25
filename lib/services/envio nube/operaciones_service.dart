@@ -19,7 +19,19 @@ class OperacionesService {
         print('❌ Tipo de operación desconocido: $tipo');
         return false;
       }
-      return _postV2(endpoint, tipo, dataList);
+      if (dataList.isEmpty) {
+        print('⚠️ [$tipo] No hay operaciones para enviar');
+        return false;
+      }
+
+      for (var i = 0; i < dataList.length; i++) {
+        final success = await _postV2(endpoint, tipo, dataList[i], i + 1);
+        if (!success) {
+          return false;
+        }
+      }
+
+      return true;
     } catch (e) {
       print('❌ Error enviando $tipo: $e');
       return false;
@@ -29,13 +41,15 @@ class OperacionesService {
   Future<bool> _postV2(
     String endpoint,
     String tipo,
-    List<Map<String, dynamic>> dataList,
+    Map<String, dynamic> request,
+    int index,
   ) async {
     final url = Uri.parse('${ApiConfig.baseUrl}$endpoint');
-    final body = jsonEncode(dataList);
+    final body = jsonEncode(request);
 
-    print('📤 [$tipo] URL: $url');
+    print('📤 [$tipo][$index] URL: $url');
     print('📤 BODY: ${body.length} chars');
+    print('📤 BODY CONTENT: $body');
 
     final response = await http.post(
       url,
@@ -46,6 +60,6 @@ class OperacionesService {
     print('📥 STATUS: ${response.statusCode}');
     print('📥 RESPONSE: ${response.body}');
 
-    return response.statusCode == 200;
+    return response.statusCode >= 200 && response.statusCode < 300;
   }
 }

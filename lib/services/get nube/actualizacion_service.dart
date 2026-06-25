@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/screens/Dash/actualizacion_dialog.dart';
 import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual.dart';
+import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual_avance.dart';
 import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual_metraje.dart';
 import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual_produccion.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceAccesorio.dart';
@@ -61,7 +62,8 @@ class ActualizacionService {
       "Pernos": fetchPernos,
       "Mallas": fetchMallas,
       "Horometros": fetchHorometros,
-      "Plan Metraje": () => fetchPlanMetrajeTL(),
+      "Plan TL": () => fetchPlanMetrajeTL(),
+      "Plan TH": () => fetchPlanAvanceTH(),
       "Origen y Destino": () => fetchOrigenDestino(),
       "Jefes Guardia": fetchJefesGuardia,
       "Minas": fetchMinas,
@@ -503,6 +505,35 @@ class ActualizacionService {
       }
     } catch (e) {
       print("❌ Error al actualizar Plan Metraje: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchPlanAvanceTH() async {
+    final apiService = ApiServicePlanAvance();
+
+    try {
+      await fetchPeriodos();
+      final periodoVigente = await DatabaseHelper().getPeriodoVigente();
+      final periodoId = periodoVigente?.periodoId;
+
+      if (periodoId == null) {
+        throw Exception(
+          'No se pudo resolver el periodo vigente desde dim_periodo para Plan Avance.',
+        );
+      }
+
+      final planes = await apiService.fetchPlanesAvance(token, periodoId);
+
+      print("✅ Plan Avance TH guardado en SQLite:");
+
+      for (final plan in planes) {
+        print(
+          "Labor: ${plan.laborNombre} | Dia: ${plan.dia} | Valor: ${plan.valor}",
+        );
+      }
+    } catch (e) {
+      print("❌ Error al actualizar Plan Avance: $e");
       throw e;
     }
   }

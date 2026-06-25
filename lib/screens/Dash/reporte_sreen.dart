@@ -47,12 +47,14 @@ class _DashboardModuleDefinition {
     required this.title,
     required this.image,
     required this.authorizedNames,
+    this.authorizedProcessIds = const {},
   });
 
   final String legacyKey;
   final String title;
   final String image;
   final Set<String> authorizedNames;
+  final Set<int> authorizedProcessIds;
 }
 
 final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
@@ -60,6 +62,7 @@ final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
     legacyKey: 'PERFORACIÓN TALADROS LARGOS',
     title: 'PERFORACIÓN\nTALADROS LARGOS',
     image: 'assets/images/perforacion_taladros.png',
+    authorizedProcessIds: {1},
     authorizedNames: {
       normalizeAuthorizationName('PERFORACIÓN TALADROS LARGOS'),
       normalizeAuthorizationName('TALADRO LARGO'),
@@ -70,6 +73,7 @@ final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
     legacyKey: 'PERFORACIÓN HORIZONTAL',
     title: 'PERFORACIÓN\nHORIZONTAL',
     image: 'assets/images/perfo_horizontal.png',
+    authorizedProcessIds: {2},
     authorizedNames: {
       normalizeAuthorizationName('PERFORACIÓN HORIZONTAL'),
       normalizeAuthorizationName('TALADRO HORIZONTAL'),
@@ -81,15 +85,25 @@ final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
     legacyKey: 'SOSTENIMIENTO',
     title: 'SOSTENIMIENTO',
     image: 'assets/images/sostenimiento.png',
-    authorizedNames: {normalizeAuthorizationName('SOSTENIMIENTO')},
+    authorizedProcessIds: {3},
+    authorizedNames: {
+      normalizeAuthorizationName('SOSTENIMIENTO'),
+      normalizeAuthorizationName('EMPERNADOR'),
+    },
   ),
   _DashboardModuleDefinition(
     legacyKey: 'SERVICIOS AUXILIARES',
     title: 'SERVICIOS\nAUXILIARES',
     image: 'assets/images/servicio_auxiliares.png',
+    authorizedProcessIds: {7, 8, 9},
     authorizedNames: {
       normalizeAuthorizationName('SERVICIOS AUXILIARES'),
       normalizeAuthorizationName('SERVICIO AUXILIARES'),
+      normalizeAuthorizationName('ANFO CHANGER'),
+      normalizeAuthorizationName('ANFOCHARGER'),
+      normalizeAuthorizationName('SCISSOR'),
+      normalizeAuthorizationName('SCALAMISTA'),
+      normalizeAuthorizationName('SCALAMIN'),
     },
   ),
   _DashboardModuleDefinition(
@@ -105,16 +119,22 @@ final List<_DashboardModuleDefinition> _dashboardModuleDefinitions = [
     legacyKey: 'CARGUÍO',
     title: 'CARGUÍO',
     image: 'assets/images/carguio.png',
+    authorizedProcessIds: {4},
     authorizedNames: {
       normalizeAuthorizationName('CARGUÍO'),
       normalizeAuthorizationName('CARGUIO'),
+      normalizeAuthorizationName('SCOOP'),
     },
   ),
   _DashboardModuleDefinition(
     legacyKey: 'ACARREO',
     title: 'ACARREO',
     image: 'assets/images/acarreo.png',
-    authorizedNames: {normalizeAuthorizationName('ACARREO')},
+    authorizedProcessIds: {5},
+    authorizedNames: {
+      normalizeAuthorizationName('ACARREO'),
+      normalizeAuthorizationName('DUMPER'),
+    },
   ),
   _DashboardModuleDefinition(
     legacyKey: 'MEDICIONES',
@@ -145,15 +165,18 @@ Future<Map<String, bool>> loadDashboardAuthorizationState({
   }
 
   final authorizedProcesses = await repository.getAuthorizedProcesses(dni);
+  final authorizedProcessIds = authorizedProcesses
+      .map((process) => process.id)
+      .toSet();
   final normalizedProcesses = authorizedProcesses
       .map((process) => normalizeAuthorizationName(process.name))
       .toSet();
 
   return {
     for (final module in _dashboardModuleDefinitions)
-      module.legacyKey: module.authorizedNames.any(
-        normalizedProcesses.contains,
-      ),
+      module.legacyKey:
+          module.authorizedProcessIds.any(authorizedProcessIds.contains) ||
+          module.authorizedNames.any(normalizedProcesses.contains),
   };
 }
 
@@ -543,12 +566,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             builder: (context) => OperacionListScreen(
               rolUsuario: '${rol}',
               dniUsuario: '${widget.dni}',
-                config: const OperacionScreenConfig(
-                  proceso: 'PERFORACIÓN TALADROS LARGOS',
-                  procesoId: 1,
-                  dbSuffix: '',
-                  operacionNombreDb: 'TalLargo',
-                ),
+              config: const OperacionScreenConfig(
+                proceso: 'PERFORACIÓN TALADROS LARGOS',
+                procesoId: 1,
+                dbSuffix: '',
+                operacionNombreDb: 'TalLargo',
+              ),
               onShowDialogoRegistro:
                   (
                     context,

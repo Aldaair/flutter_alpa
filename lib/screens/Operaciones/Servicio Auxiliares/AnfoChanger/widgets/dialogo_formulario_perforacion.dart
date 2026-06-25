@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/PlanMetraje.dart';
 import 'package:i_miner/models/PlanProduccion.dart';
 
 class DialogoFormularioAnfochanger extends StatefulWidget {
@@ -59,7 +58,6 @@ class _DialogoFormularioAnfochangerState
   // Almacenar objetos completos para referencia
   List<PlanMensual> planesMensualCompletos = [];
   List<PlanProduccion> planesProduccionCompletos = [];
-  List<PlanMetraje> planesMetrajeCompletos = [];
 
   @override
   void initState() {
@@ -113,12 +111,6 @@ class _DialogoFormularioAnfochangerState
           laboresFiltrados.add(plan.labor!);
         }
       }
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
-        }
-      }
 
       filteredOrigenLabores = laboresFiltrados.toList()..sort();
     } else {
@@ -138,13 +130,6 @@ class _DialogoFormularioAnfochangerState
         }
       }
       for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-            plan.labor == origenLaborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
-        }
-      }
-      for (var plan in planesMetrajeCompletos) {
         if (plan.tipoLabor == origenTipoLaborSeleccionado &&
             plan.labor == origenLaborSeleccionado &&
             (plan.ala?.isNotEmpty ?? false)) {
@@ -190,21 +175,6 @@ class _DialogoFormularioAnfochangerState
           nivelesFiltrados.add(plan.nivel!);
         }
       }
-      for (var plan in planesMetrajeCompletos) {
-        bool coincideBase =
-            plan.tipoLabor == origenTipoLaborSeleccionado &&
-            plan.labor == origenLaborSeleccionado;
-
-        bool coincideAla =
-            origenAlaSeleccionado == null ||
-            origenAlaSeleccionado!.isEmpty ||
-            plan.ala == origenAlaSeleccionado;
-
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
-        }
-      }
-
       filteredOrigenNiveles = nivelesFiltrados.toList()..sort();
 
       // Auto seleccionar nivel internamente

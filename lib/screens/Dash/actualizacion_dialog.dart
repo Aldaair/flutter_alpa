@@ -19,8 +19,8 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
   final Map<String, List<String>> categorias = {
     'Planificación': [
       'Periodos',
-      'Plan Mensual',
-      'Plan Metraje',
+      'Plan TL',
+      'Plan TH',
       'Plan Producción',
       'Toneladas',
     ],

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/assigned_labor.dart';
 import 'package:i_miner/models/PlanProduccion.dart';
-import 'package:i_miner/models/PlanMetraje.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:i_miner/models/DimMina.dart';
 import 'package:i_miner/models/DimZona.dart';
@@ -148,7 +147,6 @@ class _DialogoFormularioPerforacionState
 
   // Almacenar objetos completos
   List<PlanProduccion> planesProduccionCompletos = [];
-  List<PlanMetraje> planesMetrajeCompletos = [];
   List<PlanMetrajeTL> planMetrajeTLCompletos = [];
   List<_LongHolePlanLocation> ubicacionesPlanCompletas = [];
   List<TipoPerforacion> tiposPerforacionCompletos = [];
@@ -434,15 +432,6 @@ class _DialogoFormularioPerforacionState
       }
     }
 
-    for (final plan in planesMetrajeCompletos) {
-      if (plan.tipoLabor == labor.tipoLabor &&
-          plan.labor == labor.laborNombre &&
-          plan.nivel == labor.nivel &&
-          (plan.ala?.isNotEmpty ?? false)) {
-        alas.add(plan.ala!);
-      }
-    }
-
     if (alas.length == 1) {
       return alas.first;
     }
@@ -468,7 +457,8 @@ class _DialogoFormularioPerforacionState
       print("Error cargando longitudes: $e");
     }
   }
-Future<void> _cargarTiposPerforacion() async {
+
+  Future<void> _cargarTiposPerforacion() async {
     try {
       final dbHelper = DatabaseHelper();
       tiposPerforacionCompletos = await dbHelper.getTiposPerforacionByProceso(
@@ -1637,23 +1627,6 @@ Future<void> _cargarTiposPerforacion() async {
     final locations = <_LongHolePlanLocation>[];
 
     for (final plan in planesProduccionCompletos) {
-      final location = _locationFromPlan(
-        mina: plan.mina,
-        zona: plan.zona,
-        area: plan.area,
-        fase: plan.fase,
-        estructuraMineral: plan.estructuraVeta,
-        nivel: plan.nivel,
-        tipoLabor: plan.tipoLabor,
-        labor: plan.labor,
-        ala: plan.ala,
-      );
-      if (location != null) {
-        locations.add(location);
-      }
-    }
-
-    for (final plan in planesMetrajeCompletos) {
       final location = _locationFromPlan(
         mina: plan.mina,
         zona: plan.zona,

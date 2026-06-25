@@ -13,6 +13,7 @@ class ApiConfig {
 
   static const String planProduccionEndpoint = '/PlanProduccion/';
   static const String planMetrajeTLEndpoint = '/planes/metraje-tl/';
+  static const String planAvanceTHEndpoint = '/planes/avance-th/';
   static const String periodosEndpoint = '/planes/periodos';
 
   static const String planMensualEndpoint = '/PlanMensual/';

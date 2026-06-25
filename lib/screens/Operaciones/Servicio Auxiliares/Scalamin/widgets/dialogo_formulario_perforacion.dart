@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/PlanMetraje.dart';
 import 'package:i_miner/models/PlanProduccion.dart';
 
 class DialogoFormularioRompebanco extends StatefulWidget {
@@ -56,7 +55,6 @@ class _DialogoFormularioRompebancoState
   // Almacenar objetos completos para referencia
   List<PlanMensual> planesMensualCompletos = [];
   List<PlanProduccion> planesProduccionCompletos = [];
-  List<PlanMetraje> planesMetrajeCompletos = [];
 
   @override
   void initState() {
@@ -112,13 +110,6 @@ class _DialogoFormularioRompebancoState
         }
       }
 
-      for (var plan in planesMetrajeCompletos) {
-        if (plan.tipoLabor == tipoLaborSeleccionado &&
-            (plan.labor?.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor!);
-        }
-      }
-
       filteredLabores = laboresFiltrados.toList()..sort();
     } else {
       filteredLabores = List.from(opcionesLabor);
@@ -137,14 +128,6 @@ class _DialogoFormularioRompebancoState
       }
 
       for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == tipoLaborSeleccionado &&
-            plan.labor == laborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
-        }
-      }
-
-      for (var plan in planesMetrajeCompletos) {
         if (plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado &&
             (plan.ala?.isNotEmpty ?? false)) {
@@ -178,21 +161,6 @@ class _DialogoFormularioRompebancoState
       }
 
       for (var plan in planesProduccionCompletos) {
-        bool coincideBase =
-            plan.tipoLabor == tipoLaborSeleccionado &&
-            plan.labor == laborSeleccionado;
-
-        bool coincideAla =
-            alaSeleccionado == null ||
-            alaSeleccionado!.isEmpty ||
-            plan.ala == alaSeleccionado;
-
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
-        }
-      }
-
-      for (var plan in planesMetrajeCompletos) {
         bool coincideBase =
             plan.tipoLabor == tipoLaborSeleccionado &&
             plan.labor == laborSeleccionado;
