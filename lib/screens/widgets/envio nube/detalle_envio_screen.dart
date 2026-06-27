@@ -484,7 +484,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
       itemBuilder: (context, index) {
         final item = operacionData[index];
         final isSelected = selectedItems.contains(item['id']);
-        final yaEnviado = item['envio'] == 1;
+        final yaEnviado = item['enviado'] == 1;
 
         return OperacionCard(
           operacion: item,

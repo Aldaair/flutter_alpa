@@ -1060,10 +1060,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               rolUsuario: rol,
               dniUsuario: widget.dni,
               config: OperacionScreenConfig(
-                proceso: 'SCOOP',
+                proceso: 'CARGUIO',
                 procesoId: resolvedProcesoId,
-                dbSuffix: 'Scoop',
-                operacionNombreDb: 'Scoop',
+                dbSuffix: 'Carguio',
+                operacionNombreDb: 'Carguio',
                 hasChecklistTelemando: true,
                 hasProgramaTrabajo: true,
               ),

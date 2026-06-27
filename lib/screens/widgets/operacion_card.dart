@@ -1018,6 +1018,9 @@ class _OperacionCardState extends State<OperacionCard> {
     String? tiposJsonString;
     final turnoId = _resolverTurnoId(widget.selectedTurno);
     final jefeGuardiaId = jefeGuardiaIdPorNombre[selectedJefeGuardia];
+    final equipoSnapshot = widget.config.mostrarModelo && selectedModelo != null
+        ? '$selectedEquipo $selectedModelo'
+        : selectedEquipo;
     if (widget.config.mostrarTipoEquipo) {
       Map<String, bool> tiposMap = {};
       for (var tipo in tiposEquipo) {
@@ -1033,20 +1036,20 @@ class _OperacionCardState extends State<OperacionCard> {
       'turno_id': turnoId,
       'actor_operador_id': operadorId,
       'operador_id': widget.selectedOperatorId ?? operadorId,
-      'registrador_usuario_id': registradorUsuarioId,
+      'registrador_id': registradorUsuarioId,
       'jefe_guardia_id': jefeGuardiaId,
       'fecha': widget.fechaActual,
     };
 
-    if (!widget.config.soloIds) {
-      data['turno'] = widget.selectedTurno;
-      data['equipo'] = selectedEquipo;
-      data[widget.config.claveCodigo] = selectedCodigo;
-      data['operador'] = operador ?? operadorEjemplo;
-      data['actor_dni'] = widget.dniUsuario;
-      data['registrador_nombre'] = registradorNombre;
-      data[widget.config.claveJefeGuardia] = selectedJefeGuardia;
-    }
+    data['turno'] = widget.selectedTurno;
+    data['equipo'] = equipoSnapshot;
+    data[widget.config.claveCodigo] = selectedCodigo;
+    data['operador'] = operador ?? operadorEjemplo;
+    data['actor_dni'] = widget.dniUsuario;
+    data['registrador'] = registradorNombre;
+    data['jefe_guardia'] = selectedJefeGuardia;
+    data['jefeGuardia'] = selectedJefeGuardia;
+    data[widget.config.claveJefeGuardia] = selectedJefeGuardia;
 
     if (widget.config.mostrarModelo && selectedModelo != null) {
       data['modelo'] = selectedModelo;

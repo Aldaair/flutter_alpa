@@ -84,7 +84,7 @@ class OperacionCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: _getEstadoColor(
-                        operacion['estado'],
+                        operacion['cerrado'],
                       ).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
@@ -92,17 +92,17 @@ class OperacionCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          _getEstadoIcon(operacion['estado']),
+                          _getEstadoIcon(operacion['cerrado']),
                           size: 12,
-                          color: _getEstadoColor(operacion['estado']),
+                          color: _getEstadoColor(operacion['cerrado']),
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          operacion['estado'] ?? 'activo',
+                          operacion['cerrado'] == 1 ? 'Cerrado' : 'Activo',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: _getEstadoColor(operacion['estado']),
+                            color: _getEstadoColor(operacion['cerrado']),
                           ),
                         ),
                       ],
@@ -167,9 +167,9 @@ class OperacionCard extends StatelessWidget {
               Row(
                 children: [
                   _buildInfoItem(
-                    icon: Icons.person,
-                    label: 'Operador',
-                    value: operacion['operador'] ?? '-',
+                    icon: Icons.precision_manufacturing,
+                    label: 'Equipo',
+                    value: operacion['equipo'] ?? '-',
                   ),
                   const SizedBox(width: 16),
                   _buildInfoItem(
@@ -185,15 +185,15 @@ class OperacionCard extends StatelessWidget {
               Row(
                 children: [
                   _buildInfoItem(
-                    icon: Icons.precision_manufacturing,
-                    label: 'Equipo',
-                    value: operacion['n_equipo'] ?? '-',
+                    icon: Icons.person,
+                    label: 'Operador',
+                    value: operacion['operador'] ?? '-',
                   ),
                   const SizedBox(width: 16),
                   _buildInfoItem(
-                    icon: Icons.model_training,
-                    label: 'Modelo',
-                    value: operacion['modelo_equipo'] ?? '-',
+                    icon: Icons.engineering,
+                    label: 'Registrador',
+                    value: operacion['registrador'] ?? '-',
                   ),
                 ],
               ),
@@ -213,7 +213,7 @@ class OperacionCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        operacion['seccion'] ?? 'Sin sección',
+                        operacion['labor'] ?? 'Sin labor',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade700,
@@ -278,25 +278,11 @@ class OperacionCard extends StatelessWidget {
     );
   }
 
-  Color _getEstadoColor(String? estado) {
-    switch (estado?.toLowerCase()) {
-      case 'activo':
-        return Colors.green;
-      case 'cerrado':
-        return Colors.grey;
-      default:
-        return Colors.blue;
-    }
+  Color _getEstadoColor(int? cerrado) {
+    return cerrado == 1 ? Colors.grey : Colors.green;
   }
 
-  IconData _getEstadoIcon(String? estado) {
-    switch (estado?.toLowerCase()) {
-      case 'activo':
-        return Icons.play_circle_outline;
-      case 'cerrado':
-        return Icons.lock_outline;
-      default:
-        return Icons.help_outline;
-    }
+  IconData _getEstadoIcon(int? cerrado) {
+    return cerrado == 1 ? Icons.lock_outline : Icons.play_circle_outline;
   }
 }

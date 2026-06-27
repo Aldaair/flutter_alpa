@@ -38,7 +38,7 @@ class DatabaseHelper {
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
-  static const int _currentDbVersion = 29;
+  static const int _currentDbVersion = 30;
 
   DatabaseHelper._internal() {
     // Inicialización única para evitar múltiples llamadas
@@ -114,10 +114,7 @@ class DatabaseHelper {
         onConfigure: (db) async {
           await db.execute('PRAGMA foreign_keys = ON');
         },
-        onOpen: (db) async {
-          await _ensureOperationHeaderColumns(db);
-          await _backfillOperationHeaderMetadata(db);
-        },
+        onOpen: (db) async {},
       );
     } catch (e) {
       print('Error al inicializar la base de datos: $e');
@@ -1104,319 +1101,7 @@ CREATE TABLE origen_destino(
 )
 ''');
 
-    // perforacion taladro largo
-    await db.execute('''
-CREATE TABLE Operacion_tal_largo (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT,
-  turno TEXT,
-  turno_id INTEGER,
-  frente_origen TEXT,
-  seccion TEXT,
-  operador TEXT,
-  registrador_usuario_id INTEGER,
-  registrador_nombre TEXT,
-  jefe_guardia TEXT,
-  equipo TEXT,
-  n_equipo TEXT,
-  modelo_equipo TEXT,
-  labor_id INTEGER,
-  labor TEXT,
-  registros TEXT,
-  horometros TEXT,
-  condiciones_equipo TEXT,
-  check_list TEXT,
-  control_llantas TEXT,
-  estado TEXT DEFAULT 'activo',
-  envio INTEGER DEFAULT 0,
-  actor_dni TEXT,
-  actor_operador_id INTEGER,
-  operador_id INTEGER,
-  equipo_id INTEGER,
-  zona_id INTEGER,
-  jefe_guardia_id INTEGER,
-  identity_version INTEGER,
-  syncable INTEGER DEFAULT 0
-)
-''');
-
-    await db.execute('''
-CREATE TABLE Operacion_tal_horizontal (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT,
-  turno TEXT,
-  turno_id INTEGER,
-  frente_origen TEXT,
-  seccion TEXT,
-  operador TEXT,
-  registrador_usuario_id INTEGER,
-  registrador_nombre TEXT,
-  jefe_guardia TEXT,
-  equipo TEXT,
-  n_equipo TEXT,
-  modelo_equipo TEXT,
-  labor_id INTEGER,
-  labor TEXT,
-  registros TEXT,
-  horometros TEXT,
-  condiciones_equipo TEXT,
-  check_list TEXT,
-  control_llantas TEXT,
-  estado TEXT DEFAULT 'activo',
-  envio INTEGER DEFAULT 0,
-  actor_dni TEXT,
-  actor_operador_id INTEGER,
-  operador_id INTEGER,
-  equipo_id INTEGER,
-  zona_id INTEGER,
-  jefe_guardia_id INTEGER,
-  identity_version INTEGER,
-  syncable INTEGER DEFAULT 0
-)
-''');
-
-    await db.execute('''
-CREATE TABLE Operacion_empernador (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT,
-  turno TEXT,
-  turno_id INTEGER,
-  frente_origen TEXT,
-  seccion TEXT,
-  operador TEXT,
-  registrador_usuario_id INTEGER,
-  registrador_nombre TEXT,
-  jefe_guardia TEXT,
-  equipo TEXT,
-  n_equipo TEXT,
-  tipo_equipo TEXT,
-  labor_id INTEGER,
-  labor TEXT,
-  registros TEXT,
-  horometros TEXT,
-  condiciones_equipo TEXT,
-  check_list TEXT,
-  control_llantas TEXT,
-  estado TEXT DEFAULT 'activo',
-  envio INTEGER DEFAULT 0,
-  actor_dni TEXT,
-  actor_operador_id INTEGER,
-  operador_id INTEGER,
-  equipo_id INTEGER,
-  zona_id INTEGER,
-  jefe_guardia_id INTEGER,
-  identity_version INTEGER,
-  syncable INTEGER DEFAULT 0
-)
-''');
-
-    await db.execute('''
-CREATE TABLE Operacion_carguio (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT,
-  turno TEXT,
-  turno_id INTEGER,
-  frente_origen TEXT,
-  seccion TEXT,
-  operador TEXT,
-  registrador_usuario_id INTEGER,
-  registrador_nombre TEXT,
-  jefe_guardia TEXT,
-  equipo TEXT,
-  n_equipo TEXT,
-  capacidad TEXT,
-  tipo_equipo TEXT,
-  labor_id INTEGER,
-  labor TEXT,
-  registros TEXT,
-  horometros TEXT,
-  condiciones_equipo TEXT,
-  programa_trabajo TEXT,
-  check_list TEXT,
-  check_list_telemando TEXT,
-  control_llantas TEXT,
-  estado TEXT DEFAULT 'activo',
-  envio INTEGER DEFAULT 0,
-  actor_dni TEXT,
-  actor_operador_id INTEGER,
-  operador_id INTEGER,
-  equipo_id INTEGER,
-  zona_id INTEGER,
-  jefe_guardia_id INTEGER,
-  identity_version INTEGER,
-  syncable INTEGER DEFAULT 0
-)
-''');
-
-    await db.execute('''
-CREATE TABLE Operacion_Dumper (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT,
-  turno TEXT,
-  turno_id INTEGER,
-  frente_origen TEXT,
-  seccion TEXT,
-  operador TEXT,
-  registrador_usuario_id INTEGER,
-  registrador_nombre TEXT,
-  jefe_guardia TEXT,
-  equipo TEXT,
-  n_equipo TEXT,
-  capacidad TEXT,
-  tipo_equipo TEXT,
-  labor_id INTEGER,
-  labor TEXT,
-  registros TEXT,
-  horometros TEXT,
-  condiciones_equipo TEXT,
-  programa_trabajo TEXT,
-  check_list TEXT,
-  check_list_telemando TEXT,
-  control_llantas TEXT,
-  estado TEXT DEFAULT 'activo',
-  envio INTEGER DEFAULT 0,
-  actor_dni TEXT,
-  actor_operador_id INTEGER,
-  operador_id INTEGER,
-  equipo_id INTEGER,
-  zona_id INTEGER,
-  jefe_guardia_id INTEGER,
-  identity_version INTEGER,
-  syncable INTEGER DEFAULT 0
-)
-''');
-
-    await db.execute('''
-CREATE TABLE Operacion_rompebanco(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT,
-  turno TEXT,
-  turno_id INTEGER,
-  frente_origen TEXT,
-  operador TEXT,
-  registrador_usuario_id INTEGER,
-  registrador_nombre TEXT,
-  jefe_guardia TEXT,
-  equipo TEXT,
-  n_equipo TEXT,
-  labor_id INTEGER,
-  labor TEXT,
-  registros TEXT,
-  horometros TEXT,
-  condiciones_equipo TEXT,
-  check_list TEXT,
-  control_llantas TEXT,
-  estado TEXT DEFAULT 'activo',
-  envio INTEGER DEFAULT 0,
-  actor_dni TEXT,
-  actor_operador_id INTEGER,
-  operador_id INTEGER,
-  equipo_id INTEGER,
-  zona_id INTEGER,
-  jefe_guardia_id INTEGER,
-  identity_version INTEGER,
-  syncable INTEGER DEFAULT 0
-)
-''');
-
-    await db.execute('''
-CREATE TABLE Operacion_Scalamin(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT,
-  turno TEXT,
-  turno_id INTEGER,
-  frente_origen TEXT,
-  operador TEXT,
-  registrador_usuario_id INTEGER,
-  registrador_nombre TEXT,
-  jefe_guardia TEXT,
-  equipo TEXT,
-  n_equipo TEXT,
-  labor_id INTEGER,
-  labor TEXT,
-  registros TEXT,
-  horometros TEXT,
-  condiciones_equipo TEXT,
-  check_list TEXT,
-  control_llantas TEXT,
-  estado TEXT DEFAULT 'activo',
-  envio INTEGER DEFAULT 0,
-  actor_dni TEXT,
-  actor_operador_id INTEGER,
-  operador_id INTEGER,
-  equipo_id INTEGER,
-  zona_id INTEGER,
-  jefe_guardia_id INTEGER,
-  identity_version INTEGER,
-  syncable INTEGER DEFAULT 0
-)
-''');
-
-    await db.execute('''
-CREATE TABLE Operacion_scissor(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT,
-  turno TEXT,
-  turno_id INTEGER,
-  frente_origen TEXT,
-  operador TEXT,
-  registrador_usuario_id INTEGER,
-  registrador_nombre TEXT,
-  jefe_guardia TEXT,
-  equipo TEXT,
-  n_equipo TEXT,
-  labor_id INTEGER,
-  labor TEXT,
-  registros TEXT,
-  horometros TEXT,
-  condiciones_equipo TEXT,
-  check_list TEXT,
-  control_llantas TEXT,
-  estado TEXT DEFAULT 'activo',
-  envio INTEGER DEFAULT 0,
-  actor_dni TEXT,
-  actor_operador_id INTEGER,
-  operador_id INTEGER,
-  equipo_id INTEGER,
-  zona_id INTEGER,
-  jefe_guardia_id INTEGER,
-  identity_version INTEGER,
-  syncable INTEGER DEFAULT 0
-)
-''');
-
-    await db.execute('''
-CREATE TABLE Operacion_anfochanger(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  fecha TEXT,
-  turno TEXT,
-  turno_id INTEGER,
-  frente_origen TEXT,
-  operador TEXT,
-  registrador_usuario_id INTEGER,
-  registrador_nombre TEXT,
-  jefe_guardia TEXT,
-  equipo TEXT,
-  n_equipo TEXT,
-  labor_id INTEGER,
-  labor TEXT,
-  registros TEXT,
-  horometros TEXT,
-  condiciones_equipo TEXT,
-  check_list TEXT,
-  control_llantas TEXT,
-  estado TEXT DEFAULT 'activo',
-  envio INTEGER DEFAULT 0,
-  actor_dni TEXT,
-  actor_operador_id INTEGER,
-  operador_id INTEGER,
-  equipo_id INTEGER,
-  zona_id INTEGER,
-  jefe_guardia_id INTEGER,
-  identity_version INTEGER,
-  syncable INTEGER DEFAULT 0
-)
-''');
+    await _createOperationTables(db);
 
     //EXPLOSIVOS A MEJORAR------------------------------------------
     await db.execute('''
@@ -2262,10 +1947,6 @@ CREATE TABLE UsuarioEquipo (
       await db.execute('DROP TABLE IF EXISTS TipoPerforacion');
     }
 
-    if (oldVersion < 26) {
-      await _ensureOperationHeaderColumns(db);
-    }
-
     if (oldVersion < 27) {
       await db.execute('DROP TABLE IF EXISTS UsuarioProceso');
     }
@@ -2316,6 +1997,10 @@ CREATE TABLE UsuarioEquipo (
         await db.execute('DROP TABLE IF EXISTS $tbl');
       }
     }
+
+    if (oldVersion < 30) {
+      await _recreateOperationTables(db);
+    }
   }
 
   static const List<String> _operationTables = [
@@ -2330,115 +2015,58 @@ CREATE TABLE UsuarioEquipo (
     'Operacion_anfochanger',
   ];
 
-  static const Map<String, String> _operationHeaderColumns = {
-    'actor_dni': 'TEXT',
-    'actor_operador_id': 'INTEGER',
-    'operador_id': 'INTEGER',
-    'equipo_id': 'INTEGER',
-    'zona_id': 'INTEGER',
-    'jefe_guardia_id': 'INTEGER',
-    'identity_version': 'INTEGER',
-    'syncable': 'INTEGER DEFAULT 0',
-    'turno_id': 'INTEGER',
-    'frente_origen': 'TEXT',
-    'registrador_usuario_id': 'INTEGER',
-    'registrador_nombre': 'TEXT',
-    'labor_id': 'INTEGER',
-    'labor': 'TEXT',
+  static const Set<String> _operationTablesWithDispatchExtras = {
+    'Operacion_carguio',
+    'Operacion_Dumper',
   };
 
-  Future<void> _ensureOperationHeaderColumns(Database db) async {
-    for (final tbl in _operationTables) {
-      if (!await _tablaExiste(db, tbl)) {
-        continue;
-      }
-
-      for (final entry in _operationHeaderColumns.entries) {
-        if (!await _columnaExiste(db, tbl, entry.key)) {
-          await db.execute(
-            'ALTER TABLE $tbl ADD COLUMN ${entry.key} ${entry.value}',
-          );
-        }
-      }
+  Future<void> _createOperationTables(Database db) async {
+    for (final tableName in _operationTables) {
+      await db.execute(_buildOperationTableSql(tableName));
     }
   }
 
-  Future<void> _backfillOperationHeaderMetadata(Database db) async {
-    for (final tbl in _operationTables) {
-      if (!await _tablaExiste(db, tbl)) {
-        continue;
-      }
-
-      final rows = await db.query(
-        tbl,
-        columns: ['id', 'registros', 'frente_origen', 'labor_id', 'labor'],
-        where: 'frente_origen IS NULL OR labor_id IS NULL OR labor IS NULL',
-      );
-
-      for (final row in rows) {
-        final registrosJson = row['registros'] as String?;
-        if (registrosJson == null || registrosJson.isEmpty) {
-          continue;
-        }
-
-        try {
-          final decoded = jsonDecode(registrosJson);
-          if (decoded is! List) {
-            continue;
-          }
-
-          String? frenteOrigen;
-          int? laborId;
-          String? labor;
-
-          for (final item in decoded) {
-            if (item is! Map) continue;
-            final operacion = item['operacion'];
-            if (operacion is! Map) continue;
-
-            frenteOrigen ??= operacion['frente_origen']?.toString();
-            labor ??= operacion['labor']?.toString();
-
-            final rawLaborId = operacion['labor_id'];
-            if (laborId == null) {
-              if (rawLaborId is int) {
-                laborId = rawLaborId;
-              } else if (rawLaborId != null) {
-                laborId = int.tryParse(rawLaborId.toString());
-              }
-            }
-
-            if (frenteOrigen != null && laborId != null && labor != null) {
-              break;
-            }
-          }
-
-          final updateData = <String, dynamic>{};
-          if ((row['frente_origen'] == null) &&
-              frenteOrigen != null &&
-              frenteOrigen.isNotEmpty) {
-            updateData['frente_origen'] = frenteOrigen;
-          }
-          if (row['labor_id'] == null && laborId != null) {
-            updateData['labor_id'] = laborId;
-          }
-          if ((row['labor'] == null) && labor != null && labor.isNotEmpty) {
-            updateData['labor'] = labor;
-          }
-
-          if (updateData.isNotEmpty) {
-            await db.update(
-              tbl,
-              updateData,
-              where: 'id = ?',
-              whereArgs: [row['id']],
-            );
-          }
-        } catch (_) {
-          // Si un registro legacy tiene JSON inválido, lo dejamos intacto.
-        }
-      }
+  Future<void> _recreateOperationTables(Database db) async {
+    for (final tableName in _operationTables) {
+      await db.execute('DROP TABLE IF EXISTS $tableName');
     }
+    await _createOperationTables(db);
+  }
+
+  String _buildOperationTableSql(String tableName) {
+    final dispatchExtras =
+        _operationTablesWithDispatchExtras.contains(tableName)
+        ? ',\n  programa_trabajo TEXT,\n  check_list_telemando TEXT'
+        : '';
+
+    return '''
+CREATE TABLE $tableName (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  fecha TEXT,
+  turno TEXT,
+  turno_id INTEGER,
+  operador TEXT,
+  operador_id INTEGER,
+  registrador TEXT,
+  registrador_id INTEGER,
+  jefe_guardia TEXT,
+  jefe_guardia_id INTEGER,
+  equipo TEXT,
+  equipo_id INTEGER,
+  registros TEXT,
+  horometros TEXT,
+  condiciones_equipo TEXT,
+  check_list TEXT,
+  control_llantas TEXT,
+  cerrado INTEGER DEFAULT 0,
+  enviado INTEGER DEFAULT 0,
+  labor TEXT,
+  labor_id INTEGER,
+  frente_origen TEXT,
+  ala TEXT,
+  ala_id INTEGER$dispatchExtras
+)
+''';
   }
 
   Future<bool> _tablaExiste(Database db, String tableName) async {
@@ -2458,21 +2086,37 @@ CREATE TABLE UsuarioEquipo (
     Map<String, dynamic> insertData, {
     int? turnoId,
     String? frenteOrigen,
+    int? registradorId,
     int? registradorUsuarioId,
+    String? registrador,
     String? registradorNombre,
     int? laborId,
     String? labor,
+    String? ala,
+    int? alaId,
   }) {
+    final resolvedRegistradorId = registradorId ?? registradorUsuarioId;
+    final resolvedRegistrador = registrador ?? registradorNombre;
+
     if (turnoId != null) insertData['turno_id'] = turnoId;
     if (frenteOrigen != null && frenteOrigen.trim().isNotEmpty) {
       insertData['frente_origen'] = frenteOrigen.trim();
     }
-    if (registradorUsuarioId != null) {
-      insertData['registrador_usuario_id'] = registradorUsuarioId;
+    if (resolvedRegistradorId != null) {
+      insertData['registrador_id'] = resolvedRegistradorId;
     }
     if (laborId != null) insertData['labor_id'] = laborId;
     if (labor != null && labor.trim().isNotEmpty) {
       insertData['labor'] = labor.trim();
+    }
+    if (resolvedRegistrador != null && resolvedRegistrador.trim().isNotEmpty) {
+      insertData['registrador'] = resolvedRegistrador.trim();
+    }
+    if (ala != null && ala.trim().isNotEmpty) {
+      insertData['ala'] = ala.trim();
+    }
+    if (alaId != null) {
+      insertData['ala_id'] = alaId;
     }
   }
 
@@ -2489,11 +2133,11 @@ CREATE TABLE UsuarioEquipo (
     late final List<dynamic> whereArgs;
     if (onlyActive) {
       where = operadorId != null
-          ? 'turno_id = ? AND fecha = ? AND operador_id = ? AND estado IN (?, ?)'
-          : 'turno_id = ? AND fecha = ? AND estado IN (?, ?)';
+          ? 'turno_id = ? AND fecha = ? AND operador_id = ? AND cerrado = ?'
+          : 'turno_id = ? AND fecha = ? AND cerrado = ?';
       whereArgs = operadorId != null
-          ? [turnoId, fecha, operadorId, 'activo', 'parciales']
-          : [turnoId, fecha, 'activo', 'parciales'];
+          ? [turnoId, fecha, operadorId, 0]
+          : [turnoId, fecha, 0];
     } else {
       where = operadorId != null
           ? 'turno_id = ? AND fecha = ? AND operador_id = ?'
@@ -2504,138 +2148,26 @@ CREATE TABLE UsuarioEquipo (
     }
 
     final rows = await db.query(tableName, where: where, whereArgs: whereArgs);
-    return _hydrateOperationHeaderRows(rows);
+    return _normalizeOperationRows(rows);
   }
 
-  Future<List<Map<String, dynamic>>> _hydrateOperationHeaderRows(
+  List<Map<String, dynamic>> _normalizeOperationRows(
     List<Map<String, dynamic>> rows,
-  ) async {
+  ) {
     if (rows.isEmpty) return rows;
 
-    final sharedDb = await sharedCatalogDatabase;
-    final turnoIds = <int>{};
-    final equipoIds = <int>{};
-    final operadorIds = <int>{};
-    final jefeGuardiaIds = <int>{};
-    final registradorIds = <int>{};
-
-    for (final row in rows) {
-      _collectIntId(turnoIds, row['turno_id']);
-      _collectIntId(equipoIds, row['equipo_id']);
-      _collectIntId(operadorIds, row['operador_id']);
-      _collectIntId(jefeGuardiaIds, row['jefe_guardia_id']);
-      _collectIntId(registradorIds, row['registrador_usuario_id']);
-    }
-
-    final turnos = await _loadLookupRowsByIds(
-      sharedDb,
-      'dim_turno',
-      'turno_id',
-      turnoIds,
-    );
-    final equipos = await _loadLookupRowsByIds(
-      sharedDb,
-      'Equipo',
-      'id',
-      equipoIds,
-    );
-    final usuarios = await _loadLookupRowsByIds(
-      sharedDb,
-      'usuario_directorio',
-      'id',
-      {...operadorIds, ...registradorIds},
-    );
-    final jefesGuardia = await _loadLookupRowsByIds(
-      sharedDb,
-      'jefe_guardias',
-      'id',
-      jefeGuardiaIds,
-    );
-
     return rows.map((row) {
-      final hydrated = Map<String, dynamic>.from(row);
+      final normalized = Map<String, dynamic>.from(row);
+      final cerrado = _asInt(row['cerrado']) ?? 0;
+      final enviado = _asInt(row['enviado']) ?? 0;
 
-      final turno = turnos[_asInt(row['turno_id'])];
-      if (turno != null) {
-        hydrated['turno'] = turno['nombre'] ?? hydrated['turno'];
-      }
-
-      final equipo = equipos[_asInt(row['equipo_id'])];
-      if (equipo != null) {
-        hydrated['equipo'] = equipo['nombre'] ?? hydrated['equipo'];
-
-        final codigo = equipo['codigo'];
-        if (codigo != null && codigo.toString().trim().isNotEmpty) {
-          hydrated['n_equipo'] = codigo;
-          hydrated['codigo'] = codigo;
-        }
-
-        final modelo = equipo['modelo'];
-        if (modelo != null && modelo.toString().trim().isNotEmpty) {
-          hydrated['modelo_equipo'] = modelo;
-          hydrated['modelo'] = modelo;
-        }
-
-        final capacidad = _formatCapacityValue(equipo['capacidadYd3']);
-        if (capacidad != null) {
-          hydrated['capacidad'] = capacidad;
-        }
-      }
-
-      final operador = usuarios[_asInt(row['operador_id'])];
-      final operadorNombre = _buildFullName(operador);
-      if (operadorNombre != null) {
-        hydrated['operador'] = operadorNombre;
-      }
-
-      final registrador = usuarios[_asInt(row['registrador_usuario_id'])];
-      final registradorNombre = _buildFullName(registrador);
-      if (registradorNombre != null) {
-        hydrated['registrador_nombre'] = registradorNombre;
-      }
-
-      final jefeGuardia = jefesGuardia[_asInt(row['jefe_guardia_id'])];
-      final jefeGuardiaNombre = _buildFullName(jefeGuardia);
-      if (jefeGuardiaNombre != null) {
-        hydrated['jefe_guardia'] = jefeGuardiaNombre;
-        hydrated['jefeGuardia'] = jefeGuardiaNombre;
-      }
-
-      return hydrated;
+      normalized['estado'] = cerrado == 1 ? 'cerrado' : 'activo';
+      normalized['envio'] = enviado;
+      normalized['registrador_usuario_id'] = row['registrador_id'];
+      normalized['registrador_nombre'] = row['registrador'];
+      normalized['jefeGuardia'] = row['jefe_guardia'];
+      return normalized;
     }).toList();
-  }
-
-  Future<Map<int, Map<String, dynamic>>> _loadLookupRowsByIds(
-    Database db,
-    String tableName,
-    String idColumn,
-    Set<int> ids,
-  ) async {
-    if (ids.isEmpty) return const <int, Map<String, dynamic>>{};
-
-    final whereArgs = ids.toList(growable: false);
-    final placeholders = List.filled(whereArgs.length, '?').join(', ');
-    final rows = await db.query(
-      tableName,
-      where: '$idColumn IN ($placeholders)',
-      whereArgs: whereArgs,
-    );
-
-    final result = <int, Map<String, dynamic>>{};
-    for (final row in rows) {
-      final id = _asInt(row[idColumn]);
-      if (id != null) {
-        result[id] = Map<String, dynamic>.from(row);
-      }
-    }
-    return result;
-  }
-
-  void _collectIntId(Set<int> target, dynamic value) {
-    final id = _asInt(value);
-    if (id != null) {
-      target.add(id);
-    }
   }
 
   int? _asInt(dynamic value) {
@@ -2644,22 +2176,78 @@ CREATE TABLE UsuarioEquipo (
     return int.tryParse(value?.toString() ?? '');
   }
 
-  String? _buildFullName(Map<String, dynamic>? row) {
-    if (row == null) return null;
-    final nombre = '${row['nombres'] ?? ''} ${row['apellidos'] ?? ''}'.trim();
-    return nombre.isEmpty ? null : nombre;
+  Future<int?> _resolveAlaId(dynamic rawAlaId, dynamic rawAla) async {
+    final alaId = _asInt(rawAlaId);
+    if (alaId != null) return alaId;
+
+    final ala = rawAla?.toString().trim() ?? '';
+    if (ala.isEmpty) return null;
+
+    final db = await sharedCatalogDatabase;
+    final rows = await db.query(
+      'ala',
+      columns: ['ala_id'],
+      where: 'LOWER(nombre) = ?',
+      whereArgs: [ala.toLowerCase()],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return _asInt(rows.first['ala_id']);
   }
 
-  String? _formatCapacityValue(dynamic rawCapacity) {
-    if (rawCapacity == null) return null;
-    final value = rawCapacity is num
-        ? rawCapacity.toDouble()
-        : double.tryParse(rawCapacity.toString());
-    if (value == null) return null;
-    if (value == value.floorToDouble()) {
-      return value.toInt().toString();
+  Future<Map<String, dynamic>> _buildOperationHeaderUpdateData(
+    Map<String, dynamic>? operacionData,
+  ) async {
+    if (operacionData == null || operacionData.isEmpty) {
+      return <String, dynamic>{};
     }
-    return value.toStringAsFixed(2);
+
+    final updateData = <String, dynamic>{};
+    final laborId = _asInt(operacionData['labor_id']);
+    if (laborId != null) {
+      updateData['labor_id'] = laborId;
+    }
+
+    final frenteOrigen =
+        operacionData['frente_origen']?.toString().trim() ?? '';
+    if (frenteOrigen.isNotEmpty) {
+      updateData['frente_origen'] = frenteOrigen;
+    }
+
+    final labor = operacionData['labor']?.toString().trim() ?? '';
+    if (labor.isNotEmpty) {
+      updateData['labor'] = labor;
+    }
+
+    final ala = operacionData['ala']?.toString().trim() ?? '';
+    if (ala.isNotEmpty) {
+      updateData['ala'] = ala;
+    }
+
+    final alaId = await _resolveAlaId(
+      operacionData['ala_id'],
+      operacionData['ala'],
+    );
+    if (alaId != null) {
+      updateData['ala_id'] = alaId;
+    }
+
+    return updateData;
+  }
+
+  Future<List<Map<String, dynamic>>> _getNormalizedOperationRows(
+    String tableName, {
+    String? where,
+    List<dynamic>? whereArgs,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      tableName,
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: 'id DESC',
+    );
+    return _normalizeOperationRows(rows);
   }
 
   static const _sharedTables = {
@@ -3130,6 +2718,11 @@ CREATE TABLE UsuarioEquipo (
   //OPERACION TALADRO LARGO  INICIO --------------------------------------------------------------------------------------------------------------
   Future<int> insertOperacionTalLargo(
     String fecha, {
+    String? turno,
+    String? operador,
+    String? jefeGuardia,
+    String? equipo,
+    String? registradorNombre,
     List<Map<String, dynamic>>? checkListJson,
     List<Map<String, dynamic>>? horometrosBase,
     int? actorOperadorId,
@@ -3184,25 +2777,23 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
+      'turno': turno,
+      'operador': operador,
+      'jefe_guardia': jefeGuardia,
+      'equipo': equipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorOperadorId != null) {
-      insertData['actor_operador_id'] = actorOperadorId;
-    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
     if (equipoId != null) insertData['equipo_id'] = equipoId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null) {
-      insertData['identity_version'] = identityVersion;
-    }
-    if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
       turnoId: turnoId,
       registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
       laborId: laborId,
       labor: labor,
     );
@@ -3256,9 +2847,8 @@ CREATE TABLE UsuarioEquipo (
     final result = await db.query(
       tableName,
       columns: ['id'],
-      where:
-          'turno_id = ? AND fecha = ? AND operador_id = ? AND estado IN (?, ?)',
-      whereArgs: [turnoId, fecha, operadorId, 'activo', 'parciales'],
+      where: 'turno_id = ? AND fecha = ? AND operador_id = ? AND cerrado = ?',
+      whereArgs: [turnoId, fecha, operadorId, 0],
       limit: 1,
     );
     return result.isNotEmpty;
@@ -3359,9 +2949,15 @@ CREATE TABLE UsuarioEquipo (
     };
 
     registros.add(nuevoEstado);
+    final updateData = <String, dynamic>{'registros': jsonEncode(registros)};
+    updateData.addAll(
+      await _buildOperationHeaderUpdateData(
+        operacion == null ? null : Map<String, dynamic>.from(operacion),
+      ),
+    );
     await db.update(
       tableName,
-      {'registros': jsonEncode(registros)},
+      updateData,
       where: 'id = ?',
       whereArgs: [operacionId],
     );
@@ -3423,9 +3019,18 @@ CREATE TABLE UsuarioEquipo (
       return false;
     }
 
+    final updateData = <String, dynamic>{'registros': jsonEncode(registros)};
+    if (operacion != null) {
+      updateData.addAll(
+        await _buildOperationHeaderUpdateData(
+          Map<String, dynamic>.from(operacion),
+        ),
+      );
+    }
+
     int updated = await db.update(
       tableName,
-      {'registros': jsonEncode(registros)},
+      updateData,
       where: 'id = ?',
       whereArgs: [operacionId],
     );
@@ -3917,17 +3522,7 @@ CREATE TABLE UsuarioEquipo (
       }
 
       final updateData = <String, dynamic>{'registros': jsonEncode(registros)};
-      if (operacionData['labor_id'] != null) {
-        updateData['labor_id'] = operacionData['labor_id'];
-      }
-      final frenteOrigen = operacionData['frente_origen']?.toString();
-      if (frenteOrigen != null && frenteOrigen.isNotEmpty) {
-        updateData['frente_origen'] = frenteOrigen;
-      }
-      final labor = operacionData['labor']?.toString();
-      if (labor != null && labor.isNotEmpty) {
-        updateData['labor'] = labor;
-      }
+      updateData.addAll(await _buildOperationHeaderUpdateData(operacionData));
 
       int updated = await db.update(
         tableName,
@@ -3952,7 +3547,7 @@ CREATE TABLE UsuarioEquipo (
 
     await db.update(
       tableName,
-      {'estado': 'cerrado'},
+      {'cerrado': 1},
       where: 'id = ?',
       whereArgs: [operacionId],
     );
@@ -4105,24 +3700,18 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'seccion': seccion,
+      'turno': turno,
+      'operador': operador,
+      'jefe_guardia': jefeGuardia,
+      'equipo': equipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorOperadorId != null) {
-      insertData['actor_operador_id'] = actorOperadorId;
-    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
-
     if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null) {
-      insertData['identity_version'] = identityVersion;
-    }
-    if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
       turnoId: turnoId,
@@ -4585,25 +4174,18 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'seccion': seccion,
-      'tipo_equipo': tipoEquipo,
+      'turno': turno,
+      'operador': operador,
+      'jefe_guardia': jefeGuardia,
+      'equipo': equipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorOperadorId != null) {
-      insertData['actor_operador_id'] = actorOperadorId;
-    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
-
     if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null) {
-      insertData['identity_version'] = identityVersion;
-    }
-    if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
       turnoId: turnoId,
@@ -5070,8 +4652,10 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'seccion': seccion,
-      'tipo_equipo': tipoEquipo,
+      'turno': turno,
+      'operador': operador,
+      'jefe_guardia': jefeGuardia,
+      'equipo': equipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'programa_trabajo': jsonEncode(programaTrabajoJson),
@@ -5079,18 +4663,9 @@ CREATE TABLE UsuarioEquipo (
       'check_list_telemando': checkListTelemandoStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorOperadorId != null) {
-      insertData['actor_operador_id'] = actorOperadorId;
-    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
-
     if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null) {
-      insertData['identity_version'] = identityVersion;
-    }
-    if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
       turnoId: turnoId,
@@ -5650,8 +5225,10 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
-      'seccion': seccion,
-      'tipo_equipo': tipoEquipo,
+      'turno': turno,
+      'operador': operador,
+      'jefe_guardia': jefeGuardia,
+      'equipo': equipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'programa_trabajo': jsonEncode(programaTrabajoJson),
@@ -5659,18 +5236,9 @@ CREATE TABLE UsuarioEquipo (
       'check_list_telemando': checkListTelemandoStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
-    if (actorOperadorId != null) {
-      insertData['actor_operador_id'] = actorOperadorId;
-    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
-
     if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null) {
-      insertData['identity_version'] = identityVersion;
-    }
-    if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
       turnoId: turnoId,
@@ -6247,25 +5815,18 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
+      'turno': turno,
+      'operador': operador,
+      'jefe_guardia': jefeGuardia,
+      'equipo': equipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
-      'estado': 'activo',
-      'envio': 0,
     };
-    if (actorOperadorId != null) {
-      insertData['actor_operador_id'] = actorOperadorId;
-    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
-
     if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null) {
-      insertData['identity_version'] = identityVersion;
-    }
-    if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
       turnoId: turnoId,
@@ -6724,25 +6285,18 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
+      'turno': turno,
+      'operador': operador,
+      'jefe_guardia': jefeGuardia,
+      'equipo': equipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
-      'estado': 'activo',
-      'envio': 0,
     };
-    if (actorOperadorId != null) {
-      insertData['actor_operador_id'] = actorOperadorId;
-    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
-
     if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null) {
-      insertData['identity_version'] = identityVersion;
-    }
-    if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
       turnoId: turnoId,
@@ -7194,25 +6748,18 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
+      'turno': turno,
+      'operador': operador,
+      'jefe_guardia': jefeGuardia,
+      'equipo': equipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
-      'estado': 'activo',
-      'envio': 0,
     };
-    if (actorOperadorId != null) {
-      insertData['actor_operador_id'] = actorOperadorId;
-    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
-
     if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null) {
-      insertData['identity_version'] = identityVersion;
-    }
-    if (syncable != null) insertData['syncable'] = syncable;
     _appendHybridOperationMetadata(
       insertData,
       turnoId: turnoId,
@@ -7674,24 +7221,18 @@ CREATE TABLE UsuarioEquipo (
 
     final insertData = <String, dynamic>{
       'fecha': fecha,
+      'turno': turno,
+      'operador': operador,
+      'jefe_guardia': jefeGuardia,
+      'equipo': equipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
-      'estado': 'activo',
-      'envio': 0,
     };
-    if (actorOperadorId != null) {
-      insertData['actor_operador_id'] = actorOperadorId;
-    }
     if (operadorId != null) insertData['operador_id'] = operadorId;
     if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (zonaId != null) insertData['zona_id'] = zonaId;
     if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    if (identityVersion != null) {
-      insertData['identity_version'] = identityVersion;
-    }
-    if (syncable != null) insertData['syncable'] = syncable;
 
     _appendHybridOperationMetadata(
       insertData,
@@ -8096,18 +7637,11 @@ CREATE TABLE UsuarioEquipo (
   //TAL-LARGO
   Future<int> actualizarEnvio(int id) async {
     final db = await database;
-
-    // Mapa de los datos que quieres actualizar
-    Map<String, dynamic> data = {
-      'envio': 1, // Actualiza el campo envio a 1
-    };
-
-    // Llamada a la función update
     return await db.update(
-      'Operacion_tal_largo', // El nombre de la tabla
-      data, // Los datos a actualizar
-      where: 'id = ?', // Condición para seleccionar la fila
-      whereArgs: [id], // El valor de id para seleccionar la fila específica
+      'Operacion_tal_largo',
+      {'enviado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
@@ -8122,349 +7656,211 @@ CREATE TABLE UsuarioEquipo (
   }
 
   Future<List<Map<String, dynamic>>> getOperacionesTaladroLargo() async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
-      'Operacion_tal_largo',
-      orderBy: 'id DESC',
-    );
-
-    return result;
+    return _getNormalizedOperationRows('Operacion_tal_largo');
   }
 
   Future<List<Map<String, dynamic>>> getOperacionesNoEnviadasLargo() async {
-    final db = await database;
-
-    return await db.query(
+    return _getNormalizedOperationRows(
       'Operacion_tal_largo',
-      where: 'envio = ? AND estado = ?',
-      whereArgs: [0, 'cerrado'],
-      orderBy: 'id DESC',
+      where: 'enviado = ? AND cerrado = ?',
+      whereArgs: [0, 1],
     );
   }
 
   //TAL-HORIZONTAL
   Future<List<Map<String, dynamic>>> getOperacionesTaladroHorizontal() async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
-      'Operacion_tal_horizontal',
-      orderBy: 'id DESC', // opcional, para ver las más recientes primero
-    );
-
-    return result;
+    return _getNormalizedOperationRows('Operacion_tal_horizontal');
   }
 
   Future<List<Map<String, dynamic>>>
   getOperacionesTaladroHorizontalNoEnviadas() async {
-    final db = await database;
-
-    return await db.query(
+    return _getNormalizedOperationRows(
       'Operacion_tal_horizontal',
-      where: 'envio = ? AND estado = ?',
-      whereArgs: [0, 'cerrado'],
-      orderBy: 'id DESC',
+      where: 'enviado = ? AND cerrado = ?',
+      whereArgs: [0, 1],
     );
   }
 
   Future<int> actualizarEnvioHorizontal(int id) async {
     final db = await database;
 
-    // Mapa de los datos que quieres actualizar
-    Map<String, dynamic> data = {
-      'envio': 1, // Actualiza el campo envio a 1
-    };
-
-    // Llamada a la función update
     return await db.update(
-      'Operacion_tal_horizontal', // El nombre de la tabla
-      data, // Los datos a actualizar
-      where: 'id = ?', // Condición para seleccionar la fila
-      whereArgs: [id], // El valor de id para seleccionar la fila específica
+      'Operacion_tal_horizontal',
+      {'enviado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
   //EMPERNADOR
   Future<List<Map<String, dynamic>>> getOperacionesTaladroEmpernador() async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
-      'Operacion_empernador',
-      orderBy: 'id DESC', // opcional, para ver las más recientes primero
-    );
-
-    return result;
+    return _getNormalizedOperationRows('Operacion_empernador');
   }
 
   Future<List<Map<String, dynamic>>>
   getOperacionesEmpernadorNoEnviadas() async {
-    final db = await database;
-
-    return await db.query(
+    return _getNormalizedOperationRows(
       'Operacion_empernador',
-      where: 'envio = ? AND estado = ?',
-      whereArgs: [0, 'cerrado'],
-      orderBy: 'id DESC',
+      where: 'enviado = ? AND cerrado = ?',
+      whereArgs: [0, 1],
     );
   }
 
   Future<int> actualizarEnvioEmpernador(int id) async {
     final db = await database;
 
-    // Mapa de los datos que quieres actualizar
-    Map<String, dynamic> data = {
-      'envio': 1, // Actualiza el campo envio a 1
-    };
-
-    // Llamada a la función update
     return await db.update(
-      'Operacion_empernador', // El nombre de la tabla
-      data, // Los datos a actualizar
-      where: 'id = ?', // Condición para seleccionar la fila
-      whereArgs: [id], // El valor de id para seleccionar la fila específica
+      'Operacion_empernador',
+      {'enviado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
   //CARGUIO
   Future<List<Map<String, dynamic>>> getOperacionesTaladroCarguio() async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
-      'Operacion_carguio',
-      orderBy: 'id DESC', // opcional, para ver las más recientes primero
-    );
-
-    return result;
+    return _getNormalizedOperationRows('Operacion_carguio');
   }
 
   Future<List<Map<String, dynamic>>> getOperacionesCarguioNoEnviadas() async {
-    final db = await database;
-
-    return await db.query(
+    return _getNormalizedOperationRows(
       'Operacion_carguio',
-      where: 'envio = ? AND estado = ?',
-      whereArgs: [0, 'cerrado'],
-      orderBy: 'id DESC',
+      where: 'enviado = ? AND cerrado = ?',
+      whereArgs: [0, 1],
     );
   }
 
   Future<int> actualizarEnvioCarguio(int id) async {
     final db = await database;
 
-    // Mapa de los datos que quieres actualizar
-    Map<String, dynamic> data = {
-      'envio': 1, // Actualiza el campo envio a 1
-    };
-
-    // Llamada a la función update
     return await db.update(
-      'Operacion_carguio', // El nombre de la tabla
-      data, // Los datos a actualizar
-      where: 'id = ?', // Condición para seleccionar la fila
-      whereArgs: [id], // El valor de id para seleccionar la fila específica
+      'Operacion_carguio',
+      {'enviado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
   //Dumper-------------------------------------------------
 
   Future<List<Map<String, dynamic>>> getOperacionesTaladroDumper() async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
-      'Operacion_Dumper',
-      orderBy: 'id DESC', // opcional, para ver las más recientes primero
-    );
-
-    return result;
+    return _getNormalizedOperationRows('Operacion_Dumper');
   }
 
   Future<List<Map<String, dynamic>>> getOperacionesDumperNoEnviadas() async {
-    final db = await database;
-
-    return await db.query(
+    return _getNormalizedOperationRows(
       'Operacion_Dumper',
-      where: 'envio = ? AND estado = ?',
-      whereArgs: [0, 'cerrado'],
-      orderBy: 'id DESC',
+      where: 'enviado = ? AND cerrado = ?',
+      whereArgs: [0, 1],
     );
   }
 
   Future<int> actualizarEnvioDumper(int id) async {
     final db = await database;
 
-    // Mapa de los datos que quieres actualizar
-    Map<String, dynamic> data = {
-      'envio': 1, // Actualiza el campo envio a 1
-    };
-
-    // Llamada a la función update
     return await db.update(
-      'Operacion_Dumper', // El nombre de la tabla
-      data, // Los datos a actualizar
-      where: 'id = ?', // Condición para seleccionar la fila
-      whereArgs: [id], // El valor de id para seleccionar la fila específica
+      'Operacion_Dumper',
+      {'enviado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
   //ROMPE BANCOS
   Future<List<Map<String, dynamic>>> getOperacionesTaladroRompeBaco() async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
-      'Operacion_rompebanco',
-      orderBy: 'id DESC', // opcional, para ver las más recientes primero
-    );
-
-    return result;
+    return _getNormalizedOperationRows('Operacion_rompebanco');
   }
 
   Future<List<Map<String, dynamic>>>
   getOperacionesRompeBancosNoEnviadas() async {
-    final db = await database;
-
-    return await db.query(
+    return _getNormalizedOperationRows(
       'Operacion_rompebanco',
-      where: 'envio = ? AND estado = ?',
-      whereArgs: [0, 'cerrado'],
-      orderBy: 'id DESC',
+      where: 'enviado = ? AND cerrado = ?',
+      whereArgs: [0, 1],
     );
   }
 
   Future<int> actualizarEnvioRompeBancos(int id) async {
     final db = await database;
 
-    // Mapa de los datos que quieres actualizar
-    Map<String, dynamic> data = {
-      'envio': 1, // Actualiza el campo envio a 1
-    };
-
-    // Llamada a la función update
     return await db.update(
-      'Operacion_rompebanco', // El nombre de la tabla
-      data, // Los datos a actualizar
-      where: 'id = ?', // Condición para seleccionar la fila
-      whereArgs: [id], // El valor de id para seleccionar la fila específica
+      'Operacion_rompebanco',
+      {'enviado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
   //SCALAMIN
   Future<List<Map<String, dynamic>>> getOperacionesTaladroScalamin() async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
-      'Operacion_Scalamin',
-      orderBy: 'id DESC', // opcional, para ver las más recientes primero
-    );
-
-    return result;
+    return _getNormalizedOperationRows('Operacion_Scalamin');
   }
 
   Future<List<Map<String, dynamic>>> getOperacionesScalaminNoEnviadas() async {
-    final db = await database;
-
-    return await db.query(
+    return _getNormalizedOperationRows(
       'Operacion_Scalamin',
-      where: 'envio = ? AND estado = ?',
-      whereArgs: [0, 'cerrado'],
-      orderBy: 'id DESC',
+      where: 'enviado = ? AND cerrado = ?',
+      whereArgs: [0, 1],
     );
   }
 
   Future<int> actualizarEnvioScalamin(int id) async {
     final db = await database;
 
-    // Mapa de los datos que quieres actualizar
-    Map<String, dynamic> data = {
-      'envio': 1, // Actualiza el campo envio a 1
-    };
-
-    // Llamada a la función update
     return await db.update(
-      'Operacion_Scalamin', // El nombre de la tabla
-      data, // Los datos a actualizar
-      where: 'id = ?', // Condición para seleccionar la fila
-      whereArgs: [id], // El valor de id para seleccionar la fila específica
+      'Operacion_Scalamin',
+      {'enviado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
   //ANFOCHANGER
   Future<List<Map<String, dynamic>>> getOperacionesTaladroAnfoChanger() async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
-      'Operacion_anfochanger',
-      orderBy: 'id DESC', // opcional, para ver las más recientes primero
-    );
-
-    return result;
+    return _getNormalizedOperationRows('Operacion_anfochanger');
   }
 
   Future<List<Map<String, dynamic>>>
   getOperacionesAnfoChangerNoEnviadas() async {
-    final db = await database;
-
-    return await db.query(
+    return _getNormalizedOperationRows(
       'Operacion_anfochanger',
-      where: 'envio = ? AND estado = ?',
-      whereArgs: [0, 'cerrado'],
-      orderBy: 'id DESC',
+      where: 'enviado = ? AND cerrado = ?',
+      whereArgs: [0, 1],
     );
   }
 
   Future<int> actualizarEnvioRAnfoChanger(int id) async {
     final db = await database;
 
-    // Mapa de los datos que quieres actualizar
-    Map<String, dynamic> data = {
-      'envio': 1, // Actualiza el campo envio a 1
-    };
-
-    // Llamada a la función update
     return await db.update(
-      'Operacion_anfochanger', // El nombre de la tabla
-      data, // Los datos a actualizar
-      where: 'id = ?', // Condición para seleccionar la fila
-      whereArgs: [id], // El valor de id para seleccionar la fila específica
+      'Operacion_anfochanger',
+      {'enviado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
   //scissor
   Future<List<Map<String, dynamic>>> getOperacionesTaladroscissor() async {
-    final db = await database;
-
-    final List<Map<String, dynamic>> result = await db.query(
-      'Operacion_scissor',
-      orderBy: 'id DESC', // opcional, para ver las más recientes primero
-    );
-
-    return result;
+    return _getNormalizedOperationRows('Operacion_scissor');
   }
 
   Future<List<Map<String, dynamic>>> getOperacionesScissorNoEnviadas() async {
-    final db = await database;
-
-    return await db.query(
+    return _getNormalizedOperationRows(
       'Operacion_scissor',
-      where: 'envio = ? AND estado = ?',
-      whereArgs: [0, 'cerrado'],
-      orderBy: 'id DESC',
+      where: 'enviado = ? AND cerrado = ?',
+      whereArgs: [0, 1],
     );
   }
 
   Future<int> actualizarEnvioscissor(int id) async {
     final db = await database;
 
-    // Mapa de los datos que quieres actualizar
-    Map<String, dynamic> data = {
-      'envio': 1, // Actualiza el campo envio a 1
-    };
-
-    // Llamada a la función update
     return await db.update(
-      'Operacion_scissor', // El nombre de la tabla
-      data, // Los datos a actualizar
-      where: 'id = ?', // Condición para seleccionar la fila
-      whereArgs: [id], // El valor de id para seleccionar la fila específica
+      'Operacion_scissor',
+      {'enviado': 1},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 

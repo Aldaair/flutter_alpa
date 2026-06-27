@@ -40,6 +40,10 @@ class ExportarService {
   }
 
   OperacionUpsertRequest _buildDto(String tipo, Map<String, dynamic> op) {
+    final enviado = op['enviado'] ?? op['envio'] ?? 0;
+    final estadoOperacion = (op['cerrado'] ?? 0) == 1
+        ? 'cerrado'
+        : (op['estado'] ?? 'activo');
     final horometrosRaw = _decodeMap(op['horometros']);
     final horometros = horometrosRaw.isNotEmpty
         ? HorometrosRequest(horometrosRaw)
@@ -68,8 +72,8 @@ class ExportarService {
           operadorId: op['operador_id'],
           jefeGuardiaId: op['jefe_guardia_id'],
           equipoId: op['equipo_id'],
-          estado: op['estado'] ?? 'activo',
-          envio: op['envio'] ?? 0,
+          estado: estadoOperacion,
+          envio: enviado,
           revisado: op['revisado'],
           aprobacion: op['aprobacion'],
           horometros: horometros,
@@ -90,8 +94,8 @@ class ExportarService {
           operadorId: op['operador_id'],
           jefeGuardiaId: op['jefe_guardia_id'],
           equipoId: op['equipo_id'],
-          estado: op['estado'] ?? 'activo',
-          envio: op['envio'] ?? 0,
+          estado: estadoOperacion,
+          envio: enviado,
           revisado: op['revisado'],
           aprobacion: op['aprobacion'],
           horometros: horometros,
@@ -112,8 +116,8 @@ class ExportarService {
           operadorId: op['operador_id'],
           jefeGuardiaId: op['jefe_guardia_id'],
           equipoId: op['equipo_id'],
-          estado: op['estado'] ?? 'activo',
-          envio: op['envio'] ?? 0,
+          estado: estadoOperacion,
+          envio: enviado,
           revisado: op['revisado'],
           aprobacion: op['aprobacion'],
           horometros: horometros,
@@ -134,8 +138,8 @@ class ExportarService {
           operadorId: op['operador_id'],
           jefeGuardiaId: op['jefe_guardia_id'],
           equipoId: op['equipo_id'],
-          estado: op['estado'] ?? 'activo',
-          envio: op['envio'] ?? 0,
+          estado: estadoOperacion,
+          envio: enviado,
           revisado: op['revisado'],
           aprobacion: op['aprobacion'],
           horometros: horometros,
@@ -156,8 +160,8 @@ class ExportarService {
           operadorId: op['operador_id'],
           jefeGuardiaId: op['jefe_guardia_id'],
           equipoId: op['equipo_id'],
-          estado: op['estado'] ?? 'activo',
-          envio: op['envio'] ?? 0,
+          estado: estadoOperacion,
+          envio: enviado,
           revisado: op['revisado'],
           aprobacion: op['aprobacion'],
           horometros: horometros,
@@ -178,8 +182,8 @@ class ExportarService {
           operadorId: op['operador_id'],
           jefeGuardiaId: op['jefe_guardia_id'],
           equipoId: op['equipo_id'],
-          estado: op['estado'] ?? 'activo',
-          envio: op['envio'] ?? 0,
+          estado: estadoOperacion,
+          envio: enviado,
           revisado: op['revisado'],
           aprobacion: op['aprobacion'],
           horometros: horometros,
@@ -200,8 +204,8 @@ class ExportarService {
           operadorId: op['operador_id'],
           jefeGuardiaId: op['jefe_guardia_id'],
           equipoId: op['equipo_id'],
-          estado: op['estado'] ?? 'activo',
-          envio: op['envio'] ?? 0,
+          estado: estadoOperacion,
+          envio: enviado,
           revisado: op['revisado'],
           aprobacion: op['aprobacion'],
           horometros: horometros,

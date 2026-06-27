@@ -447,11 +447,18 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       case 'TalLargo':
         await _db.insertOperacionTalLargo(
           data['fecha'],
+          turno: data['turno'] ?? '',
+          operador: data['operador'] ?? '',
+          jefeGuardia: data['jefe_guardia'] ?? data['jefeGuardia'] ?? '',
+          equipo: data['equipo'] ?? '',
+          registradorNombre: data['registrador'] ?? '',
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           equipoId: data['equipo_id'] as int?,
           turnoId: data['turno_id'] as int?,
-          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorUsuarioId:
+              (data['registrador_id'] ?? data['registrador_usuario_id'])
+                  as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
@@ -469,7 +476,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
-          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador'] ?? '',
+          registradorUsuarioId:
+              (data['registrador_id'] ?? data['registrador_usuario_id'])
+                  as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
@@ -488,7 +498,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
-          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador'] ?? '',
+          registradorUsuarioId:
+              (data['registrador_id'] ?? data['registrador_usuario_id'])
+                  as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
@@ -507,7 +520,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
-          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador'] ?? '',
+          registradorUsuarioId:
+              (data['registrador_id'] ?? data['registrador_usuario_id'])
+                  as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
@@ -525,7 +541,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
-          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador'] ?? '',
+          registradorUsuarioId:
+              (data['registrador_id'] ?? data['registrador_usuario_id'])
+                  as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
@@ -541,7 +560,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
-          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador'] ?? '',
+          registradorUsuarioId:
+              (data['registrador_id'] ?? data['registrador_usuario_id'])
+                  as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
@@ -557,7 +579,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
-          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador'] ?? '',
+          registradorUsuarioId:
+              (data['registrador_id'] ?? data['registrador_usuario_id'])
+                  as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
@@ -573,7 +598,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
-          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador'] ?? '',
+          registradorUsuarioId:
+              (data['registrador_id'] ?? data['registrador_usuario_id'])
+                  as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
@@ -589,7 +617,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
           turnoId: data['turno_id'] as int?,
-          registradorUsuarioId: data['registrador_usuario_id'] as int?,
+          registradorNombre: data['registrador'] ?? '',
+          registradorUsuarioId:
+              (data['registrador_id'] ?? data['registrador_usuario_id'])
+                  as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
         );
@@ -962,7 +993,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                 proceso: widget.config.proceso,
                 mostrarModelo: widget.config.mostrarModelo,
                 usarAutorizacion: widget.config.usarAutorizacion,
-                soloIds: true,
+                soloIds: false,
               ),
             ),
 
@@ -1399,6 +1430,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         'tipo_labor': data['tipo_labor'] ?? '',
         'labor': data['labor'] ?? '',
         'ala': data['ala'] ?? '',
+        'ala_id': data['ala_id'],
         'n_taladros_produccion': data['n_taladros_produccion'] ?? '',
         'metros_perforados_produccion':
             data['metros_perforados_produccion'] ?? '',

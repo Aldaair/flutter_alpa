@@ -83,7 +83,10 @@ class SyncService {
     print("📦 Sincronizando: $tipo");
 
     final data = await getData();
-    final pendientes = data.where((e) => e['envio'] == 0).toList();
+    final pendientes = data.where((e) {
+      final enviado = e['enviado'] ?? e['envio'] ?? 0;
+      return enviado == 0;
+    }).toList();
 
     if (pendientes.isEmpty) {
       print("✔️ $tipo sin pendientes");
