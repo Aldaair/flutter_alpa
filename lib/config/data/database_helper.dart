@@ -13,8 +13,9 @@ import 'package:i_miner/models/DimAla.dart';
 import 'package:i_miner/models/DimLabor.dart';
 import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
-import 'package:i_miner/models/PlanMetrajeTL.dart';
+import 'package:i_miner/models/plan_metraje_tl.dart';
 import 'package:i_miner/models/plan_avance_th.dart';
+import 'package:i_miner/models/plan_produccion.dart';
 import 'package:i_miner/models/zona.dart';
 
 import 'package:bcrypt/bcrypt.dart';
@@ -34,7 +35,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 27;
+  static const int _sharedCatalogDbVersion = 29;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -392,6 +393,14 @@ CREATE TABLE IF NOT EXISTS procesos (
 )
 ''');
 
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS destinos (
+  id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  proceso_id INTEGER NOT NULL
+)
+''');
+
     // v12 tables
     await db.execute('''
 CREATE TABLE IF NOT EXISTS planes_metrajes_avances (
@@ -415,13 +424,21 @@ CREATE TABLE IF NOT EXISTS planes_metrajes_avances (
 
     await db.execute('''
 CREATE TABLE IF NOT EXISTS planes_produccion (
-  plan_produccion_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  plan_produccion_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
   turno_id INTEGER NOT NULL,
   ley_id INTEGER NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  proceso_nombre TEXT NOT NULL,
   dia INTEGER NOT NULL,
-  valor REAL NOT NULL
+  valor REAL NOT NULL,
+  labor_nombre TEXT NOT NULL,
+  turno_nombre TEXT NOT NULL,
+  ley_nombre TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
 )
 ''');
 
@@ -751,6 +768,18 @@ CREATE TABLE IF NOT EXISTS procesos (
       }
     }
 
+    if (oldVersion < 29) {
+      if (!await _tablaExiste(db, 'destinos')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS destinos (
+  id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  proceso_id INTEGER NOT NULL
+)
+''');
+      }
+    }
+
     if (oldVersion < 12) {
       if (!await _tablaExiste(db, 'planes_metrajes_avances')) {
         await db.execute('''
@@ -777,13 +806,21 @@ CREATE TABLE IF NOT EXISTS planes_metrajes_avances (
       if (!await _tablaExiste(db, 'planes_produccion')) {
         await db.execute('''
 CREATE TABLE IF NOT EXISTS planes_produccion (
-  plan_produccion_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  plan_produccion_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
   turno_id INTEGER NOT NULL,
   ley_id INTEGER NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  proceso_nombre TEXT NOT NULL,
   dia INTEGER NOT NULL,
-  valor REAL NOT NULL
+  valor REAL NOT NULL,
+  labor_nombre TEXT NOT NULL,
+  turno_nombre TEXT NOT NULL,
+  ley_nombre TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
 )
 ''');
       }
@@ -1039,6 +1076,10 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
     if (oldVersion < 27) {
       await _resetPlanesMetrajesAvancesTable(db);
     }
+
+    if (oldVersion < 28) {
+      await _resetPlanesProduccionTable(db);
+    }
   }
 
   Future<void> _resetEstadosTable(Database db) async {
@@ -1065,6 +1106,31 @@ CREATE TABLE estados (
 CREATE TABLE planes_metrajes_avances (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   plan_metraje_avance_id INTEGER NOT NULL,
+  labor_id INTEGER NOT NULL,
+  periodo_id INTEGER NOT NULL,
+  turno_id INTEGER NOT NULL,
+  ley_id INTEGER NOT NULL,
+  proceso_id INTEGER NOT NULL,
+  proceso_nombre TEXT NOT NULL,
+  dia INTEGER NOT NULL,
+  valor REAL NOT NULL,
+  labor_nombre TEXT NOT NULL,
+  turno_nombre TEXT NOT NULL,
+  ley_nombre TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
+)
+''');
+    });
+  }
+
+  Future<void> _resetPlanesProduccionTable(Database db) async {
+    await db.transaction((txn) async {
+      await txn.execute('DROP TABLE IF EXISTS planes_produccion');
+      await txn.execute('''
+CREATE TABLE planes_produccion (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  plan_produccion_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
   turno_id INTEGER NOT NULL,
@@ -2272,6 +2338,7 @@ CREATE TABLE $tableName (
     'dim_turno',
     'planes_metrajes_avances',
     'planes_produccion',
+    'destinos',
     'tipo_perforaciones',
     'longitud_barras',
     'pernos',
@@ -2663,6 +2730,18 @@ CREATE TABLE $tableName (
     return rows.isNotEmpty ? rows.first : null;
   }
 
+  Future<List<Map<String, dynamic>>> getDestinosByProcesoId(
+    int procesoId,
+  ) async {
+    final db = await sharedCatalogDatabase;
+    return await db.query(
+      'destinos',
+      where: 'proceso_id = ?',
+      whereArgs: [procesoId],
+      orderBy: 'nombre ASC',
+    );
+  }
+
   Future<List<TipoPerforacion>> getTiposPerforacionByProceso(
     String proceso,
   ) async {
@@ -2689,6 +2768,12 @@ CREATE TABLE $tableName (
       'planes_metrajes_avances',
     );
     return List.generate(maps.length, (i) => PlanAvanceTH.fromJson(maps[i]));
+  }
+
+  Future<List<PlanProduccion>> getPlanesProduccion() async {
+    final db = await sharedCatalogDatabase;
+    final List<Map<String, dynamic>> maps = await db.query('planes_produccion');
+    return List.generate(maps.length, (i) => PlanProduccion.fromJson(maps[i]));
   }
 
   Future<List<Map<String, dynamic>>> getLongitudBarrasPorProceso(

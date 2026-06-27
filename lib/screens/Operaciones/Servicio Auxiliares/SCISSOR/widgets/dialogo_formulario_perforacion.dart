@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/PlanProduccion.dart';
+import 'package:i_miner/models/plan_produccion.dart';
 
 class DialogoFormularioRompebanco extends StatefulWidget {
   final int operacionId;
@@ -115,13 +115,6 @@ class _DialogoFormularioRompebancoState
         }
       }
 
-      for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-            (plan.labor.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor);
-        }
-      }
-
       filteredOrigenLabores = laboresFiltrados.toList()..sort();
     } else {
       filteredOrigenLabores = List.from(opcionesLabor);
@@ -137,14 +130,6 @@ class _DialogoFormularioRompebancoState
             plan.labor == origenLaborSeleccionado &&
             (plan.ala.isNotEmpty ?? false)) {
           alasFiltrados.add(plan.ala);
-        }
-      }
-
-      for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-            plan.labor == origenLaborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
         }
       }
       filteredOrigenAlas = alasFiltrados.toList()..sort();
@@ -167,19 +152,6 @@ class _DialogoFormularioRompebancoState
             plan.ala == origenAlaSeleccionado;
         if (coincideBase && coincideAla && (plan.nivel.isNotEmpty ?? false)) {
           nivelesFiltrados.add(plan.nivel);
-        }
-      }
-
-      for (var plan in planesProduccionCompletos) {
-        bool coincideBase =
-            plan.tipoLabor == origenTipoLaborSeleccionado &&
-            plan.labor == origenLaborSeleccionado;
-        bool coincideAla =
-            origenAlaSeleccionado == null ||
-            origenAlaSeleccionado!.isEmpty ||
-            plan.ala == origenAlaSeleccionado;
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
         }
       }
 
@@ -242,13 +214,6 @@ class _DialogoFormularioRompebancoState
         }
       }
 
-      for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == destTipoLaborSeleccionado &&
-            (plan.labor.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor);
-        }
-      }
-
       filteredDestinoLabores = laboresFiltrados.toList()..sort();
     } else {
       filteredDestinoLabores = List.from(opcionesLabor);
@@ -263,14 +228,6 @@ class _DialogoFormularioRompebancoState
             plan.labor == destinoLaborSeleccionado &&
             (plan.ala.isNotEmpty ?? false)) {
           alasFiltrados.add(plan.ala);
-        }
-      }
-
-      for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == destTipoLaborSeleccionado &&
-            plan.labor == destinoLaborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
         }
       }
 
@@ -293,19 +250,6 @@ class _DialogoFormularioRompebancoState
             plan.ala == destinoAlaSeleccionado;
         if (coincideBase && coincideAla && (plan.nivel.isNotEmpty ?? false)) {
           nivelesFiltrados.add(plan.nivel);
-        }
-      }
-
-      for (var plan in planesProduccionCompletos) {
-        bool coincideBase =
-            plan.tipoLabor == destTipoLaborSeleccionado &&
-            plan.labor == destinoLaborSeleccionado;
-        bool coincideAla =
-            destinoAlaSeleccionado == null ||
-            destinoAlaSeleccionado!.isEmpty ||
-            plan.ala == destinoAlaSeleccionado;
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
         }
       }
 

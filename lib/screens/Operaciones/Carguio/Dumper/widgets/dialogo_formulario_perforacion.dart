@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/PlanProduccion.dart';
+import 'package:i_miner/models/plan_produccion.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
@@ -34,11 +33,9 @@ class _DialogoFormularioPerforacionState
   // Controlador para observaciones
   final TextEditingController observacionesController = TextEditingController();
 
-  // Variables para INICIO (vienen de PlanMensual)
-  String? nivelInicioSeleccionado;
-  String? tipoLaborInicioSeleccionado;
-  String? laborInicioSeleccionado;
-  String? alaInicioSeleccionado;
+  // Labor desde plan de produccion
+  String? laborSeleccionada;
+  int? laborIdSeleccionado;
 
   // Variable para DESTINO (viene de tabla origen_destino)
   String? ubicacionDestinoSeleccionado;
@@ -47,24 +44,13 @@ class _DialogoFormularioPerforacionState
   // Número de cucharas
   final TextEditingController nCucharasController = TextEditingController();
 
-  // Opciones para los dropdowns (de PlanMensual)
-  List<String> opcionesNivel = [];
-  List<String> opcionesTipoLabor = [];
+  // Opciones de labor desde planes_produccion
+  List<PlanProduccion> planesProduccionCompletos = [];
   List<String> opcionesLabor = [];
-  List<String> opcionesAla = [];
 
   // Opciones para ubicación destino (desde tabla origen_destino)
   List<Map<String, dynamic>> destinosDisponibles = [];
   List<String> opcionesUbicacionDestino = [];
-
-  // Listas filtradas para INICIO
-  List<String> filteredTiposLaborInicio = [];
-  List<String> filteredLaboresInicio = [];
-  List<String> filteredAlasInicio = [];
-
-  // Almacenar objetos completos para referencia
-  List<PlanMensual> planesMensualCompletos = [];
-  List<PlanProduccion> planesProduccionCompletos = [];
 
   @override
   void initState() {
@@ -79,12 +65,38 @@ class _DialogoFormularioPerforacionState
 
     try {
       await Future.wait([
+        _cargarPlanesProduccion(),
         _cargarDestinosDUMPER(), // Para ubicación DESTINO
       ]);
     } catch (e) {
       print("Error cargando datos: $e");
     } finally {
       setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _cargarPlanesProduccion() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final planes = await dbHelper.getPlanesProduccion();
+
+      final laboresUnicas = <String>{};
+      for (final plan in planes) {
+        if (plan.laborNombre.trim().isNotEmpty) {
+          laboresUnicas.add(plan.laborNombre.trim());
+        }
+      }
+
+      setState(() {
+        planesProduccionCompletos = planes;
+        opcionesLabor = laboresUnicas.toList()..sort();
+      });
+    } catch (e) {
+      print('Error cargando planes de produccion: $e');
+      setState(() {
+        planesProduccionCompletos = [];
+        opcionesLabor = [];
+      });
     }
   }
 
@@ -112,184 +124,14 @@ class _DialogoFormularioPerforacionState
     }
   }
 
-  // Cargar planes mensuales y construir opciones únicas
-  Future<void> _cargarPlanesCombinados() async {
-    try {
-      final dbHelper = DatabaseHelper();
-
-      // Cargar las tres tablas en paralelo
-      final results = await Future.wait([
-        dbHelper.getOrigenDestino('DUMPER', 'ORIGEN'),
-      ]);
-
-      final origenes = results[0];
-
-      Set<String> nivelesSet = {};
-      Set<String> tiposLaborSet = {};
-      Set<String> laboresSet = {};
-      Set<String> alasSet = {};
-
-      // Procesar PlanMensual
-      for (var plan in planesMensualCompletos) {
-        if (plan.nivel.isNotEmpty ?? false) nivelesSet.add(plan.nivel);
-        if (plan.tipoLabor.isNotEmpty ?? false) {
-          tiposLaborSet.add(plan.tipoLabor);
-        }
-        if (plan.labor.isNotEmpty ?? false) laboresSet.add(plan.labor);
-        if (plan.ala.isNotEmpty ?? false) alasSet.add(plan.ala);
-      }
-
-      // Procesar PlanProduccion
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel?.isNotEmpty ?? false) nivelesSet.add(plan.nivel!);
-        if (plan.tipoLabor.isNotEmpty ?? false) {
-          tiposLaborSet.add(plan.tipoLabor);
-        }
-        if (plan.labor.isNotEmpty ?? false) laboresSet.add(plan.labor);
-        if (plan.ala?.isNotEmpty ?? false) alasSet.add(plan.ala!);
-      }
-
-      for (var origen in origenes) {
-        if (origen['nombre'] != null &&
-            origen['nombre'].toString().isNotEmpty) {
-          nivelesSet.add(origen['nombre']);
-        }
-      }
-
-      setState(() {
-        opcionesNivel = nivelesSet.toList()..sort();
-        opcionesTipoLabor = tiposLaborSet.toList()..sort();
-        opcionesLabor = laboresSet.toList()..sort();
-        opcionesAla = alasSet.toList()..sort();
-
-        // Inicializar listas filtradas
-        filteredTiposLaborInicio = List.from(opcionesTipoLabor);
-        filteredLaboresInicio = List.from(opcionesLabor);
-        filteredAlasInicio = List.from(opcionesAla);
-      });
-    } catch (e) {
-      print("Error cargando planes combinados: $e");
-      // Fallback con datos de ejemplo
-      setState(() {
-        opcionesNivel = ['Nv 300', 'Nv 320', 'Nv 340', 'Nv 360'];
-        opcionesTipoLabor = ['Galería', 'Crucero', 'Rampa', 'Chimenea'];
-        opcionesLabor = ['Labor 01', 'Labor 02', 'Labor 03', 'Labor 04'];
-        opcionesAla = ['Ala Norte', 'Ala Sur', 'Ala Este', 'Ala Oeste'];
-
-        filteredTiposLaborInicio = List.from(opcionesTipoLabor);
-        filteredLaboresInicio = List.from(opcionesLabor);
-        filteredAlasInicio = List.from(opcionesAla);
-      });
-    }
-  }
-
   // Actualizar filtros de INICIO
-  void _actualizarFiltrosInicio() {
-    // Filtrar tipos de labor basados en nivel seleccionado
-    if (nivelInicioSeleccionado != null) {
-      Set<String> tiposLaborFiltrados = {};
-
-      // Buscar en PlanMensual
-      for (var plan in planesMensualCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado &&
-            (plan.tipoLabor.isNotEmpty ?? false)) {
-          tiposLaborFiltrados.add(plan.tipoLabor);
-        }
-      }
-
-      // Buscar en PlanProduccion
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado &&
-            (plan.tipoLabor.isNotEmpty ?? false)) {
-          tiposLaborFiltrados.add(plan.tipoLabor);
-        }
-      }
-
-      filteredTiposLaborInicio = tiposLaborFiltrados.toList()..sort();
-    } else {
-      filteredTiposLaborInicio = List.from(opcionesTipoLabor);
-    }
-
-    // Filtrar labores basados en nivel y tipo labor
-    if (nivelInicioSeleccionado != null &&
-        tipoLaborInicioSeleccionado != null) {
-      Set<String> laboresFiltrados = {};
-
-      // Buscar en PlanMensual
-      for (var plan in planesMensualCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado &&
-            plan.tipoLabor == tipoLaborInicioSeleccionado &&
-            (plan.labor.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor);
-        }
-      }
-
-      // Buscar en PlanProduccion
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado &&
-            plan.tipoLabor == tipoLaborInicioSeleccionado &&
-            (plan.labor.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor);
-        }
-      }
-
-      filteredLaboresInicio = laboresFiltrados.toList()..sort();
-    } else {
-      filteredLaboresInicio = List.from(opcionesLabor);
-    }
-
-    // Filtrar alas basados en nivel, tipo labor y labor
-    if (nivelInicioSeleccionado != null &&
-        tipoLaborInicioSeleccionado != null &&
-        laborInicioSeleccionado != null) {
-      Set<String> alasFiltrados = {};
-
-      // Buscar en PlanMensual
-      for (var plan in planesMensualCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado &&
-            plan.tipoLabor == tipoLaborInicioSeleccionado &&
-            plan.labor == laborInicioSeleccionado &&
-            (plan.ala.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala);
-        }
-      }
-
-      // Buscar en PlanProduccion
-      for (var plan in planesProduccionCompletos) {
-        if (plan.nivel == nivelInicioSeleccionado &&
-            plan.tipoLabor == tipoLaborInicioSeleccionado &&
-            plan.labor == laborInicioSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
-        }
-      }
-
-      filteredAlasInicio = alasFiltrados.toList()..sort();
-    } else {
-      filteredAlasInicio = List.from(opcionesAla);
-    }
-  }
+  void _actualizarFiltrosInicio() {}
 
   void _cargarDatosIniciales() {
     if (widget.datosIniciales != null) {
       setState(() {
-        // Campos de INICIO
-        nivelInicioSeleccionado =
-            widget.datosIniciales!['nivel_inicio']?.isNotEmpty == true
-            ? widget.datosIniciales!['nivel_inicio']
-            : null;
-        tipoLaborInicioSeleccionado =
-            widget.datosIniciales!['tipo_labor_inicio']?.isNotEmpty == true
-            ? widget.datosIniciales!['tipo_labor_inicio']
-            : null;
-        laborInicioSeleccionado =
-            widget.datosIniciales!['labor_inicio']?.isNotEmpty == true
-            ? widget.datosIniciales!['labor_inicio']
-            : null;
-        alaInicioSeleccionado =
-            widget.datosIniciales!['ala_inicio']?.isNotEmpty == true
-            ? widget.datosIniciales!['ala_inicio']
-            : null;
+        laborIdSeleccionado = widget.datosIniciales!['labor_id'];
+        laborSeleccionada = widget.datosIniciales!['labor'];
 
         // Ubicación destino (desde tabla origen_destino)
         ubicacionDestinoId = widget.datosIniciales!['ubicacion_destino_id'];
@@ -313,6 +155,26 @@ class _DialogoFormularioPerforacionState
   }
 
   Future<void> _guardarDatos() async {
+    final planSeleccionado = planesProduccionCompletos.firstWhere(
+      (plan) => plan.laborNombre == laborSeleccionada,
+      orElse: () => PlanProduccion(
+        planProduccionId: 0,
+        laborId: laborIdSeleccionado ?? 0,
+        periodoId: 0,
+        turnoId: 0,
+        leyId: 0,
+        procesoId: 0,
+        procesoNombre: '',
+        dia: 0,
+        valor: 0,
+        laborNombre: laborSeleccionada ?? '',
+        turnoNombre: '',
+        leyNombre: '',
+        createdAt: null,
+        updatedAt: null,
+      ),
+    );
+
     // Encontrar el ID del destino seleccionado
     int? destinoId;
     if (ubicacionDestinoSeleccionado != null) {
@@ -325,19 +187,13 @@ class _DialogoFormularioPerforacionState
 
     Map<String, dynamic> datosFormulario = {
       // Campos de INICIO
-      'nivel_inicio': nivelInicioSeleccionado ?? '',
-      'tipo_labor_inicio': tipoLaborInicioSeleccionado ?? '',
-      'labor_inicio': laborInicioSeleccionado ?? '',
-      'ala_inicio': alaInicioSeleccionado ?? '',
-
-      // Ubicación destino (guardamos ID y nombre)
+      'labor_id': planSeleccionado.laborId == 0
+          ? laborIdSeleccionado
+          : planSeleccionado.laborId,
+      'labor': laborSeleccionada ?? planSeleccionado.laborNombre,
       'ubicacion_destino_id': destinoId ?? 0,
       'ubicacion_destino': ubicacionDestinoSeleccionado ?? '',
-
-      // Número de cucharas
       'n_cucharas': int.tryParse(nCucharasController.text) ?? 0,
-
-      // Observaciones
       'observaciones': observacionesController.text,
     };
 
@@ -454,78 +310,35 @@ class _DialogoFormularioPerforacionState
             ],
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildCompactDropdownField(
-                  label: 'Nivel',
-                  value: nivelInicioSeleccionado,
-                  items: opcionesNivel,
-                  onChanged: isEditable
-                      ? (value) {
-                          setState(() {
-                            nivelInicioSeleccionado = value;
-                            tipoLaborInicioSeleccionado = null;
-                            laborInicioSeleccionado = null;
-                            alaInicioSeleccionado = null;
-                            _actualizarFiltrosInicio();
-                          });
-                        }
-                      : null,
-                  icon: Icons.stairs,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildCompactDropdownField(
-                  label: 'Tipo Labor',
-                  value: tipoLaborInicioSeleccionado,
-                  items: filteredTiposLaborInicio,
-                  onChanged: (nivelInicioSeleccionado != null && isEditable)
-                      ? (value) {
-                          setState(() {
-                            tipoLaborInicioSeleccionado = value;
-                            laborInicioSeleccionado = null;
-                            alaInicioSeleccionado = null;
-                            _actualizarFiltrosInicio();
-                          });
-                        }
-                      : null,
-                  icon: Icons.construction,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildCompactDropdownField(
-                  label: 'Labor',
-                  value: laborInicioSeleccionado,
-                  items: filteredLaboresInicio,
-                  onChanged: (tipoLaborInicioSeleccionado != null && isEditable)
-                      ? (value) {
-                          setState(() {
-                            laborInicioSeleccionado = value;
-                            alaInicioSeleccionado = null;
-                            _actualizarFiltrosInicio();
-                          });
-                        }
-                      : null,
-                  icon: Icons.factory,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildCompactDropdownField(
-                  label: 'Ala',
-                  value: alaInicioSeleccionado,
-                  items: filteredAlasInicio,
-                  onChanged: (laborInicioSeleccionado != null && isEditable)
-                      ? (value) => setState(() => alaInicioSeleccionado = value)
-                      : null,
-                  icon: Icons.compare_arrows,
-                ),
-              ),
-            ],
+          _buildCompactDropdownField(
+            label: 'Seleccionar labor',
+            value: laborSeleccionada,
+            items: opcionesLabor,
+            onChanged: isEditable
+                ? (value) {
+                    setState(() {
+                      laborSeleccionada = value;
+                      final plan = planesProduccionCompletos
+                          .where((item) => item.laborNombre == value)
+                          .cast<PlanProduccion?>()
+                          .firstWhere(
+                            (item) => item != null,
+                            orElse: () => null,
+                          );
+                      laborIdSeleccionado = plan?.laborId;
+                    });
+                  }
+                : null,
+            icon: Icons.factory,
           ),
+          if (opcionesLabor.isEmpty && !isLoading)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'No hay labores disponibles en planes de producción',
+                style: TextStyle(fontSize: 11, color: Colors.red.shade400),
+              ),
+            ),
         ],
       ),
     );

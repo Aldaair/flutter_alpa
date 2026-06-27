@@ -11,7 +11,7 @@ class ApiConfig {
   static const String equipoEndpoint = '/equipo/';
   static const String tipoPerforacionEndpoint = '/tipo-perforaciones/';
 
-  static const String planProduccionEndpoint = '/PlanProduccion/';
+  static const String planProduccionEndpoint = '/planes/produccion/';
   static const String planMetrajeTLEndpoint = '/planes/metraje-tl/';
   static const String planAvanceTHEndpoint = '/planes/metraje-avances/';
   static const String periodosEndpoint = '/planes/periodos';
@@ -26,6 +26,7 @@ class ApiConfig {
   static const String pernosEndpoint = '/pernos/';
   static const String mallasEndpoint = '/mallas/';
   static const String origenDestinoEndpoint = '/origen-destino/';
+  static const String destinosEndpoint = '/destinos';
 
   static const String accesorioEndpoint = '/Accesorios/';
   static const String datosExploracionesEndpoint = '/NubeDatosExploraciones';

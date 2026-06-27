@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/PlanProduccion.dart';
+import 'package:i_miner/models/plan_produccion.dart';
 
 class DialogoFormularioAnfochanger extends StatefulWidget {
   final int operacionId;
@@ -105,13 +105,6 @@ class _DialogoFormularioAnfochangerState
           laboresFiltrados.add(plan.labor);
         }
       }
-      for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-            (plan.labor.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor);
-        }
-      }
-
       filteredOrigenLabores = laboresFiltrados.toList()..sort();
     } else {
       filteredOrigenLabores = List.from(opcionesLabor);
@@ -129,14 +122,6 @@ class _DialogoFormularioAnfochangerState
           alasFiltrados.add(plan.ala);
         }
       }
-      for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == origenTipoLaborSeleccionado &&
-            plan.labor == origenLaborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
-        }
-      }
-
       filteredOrigenAlas = alasFiltrados.toList()..sort();
     } else {
       filteredOrigenAlas = List.from(opcionesAla);
@@ -159,20 +144,6 @@ class _DialogoFormularioAnfochangerState
 
         if (coincideBase && coincideAla && (plan.nivel.isNotEmpty ?? false)) {
           nivelesFiltrados.add(plan.nivel);
-        }
-      }
-      for (var plan in planesProduccionCompletos) {
-        bool coincideBase =
-            plan.tipoLabor == origenTipoLaborSeleccionado &&
-            plan.labor == origenLaborSeleccionado;
-
-        bool coincideAla =
-            origenAlaSeleccionado == null ||
-            origenAlaSeleccionado!.isEmpty ||
-            plan.ala == origenAlaSeleccionado;
-
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
         }
       }
       filteredOrigenNiveles = nivelesFiltrados.toList()..sort();

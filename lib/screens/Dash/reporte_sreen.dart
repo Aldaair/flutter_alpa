@@ -172,26 +172,41 @@ Future<Map<String, bool>> loadDashboardAuthorizationState({
   final dbHelper = databaseHelper ?? DatabaseHelper();
   final repository =
       authorizationRepository ?? OfflineAuthorizationRepository();
+  final catalogProcesses = await dbHelper.getProcesos();
+  final catalogIdsByName = <String, int>{};
+  for (final process in catalogProcesses) {
+    final id = process['id'] as int?;
+    final nombre = process['nombre']?.toString();
+    final nombreAbreviado = process['nombre_abreviado']?.toString();
 
-  if (!await repository.hasNormalizedProcessAuth(dni)) {
-    return {
-      for (final module in _dashboardModuleDefinitions) module.legacyKey: false,
-    };
+    if (id == null) continue;
+    if (nombre != null && nombre.trim().isNotEmpty) {
+      catalogIdsByName[normalizeAuthorizationName(nombre)] = id;
+    }
+    if (nombreAbreviado != null && nombreAbreviado.trim().isNotEmpty) {
+      catalogIdsByName[normalizeAuthorizationName(nombreAbreviado)] = id;
+    }
   }
 
+  final authorizedProcessIds = await repository.getAuthorizedProcessIds(dni);
   final authorizedProcesses = await repository.getAuthorizedProcesses(dni);
-  final authorizedProcessIds = authorizedProcesses
-      .map((process) => process.id)
-      .toSet();
   final normalizedProcesses = authorizedProcesses
       .map((process) => normalizeAuthorizationName(process.name))
       .toSet();
 
   return {
     for (final module in _dashboardModuleDefinitions)
-      module.legacyKey:
-          module.authorizedProcessIds.any(authorizedProcessIds.contains) ||
-          module.authorizedNames.any(normalizedProcesses.contains),
+      module.legacyKey: () {
+        final resolvedModuleProcessIds = <int>{
+          for (final processName in module.processLookupNames)
+            if (catalogIdsByName[normalizeAuthorizationName(processName)] !=
+                null)
+              catalogIdsByName[normalizeAuthorizationName(processName)]!,
+        };
+
+        return resolvedModuleProcessIds.any(authorizedProcessIds.contains) ||
+            module.authorizedNames.any(normalizedProcesses.contains);
+      }(),
   };
 }
 
@@ -767,6 +782,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     required primaryColor,
                     onChecklistTelemandoPressed,
                     onProgramaTrabajoPressed,
+                    isCerrado = false,
                   }) => BotonesAccionesInferiores(
                     onChecklistPressed: onChecklistPressed,
                     onHorometroPressed: onHorometroPressed,
@@ -774,10 +790,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onCondicionesEquipoPressed: onCondicionesEquipoPressed,
                     onPresionLlantasPressed: onPresionLlantasPressed,
                     primaryColor: primaryColor,
+                    isCerrado: isCerrado,
                   ),
-            ),
-          ),
-        );
+                ),
+              ),
+            );
         break;
 
       case 'PERFORACIÓN\nHORIZONTAL':
@@ -904,6 +921,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     required primaryColor,
                     onChecklistTelemandoPressed,
                     onProgramaTrabajoPressed,
+                    isCerrado = false,
                   }) => BotonesAccionesInferiores(
                     onChecklistPressed: onChecklistPressed,
                     onHorometroPressed: onHorometroPressed,
@@ -911,10 +929,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onCondicionesEquipoPressed: onCondicionesEquipoPressed,
                     onPresionLlantasPressed: onPresionLlantasPressed,
                     primaryColor: primaryColor,
+                    isCerrado: isCerrado,
                   ),
-            ),
-          ),
-        );
+                ),
+              ),
+            );
         break;
 
       case 'SOSTENIMIENTO':
@@ -1039,6 +1058,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     required primaryColor,
                     onChecklistTelemandoPressed,
                     onProgramaTrabajoPressed,
+                    isCerrado = false,
                   }) => BotonesAccionesInferiores(
                     onChecklistPressed: onChecklistPressed,
                     onHorometroPressed: onHorometroPressed,
@@ -1046,10 +1066,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onCondicionesEquipoPressed: onCondicionesEquipoPressed,
                     onPresionLlantasPressed: onPresionLlantasPressed,
                     primaryColor: primaryColor,
+                    isCerrado: isCerrado,
                   ),
-            ),
-          ),
-        );
+                ),
+              ),
+            );
         break;
 
       case 'CARGUÍO':
@@ -1103,6 +1124,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ) => cs.DialogoFormularioPerforacion(
                     operacionId: operacionId,
                     estadoId: estadoId,
+                    procesoId: resolvedProcesoId,
                     datosIniciales: datosIniciales,
                     estado: "OPERATIVO",
                     primaryColor: primaryColor,
@@ -1176,6 +1198,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     required primaryColor,
                     onChecklistTelemandoPressed,
                     onProgramaTrabajoPressed,
+                    isCerrado = false,
                   }) => BotonesAccionesInferiores(
                     onChecklistPressed: onChecklistPressed,
                     onHorometroPressed: onHorometroPressed,
@@ -1183,10 +1206,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onCondicionesEquipoPressed: onCondicionesEquipoPressed,
                     onPresionLlantasPressed: onPresionLlantasPressed,
                     primaryColor: primaryColor,
+                    isCerrado: isCerrado,
                   ),
-            ),
-          ),
-        );
+                ),
+              ),
+            );
         break;
 
       case 'ACARREO':
@@ -1313,6 +1337,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     required primaryColor,
                     onChecklistTelemandoPressed,
                     onProgramaTrabajoPressed,
+                    isCerrado = false,
                   }) => BotonesAccionesInferiores(
                     onChecklistPressed: onChecklistPressed,
                     onHorometroPressed: onHorometroPressed,
@@ -1320,10 +1345,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onCondicionesEquipoPressed: onCondicionesEquipoPressed,
                     onPresionLlantasPressed: onPresionLlantasPressed,
                     primaryColor: primaryColor,
+                    isCerrado: isCerrado,
                   ),
-            ),
-          ),
-        );
+                ),
+              ),
+            );
         break;
 
       case 'MEDICIONES':

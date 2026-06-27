@@ -9,6 +9,7 @@ class BotonesAccionesInferiores extends StatelessWidget {
   final Color primaryColor;
   final VoidCallback? onChecklistTelemandoPressed;
   final VoidCallback? onProgramaTrabajoPressed;
+  final bool isCerrado;
 
   const BotonesAccionesInferiores({
     super.key,
@@ -20,6 +21,7 @@ class BotonesAccionesInferiores extends StatelessWidget {
     required this.primaryColor,
     this.onChecklistTelemandoPressed,
     this.onProgramaTrabajoPressed,
+    this.isCerrado = false,
   });
 
   @override
@@ -69,6 +71,7 @@ class BotonesAccionesInferiores extends StatelessWidget {
                   icon: Icons.lock_outline,
                   label: 'Cerrar registro',
                   onPressed: onCerrarRegistrosPressed,
+                  enabled: !isCerrado,
                 ),
                 if (onProgramaTrabajoPressed != null)
                   _buildAccionBoton(
@@ -106,6 +109,7 @@ class BotonesAccionesInferiores extends StatelessWidget {
                     icon: Icons.lock_outline,
                     label: 'Cerrar',
                     onPressed: onCerrarRegistrosPressed,
+                    enabled: !isCerrado,
                   ),
                   const SizedBox(width: 8),
                   _buildAccionBoton(
@@ -148,25 +152,27 @@ class BotonesAccionesInferiores extends StatelessWidget {
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
+    bool enabled = true,
   }) {
+    final color = enabled ? primaryColor : Colors.grey;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onPressed,
+        onTap: enabled ? onPressed : null,
         borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: primaryColor),
+              Icon(icon, size: 18, color: color),
               const SizedBox(width: 4),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: primaryColor,
+                  color: color,
                 ),
               ),
             ],

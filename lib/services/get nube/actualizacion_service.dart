@@ -33,6 +33,7 @@ import 'package:i_miner/services/get%20nube/llamadas/api_service_niveles.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_alas.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_labores.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_dim_turnos.dart';
+import 'package:i_miner/services/get%20nube/llamadas/api_service_destinos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_cargos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_usuario_directorio.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_procesos.dart';
@@ -64,6 +65,7 @@ class ActualizacionService {
       "Horometros": fetchHorometros,
       "Plan TL": () => fetchPlanMetrajeTL(),
       "Plan TH": () => fetchPlanAvanceTH(),
+      "Plan CARGUIO y ACARREO": () => fetchPlanProduccion(),
       "Origen y Destino": () => fetchOrigenDestino(),
       "Jefes Guardia": fetchJefesGuardia,
       "Minas": fetchMinas,
@@ -77,6 +79,7 @@ class ActualizacionService {
       "Labores": fetchLabores,
       "Dim Turnos": fetchDimTurnos,
       "Procesos": fetchProcesos,
+      "Destinos": fetchDestinos,
       "Autorizaciones": refreshOfflineAuthorizationSnapshot,
       "Cargos": fetchCargos,
       "Usuarios": fetchUsuarios,
@@ -371,10 +374,6 @@ class ActualizacionService {
     }
   }
 
-  Future<void> fetchDestinatarios() async {
-    // Tu implementación
-  }
-
   Future<void> fetchCheckList() async {
     final apiService = ApiServiceCheckList();
 
@@ -534,6 +533,29 @@ class ActualizacionService {
       }
     } catch (e) {
       print("❌ Error al actualizar Plan Avance: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchPlanProduccion() async {
+    final apiService = ApiServicePlanProduccion();
+
+    try {
+      await fetchPeriodos();
+      final periodoVigente = await DatabaseHelper().getPeriodoVigente();
+      final periodoId = periodoVigente?.periodoId;
+
+      if (periodoId == null) {
+        throw Exception(
+          'No se pudo resolver el periodo vigente desde dim_periodo para Plan Producción.',
+        );
+      }
+
+      final planes = await apiService.fetchPlanesProduccion(token, periodoId);
+
+      print("✅ Plan Producción guardado en SQLite:");
+    } catch (e) {
+      print("❌ Error al actualizar Plan Producción: $e");
       throw e;
     }
   }
@@ -739,6 +761,18 @@ class ActualizacionService {
       }
     } catch (e) {
       print("❌ Error al actualizar procesos: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchDestinos() async {
+    final apiService = ApiServiceDestinos();
+
+    try {
+      final destinos = await apiService.fetchDestinos(token);
+      print("✅ Destinos guardados en SQLite: ${destinos.length}");
+    } catch (e) {
+      print("❌ Error al actualizar destinos: $e");
       throw e;
     }
   }

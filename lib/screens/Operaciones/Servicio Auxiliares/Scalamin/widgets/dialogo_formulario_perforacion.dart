@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/PlanProduccion.dart';
+import 'package:i_miner/models/plan_produccion.dart';
 
 class DialogoFormularioRompebanco extends StatefulWidget {
   final int operacionId;
@@ -103,13 +103,6 @@ class _DialogoFormularioRompebancoState
         }
       }
 
-      for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == tipoLaborSeleccionado &&
-            (plan.labor.isNotEmpty ?? false)) {
-          laboresFiltrados.add(plan.labor);
-        }
-      }
-
       filteredLabores = laboresFiltrados.toList()..sort();
     } else {
       filteredLabores = List.from(opcionesLabor);
@@ -124,14 +117,6 @@ class _DialogoFormularioRompebancoState
             plan.labor == laborSeleccionado &&
             (plan.ala.isNotEmpty ?? false)) {
           alasFiltrados.add(plan.ala);
-        }
-      }
-
-      for (var plan in planesProduccionCompletos) {
-        if (plan.tipoLabor == tipoLaborSeleccionado &&
-            plan.labor == laborSeleccionado &&
-            (plan.ala?.isNotEmpty ?? false)) {
-          alasFiltrados.add(plan.ala!);
         }
       }
 
@@ -157,21 +142,6 @@ class _DialogoFormularioRompebancoState
 
         if (coincideBase && coincideAla && (plan.nivel.isNotEmpty ?? false)) {
           nivelesFiltrados.add(plan.nivel);
-        }
-      }
-
-      for (var plan in planesProduccionCompletos) {
-        bool coincideBase =
-            plan.tipoLabor == tipoLaborSeleccionado &&
-            plan.labor == laborSeleccionado;
-
-        bool coincideAla =
-            alaSeleccionado == null ||
-            alaSeleccionado!.isEmpty ||
-            plan.ala == alaSeleccionado;
-
-        if (coincideBase && coincideAla && (plan.nivel?.isNotEmpty ?? false)) {
-          nivelesFiltrados.add(plan.nivel!);
         }
       }
 

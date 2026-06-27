@@ -312,6 +312,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           required primaryColor,
                                           onChecklistTelemandoPressed,
                                           onProgramaTrabajoPressed,
+                                          isCerrado = false,
                                         }) => BotonesAccionesInferiores(
                                           onChecklistPressed:
                                               onChecklistPressed,
@@ -324,6 +325,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           onPresionLlantasPressed:
                                               onPresionLlantasPressed,
                                           primaryColor: primaryColor,
+                                          isCerrado: isCerrado,
                                         ),
                                   ),
                                 ),
@@ -484,6 +486,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           required primaryColor,
                                           onChecklistTelemandoPressed,
                                           onProgramaTrabajoPressed,
+                                          isCerrado = false,
                                         }) => BotonesAccionesInferiores(
                                           onChecklistPressed:
                                               onChecklistPressed,
@@ -496,6 +499,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           onPresionLlantasPressed:
                                               onPresionLlantasPressed,
                                           primaryColor: primaryColor,
+                                          isCerrado: isCerrado,
                                         ),
                                   ),
                                 ),
@@ -656,6 +660,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           required primaryColor,
                                           onChecklistTelemandoPressed,
                                           onProgramaTrabajoPressed,
+                                          isCerrado = false,
                                         }) => BotonesAccionesInferiores(
                                           onChecklistPressed:
                                               onChecklistPressed,
@@ -668,6 +673,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           onPresionLlantasPressed:
                                               onPresionLlantasPressed,
                                           primaryColor: primaryColor,
+                                          isCerrado: isCerrado,
                                         ),
                                   ),
                                 ),

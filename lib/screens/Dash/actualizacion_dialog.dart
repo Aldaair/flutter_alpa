@@ -21,7 +21,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Periodos',
       'Plan TL',
       'Plan TH',
-      'Plan Producción',
+      'Plan CARGUIO y ACARREO',
       'Toneladas',
     ],
     'Maestros': [
@@ -31,8 +31,6 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Zonas',
       'Tipos Equipo',
       'Accesorios',
-      'Destinatarios',
-      'origen-destino',
       'Longitud Barras',
       'Pernos',
       'Mallas',
@@ -46,6 +44,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Checklist',
       'Checklist Carguio',
       'Usuarios',
+      'Destinos',
     ],
     'Catálogos': [
       'Minas',

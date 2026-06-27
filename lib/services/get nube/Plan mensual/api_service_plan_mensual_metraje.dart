@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:i_miner/config/api/api_config.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/models/PlanMetrajeTL.dart';
+import 'package:i_miner/models/plan_metraje_tl.dart';
 
 class ApiServicePlanMetraje {
   final DatabaseHelper _dbHelper = DatabaseHelper();

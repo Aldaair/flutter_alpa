@@ -11,7 +11,7 @@ import 'package:i_miner/models/DimEstructuraMineral.dart';
 import 'package:i_miner/models/DimNivel.dart';
 import 'package:i_miner/models/DimAla.dart';
 import 'package:i_miner/models/DimLabor.dart';
-import 'package:i_miner/models/PlanMetrajeTL.dart';
+import 'package:i_miner/models/plan_metraje_tl.dart';
 import 'package:i_miner/services/mis_labores_service.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
@@ -420,24 +420,17 @@ class _DialogoFormularioPerforacionState
       );
       final lista =
           tiposPerforacionCompletos
-              .map((t) => t.nombre ?? '')
+              .map((t) => t.nombre)
               .where((n) => n.isNotEmpty)
               .toSet()
               .toList()
             ..sort();
+      print('🔍 _cargarTiposPerforacion → ${lista.length} tipos cargados');
       setState(() {
         opcionesTipoPerforacion = lista;
       });
     } catch (e) {
       print("Error cargando tipos perforación: $e");
-      setState(() {
-        opcionesTipoPerforacion = [
-          'Perforación 1',
-          'Perforación 2',
-          'Perforación 3',
-          'Perforación 4',
-        ];
-      });
     }
   }
 

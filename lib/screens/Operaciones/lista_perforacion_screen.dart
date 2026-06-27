@@ -107,6 +107,7 @@ typedef BotonesAccionesBuilder =
       required Color primaryColor,
       VoidCallback? onChecklistTelemandoPressed,
       VoidCallback? onProgramaTrabajoPressed,
+      bool isCerrado,
     });
 
 // ======== GENERIC WIDGET ========
@@ -1032,6 +1033,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
               onProgramaTrabajoPressed: widget.config.hasProgramaTrabajo
                   ? _handleProgramaTrabajo
                   : null,
+              isCerrado: (operacionActual?['cerrado'] as int?) == 1,
             ),
 
             const SizedBox(height: 50),
