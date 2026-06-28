@@ -17,6 +17,7 @@ import 'package:i_miner/services/mis_labores_service.dart';
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
   final int estadoId;
+  final int procesoId;
   final Map<String, dynamic>? datosIniciales;
   final String estado;
   final String fecha;
@@ -28,6 +29,7 @@ class DialogoFormularioPerforacion extends StatefulWidget {
     super.key,
     required this.operacionId,
     required this.estadoId,
+    required this.procesoId,
     this.datosIniciales,
     required this.estado,
     required this.fecha,
@@ -415,8 +417,12 @@ class _DialogoFormularioPerforacionState
   Future<void> _cargarTiposPerforacion() async {
     try {
       final dbHelper = DatabaseHelper();
-      tiposPerforacionCompletos = await dbHelper.getTiposPerforacionByProceso(
-        "PERFORACIÓN TALADROS LARGOS",
+
+      print(
+        '🔍 _cargarTiposPerforacion → Cargando tipos de perforación para procesoId=${widget.procesoId}',
+      );
+      tiposPerforacionCompletos = await dbHelper.getTiposPerforacionByProcesoId(
+        widget.procesoId,
       );
       final lista =
           tiposPerforacionCompletos
@@ -541,6 +547,7 @@ class _DialogoFormularioPerforacionState
       'tipo_labor': tipoLaborSeleccionado ?? '',
       'labor': laborSeleccionado ?? '',
       'ala': alaSeleccionado ?? '',
+      'ala_id': _obtenerIdAla(alaSeleccionado),
       'nivel': nivelSeleccionado ?? '',
       'n_taladros_produccion':
           int.tryParse(nTaladrosProduccionController.text) ?? 0,
@@ -575,6 +582,17 @@ class _DialogoFormularioPerforacionState
       return tiposPerforacionCompletos
           .firstWhere((tipo) => tipo.nombre == nombre)
           .id;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  int? _obtenerIdAla(String? nombre) {
+    if (nombre == null || nombre.isEmpty) return null;
+    try {
+      return alasCatalogo
+          .firstWhere((a) => a.nombre == nombre)
+          .alaId;
     } catch (e) {
       return null;
     }
@@ -637,50 +655,48 @@ class _DialogoFormularioPerforacionState
                             icon: Icons.location_on,
                             titulo: 'Ubicación',
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (laboresAsignadas.isNotEmpty) ...[
-                                      SegmentedButton<bool>(
-                                        segments: const [
-                                          ButtonSegment<bool>(
-                                            value: true,
-                                            label: Text('Frente planificado'),
-                                          ),
-                                          ButtonSegment<bool>(
-                                            value: false,
-                                            label: Text('Otro frente'),
-                                          ),
-                                        ],
-                                        selected: {usarFrentePlanificado},
-                                        onSelectionChanged: isEditable
-                                            ? (selection) {
-                                                final usePlanned =
-                                                    selection.first;
-                                                setState(() {
-                                                  usarFrentePlanificado =
-                                                      usePlanned;
-                                                });
-                                                if (usePlanned &&
-                                                    laborAsignadaSeleccionada !=
-                                                        null) {
-                                                  _aplicarLaborAsignada(
-                                                    laborAsignadaSeleccionada!,
-                                                  );
-                                                }
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (laboresAsignadas.isNotEmpty) ...[
+                                    SegmentedButton<bool>(
+                                      segments: const [
+                                        ButtonSegment<bool>(
+                                          value: true,
+                                          label: Text('Frente planificado'),
+                                        ),
+                                        ButtonSegment<bool>(
+                                          value: false,
+                                          label: Text('Otro frente'),
+                                        ),
+                                      ],
+                                      selected: {usarFrentePlanificado},
+                                      onSelectionChanged: isEditable
+                                          ? (selection) {
+                                              final usePlanned =
+                                                  selection.first;
+                                              setState(() {
+                                                usarFrentePlanificado =
+                                                    usePlanned;
+                                              });
+                                              if (usePlanned &&
+                                                  laborAsignadaSeleccionada !=
+                                                      null) {
+                                                _aplicarLaborAsignada(
+                                                  laborAsignadaSeleccionada!,
+                                                );
                                               }
-                                            : null,
-                                      ),
-                                      const SizedBox(height: 12),
-                                    ],
-                                    if (usarFrentePlanificado &&
-                                        laboresAsignadas.isNotEmpty)
-                                      _buildPlannedFrontSelector()
-                                    else
-                                      _buildManualFrontSelectors(),
+                                            }
+                                          : null,
+                                    ),
+                                    const SizedBox(height: 12),
                                   ],
-                                ),
+                                  if (usarFrentePlanificado &&
+                                      laboresAsignadas.isNotEmpty)
+                                    _buildPlannedFrontSelector()
+                                  else
+                                    _buildManualFrontSelectors(),
+                                ],
                               ),
                             ],
                           ),

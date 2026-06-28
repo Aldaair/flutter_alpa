@@ -12,6 +12,7 @@ import 'package:i_miner/services/mis_labores_service.dart';
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
   final int estadoId;
+  final int procesoId;
   final Map<String, dynamic>? datosIniciales;
   final String estado;
   final String fecha;
@@ -23,6 +24,7 @@ class DialogoFormularioPerforacion extends StatefulWidget {
     super.key,
     required this.operacionId,
     required this.estadoId,
+    required this.procesoId,
     this.datosIniciales,
     required this.estado,
     required this.fecha,
@@ -245,9 +247,10 @@ class _DialogoFormularioPerforacionState
   Future<void> _cargarTiposPerforacion() async {
     try {
       final dbHelper = DatabaseHelper();
-      tiposPerforacionCompletos = await dbHelper.getTiposPerforacionByProceso(
-        "PERFORACIÓN HORIZONTAL",
-      );
+      tiposPerforacionCompletos =
+          await dbHelper.getTiposPerforacionByProcesoId(
+            widget.procesoId,
+          );
 
       final lista =
           tiposPerforacionCompletos

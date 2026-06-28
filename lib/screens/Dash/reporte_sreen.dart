@@ -19,7 +19,7 @@ import 'package:i_miner/screens/widgets/botones_acciones_inferiores.dart';
 import 'package:i_miner/screens/widgets/dialog_check_imagen.dart';
 
 // Tal largo widgets
-import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_formulario_perforacion.dart'
+import 'package:i_miner/screens/Operaciones/Tal%20largo/widgets/dialogo_formulario_perforacion_tal_largo.dart'
     as tl;
 
 // Tal horizontal widgets
@@ -27,7 +27,7 @@ import 'package:i_miner/screens/Operaciones/Tal%20horizontal/widgets/dialogo_for
     as th;
 
 // Sostenimiento widgets
-import 'package:i_miner/screens/Operaciones/sostenimiento/widgets/dialogo_formulario_perforacion.dart'
+import 'package:i_miner/screens/Operaciones/sostenimiento/widgets/dialogo_formulario_perforacion_sostenimiento.dart'
     as so;
 
 import 'package:i_miner/screens/Operaciones/Acarreo/Dumper/widgets/dialogo_formulario_perforacion.dart'
@@ -707,6 +707,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ) => tl.DialogoFormularioPerforacion(
                     operacionId: operacionId,
                     estadoId: estadoId,
+                    procesoId: resolvedProcesoId,
                     datosIniciales: datosIniciales,
                     estado: "OPERATIVO",
                     fecha: fecha,
@@ -846,6 +847,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ) => th.DialogoFormularioPerforacion(
                     operacionId: operacionId,
                     estadoId: estadoId,
+                    procesoId: resolvedProcesoId,
                     datosIniciales: datosIniciales,
                     estado: "OPERATIVO",
                     fecha: fecha,
@@ -1264,6 +1266,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ) => ad.DialogoFormularioPerforacion(
                     operacionId: operacionId,
                     estadoId: estadoId,
+                    procesoId: resolvedProcesoId,
                     datosIniciales: datosIniciales,
                     estado: "OPERATIVO",
                     primaryColor: primaryColor,

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/models/PlanMensual.dart';
-import 'package:i_miner/models/plan_produccion.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
   final int estadoId;
+  final int procesoId;
   final Map<String, dynamic>? datosIniciales;
   final String estado;
   final Color primaryColor;
@@ -15,6 +14,7 @@ class DialogoFormularioPerforacion extends StatefulWidget {
     super.key,
     required this.operacionId,
     required this.estadoId,
+    required this.procesoId,
     this.datosIniciales,
     required this.estado,
     this.primaryColor = const Color(0xFF1B5E6B),
@@ -32,68 +32,116 @@ class _DialogoFormularioPerforacionState
   bool isLoading = true;
   bool isSmallScreen = false;
 
-  // Controlador para observaciones
   final TextEditingController observacionesController = TextEditingController();
-
-  // Controlador para número de viajes
   final TextEditingController nViajesController = TextEditingController();
 
-  // Variables para INICIO
-  String? nivelInicioSeleccionado;
-  String? tipoLaborInicioSeleccionado;
+  // INICIO — labor desde planes
   String? laborInicioSeleccionado;
-  String? alaInicioSeleccionado;
+  int? laborInicioId;
 
-  // Variables para FIN
-  String? nivelFinSeleccionado;
-  String? tipoLaborFinSeleccionado;
-  String? laborFinSeleccionado;
-  String? alaFinSeleccionado;
+  List<String> opcionesLaborInicio = [];
+  final Map<String, int> laborInicioMap = {};
 
-  // Opciones para los dropdowns
-  List<String> opcionesNivel = [];
-  List<String> opcionesTipoLabor = [];
-  List<String> opcionesLabor = [];
-  List<String> opcionesAla = [];
-
-  // Listas filtradas para INICIO
-  List<String> filteredTiposLaborInicio = [];
-  List<String> filteredLaboresInicio = [];
-  List<String> filteredAlasInicio = [];
-
-  // Listas filtradas para FIN
-  List<String> filteredTiposLaborFin = [];
-  List<String> filteredLaboresFin = [];
-  List<String> filteredAlasFin = [];
-
-  // Almacenar objetos completos
-  List<PlanMensual> planesMensualCompletos = [];
-  List<PlanProduccion> planesProduccionCompletos = [];
+  // FIN — destino
+  String? ubicacionDestinoSeleccionado;
+  int? ubicacionDestinoId;
+  List<Map<String, dynamic>> destinosDisponibles = [];
+  List<String> opcionesDestino = [];
 
   @override
   void initState() {
     super.initState();
     isEditable = widget.estado.toLowerCase() != "cerrado";
+    _cargarDatos();
+  }
+
+  Future<void> _cargarDatos() async {
+    setState(() => isLoading = true);
+
+    try {
+      final db = DatabaseHelper();
+      final results = await Future.wait([
+        db.getPlanesMetrajeTL(),
+        db.getPlanesAvanceTH(),
+        db.getPlanesProduccion(),
+        db.getDestinosByProcesoId(widget.procesoId),
+      ]);
+
+      if (!mounted) return;
+
+      final planMetrajeTL = results[0] as List;
+      final planAvanceTH = results[1] as List;
+      final planProduccion = results[2] as List;
+      destinosDisponibles = results[3] as List<Map<String, dynamic>>;
+
+      final laboresSet = <String>{};
+      for (final plan in [...planMetrajeTL, ...planAvanceTH, ...planProduccion]) {
+        final nombre = _extractLaborNombre(plan);
+        final id = _extractLaborId(plan);
+        if (nombre != null && nombre.trim().isNotEmpty) {
+          laboresSet.add(nombre.trim());
+          if (id != null) {
+            laborInicioMap[nombre.trim()] = id;
+          }
+        }
+      }
+
+      setState(() {
+        opcionesLaborInicio = laboresSet.toList()..sort();
+        opcionesDestino = destinosDisponibles
+            .map((d) => d['nombre']?.toString() ?? '')
+            .where((n) => n.isNotEmpty)
+            .toList();
+        _cargarDatosIniciales();
+      });
+    } catch (e) {
+      print('Error cargando datos: $e');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  String? _extractLaborNombre(dynamic plan) {
+    if (plan is Map) return plan['laborNombre']?.toString() ?? plan['labor_nombre']?.toString();
+    try {
+      return (plan as dynamic).laborNombre as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  int? _extractLaborId(dynamic plan) {
+    if (plan is Map) return plan['laborId'] ?? plan['labor_id'];
+    try {
+      return (plan as dynamic).laborId as int?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _cargarDatosIniciales() {
+    if (widget.datosIniciales == null) return;
+
+    laborInicioSeleccionado = widget.datosIniciales!['labor']?.toString();
+    laborInicioId = widget.datosIniciales!['labor_id'] as int?;
+
+    ubicacionDestinoSeleccionado =
+        widget.datosIniciales!['ubicacion_destino']?.toString();
+    ubicacionDestinoId = widget.datosIniciales!['ubicacion_destino_id'] as int?;
+
+    nViajesController.text =
+        widget.datosIniciales!['n_viajes']?.toString() ?? '';
+    observacionesController.text =
+        widget.datosIniciales!['observaciones']?.toString() ?? '';
   }
 
   Future<void> _guardarDatos() async {
     Map<String, dynamic> datosFormulario = {
-      // INICIO
-      'nivel_inicio': nivelInicioSeleccionado ?? '',
-      'tipo_labor_inicio': tipoLaborInicioSeleccionado ?? '',
-      'labor_inicio': laborInicioSeleccionado ?? '',
-      'ala_inicio': alaInicioSeleccionado ?? '',
-
-      // FIN
-      'nivel_fin': nivelFinSeleccionado ?? '',
-      'tipo_labor_fin': tipoLaborFinSeleccionado ?? '',
-      'labor_fin': laborFinSeleccionado ?? '',
-      'ala_fin': alaFinSeleccionado ?? '',
-
-      // NÚMERO DE VIAJES
+      'labor_id': laborInicioId,
+      'labor': laborInicioSeleccionado ?? '',
+      'ubicacion_destino_id': ubicacionDestinoId ?? 0,
+      'ubicacion_destino': ubicacionDestinoSeleccionado ?? '',
       'n_viajes': int.tryParse(nViajesController.text) ?? 0,
-
-      // OBSERVACIONES
       'observaciones': observacionesController.text,
     };
 
@@ -209,156 +257,91 @@ class _DialogoFormularioPerforacionState
             ],
           ),
           const SizedBox(height: 8),
-          if (isSmallScreen)
-            _buildVerticalDropdownsInicio()
-          else
-            _buildHorizontalDropdownsInicio(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerticalDropdownsInicio() {
-    return Column(
-      children: [
-        _buildCompactDropdownField(
-          label: 'Nivel',
-          value: nivelInicioSeleccionado,
-          items: opcionesNivel,
-          onChanged: isEditable
-              ? (value) {
-                  setState(() {
-                    nivelInicioSeleccionado = value;
-                    tipoLaborInicioSeleccionado = null;
-                    laborInicioSeleccionado = null;
-                    alaInicioSeleccionado = null;
-                  });
-                }
-              : null,
-          icon: Icons.stairs,
-          color: Colors.green,
-        ),
-        const SizedBox(height: 8),
-        _buildCompactDropdownField(
-          label: 'Tipo Labor',
-          value: tipoLaborInicioSeleccionado,
-          items: filteredTiposLaborInicio,
-          onChanged: (nivelInicioSeleccionado != null && isEditable)
-              ? (value) {
-                  setState(() {
-                    tipoLaborInicioSeleccionado = value;
-                    laborInicioSeleccionado = null;
-                    alaInicioSeleccionado = null;
-                  });
-                }
-              : null,
-          icon: Icons.construction,
-          color: Colors.green,
-        ),
-        const SizedBox(height: 8),
-        _buildCompactDropdownField(
-          label: 'Labor',
-          value: laborInicioSeleccionado,
-          items: filteredLaboresInicio,
-          onChanged: (tipoLaborInicioSeleccionado != null && isEditable)
-              ? (value) {
-                  setState(() {
-                    laborInicioSeleccionado = value;
-                    alaInicioSeleccionado = null;
-                  });
-                }
-              : null,
-          icon: Icons.factory,
-          color: Colors.green,
-        ),
-        const SizedBox(height: 8),
-        _buildCompactDropdownField(
-          label: 'Ala',
-          value: alaInicioSeleccionado,
-          items: filteredAlasInicio,
-          onChanged: (laborInicioSeleccionado != null && isEditable)
-              ? (value) => setState(() => alaInicioSeleccionado = value)
-              : null,
-          icon: Icons.compare_arrows,
-          color: Colors.green,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHorizontalDropdownsInicio() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildCompactDropdownField(
-            label: 'Nivel',
-            value: nivelInicioSeleccionado,
-            items: opcionesNivel,
-            onChanged: isEditable
-                ? (value) {
-                    setState(() {
-                      nivelInicioSeleccionado = value;
-                      tipoLaborInicioSeleccionado = null;
-                      laborInicioSeleccionado = null;
-                      alaInicioSeleccionado = null;
-                    });
-                  }
-                : null,
-            icon: Icons.stairs,
-            color: Colors.green,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildCompactDropdownField(
-            label: 'Tipo Labor',
-            value: tipoLaborInicioSeleccionado,
-            items: filteredTiposLaborInicio,
-            onChanged: (nivelInicioSeleccionado != null && isEditable)
-                ? (value) {
-                    setState(() {
-                      tipoLaborInicioSeleccionado = value;
-                      laborInicioSeleccionado = null;
-                      alaInicioSeleccionado = null;
-                    });
-                  }
-                : null,
-            icon: Icons.construction,
-            color: Colors.green,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildCompactDropdownField(
-            label: 'Labor',
-            value: laborInicioSeleccionado,
-            items: filteredLaboresInicio,
-            onChanged: (tipoLaborInicioSeleccionado != null && isEditable)
+          RawAutocomplete<String>(
+            initialValue: TextEditingValue(text: laborInicioSeleccionado ?? ''),
+            optionsBuilder: (textEditingValue) {
+              final query = textEditingValue.text.trim().toLowerCase();
+              if (query.isEmpty) return opcionesLaborInicio;
+              return opcionesLaborInicio.where(
+                (label) => label.toLowerCase().contains(query),
+              );
+            },
+            onSelected: isEditable
                 ? (value) {
                     setState(() {
                       laborInicioSeleccionado = value;
-                      alaInicioSeleccionado = null;
+                      laborInicioId = laborInicioMap[value];
                     });
                   }
                 : null,
-            icon: Icons.factory,
-            color: Colors.green,
+            fieldViewBuilder:
+                (context, controller, focusNode, onFieldSubmitted) {
+              return TextField(
+                controller: controller,
+                focusNode: focusNode,
+                enabled: isEditable,
+                onChanged: (value) {
+                  setState(() {
+                    laborInicioSeleccionado = value;
+                    laborInicioId = null;
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: 'Buscar labor de inicio...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  isDense: true,
+                ),
+              );
+            },
+            optionsViewBuilder: (context, onSelected, options) {
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 500,
+                    height: 240,
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: options.length,
+                      itemBuilder: (context, index) {
+                        final label = options.elementAt(index);
+                        return ListTile(
+                          dense: true,
+                          title: Text(
+                            label,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          onTap: () => onSelected(label),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildCompactDropdownField(
-            label: 'Ala',
-            value: alaInicioSeleccionado,
-            items: filteredAlasInicio,
-            onChanged: (laborInicioSeleccionado != null && isEditable)
-                ? (value) => setState(() => alaInicioSeleccionado = value)
-                : null,
-            icon: Icons.compare_arrows,
-            color: Colors.green,
-          ),
-        ),
-      ],
+          if (opcionesLaborInicio.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'No hay labores disponibles en los planes',
+                style: TextStyle(fontSize: 11, color: Colors.red.shade400),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -399,156 +382,34 @@ class _DialogoFormularioPerforacionState
             ],
           ),
           const SizedBox(height: 8),
-          if (isSmallScreen)
-            _buildVerticalDropdownsFin()
-          else
-            _buildHorizontalDropdownsFin(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerticalDropdownsFin() {
-    return Column(
-      children: [
-        _buildCompactDropdownField(
-          label: 'Nivel',
-          value: nivelFinSeleccionado,
-          items: opcionesNivel,
-          onChanged: isEditable
-              ? (value) {
-                  setState(() {
-                    nivelFinSeleccionado = value;
-                    tipoLaborFinSeleccionado = null;
-                    laborFinSeleccionado = null;
-                    alaFinSeleccionado = null;
-                  });
-                }
-              : null,
-          icon: Icons.stairs,
-          color: Colors.red,
-        ),
-        const SizedBox(height: 8),
-        _buildCompactDropdownField(
-          label: 'Tipo Labor',
-          value: tipoLaborFinSeleccionado,
-          items: filteredTiposLaborFin,
-          onChanged: (nivelFinSeleccionado != null && isEditable)
-              ? (value) {
-                  setState(() {
-                    tipoLaborFinSeleccionado = value;
-                    laborFinSeleccionado = null;
-                    alaFinSeleccionado = null;
-                  });
-                }
-              : null,
-          icon: Icons.construction,
-          color: Colors.red,
-        ),
-        const SizedBox(height: 8),
-        _buildCompactDropdownField(
-          label: 'Labor',
-          value: laborFinSeleccionado,
-          items: filteredLaboresFin,
-          onChanged: (tipoLaborFinSeleccionado != null && isEditable)
-              ? (value) {
-                  setState(() {
-                    laborFinSeleccionado = value;
-                    alaFinSeleccionado = null;
-                  });
-                }
-              : null,
-          icon: Icons.factory,
-          color: Colors.red,
-        ),
-        const SizedBox(height: 8),
-        _buildCompactDropdownField(
-          label: 'Ala',
-          value: alaFinSeleccionado,
-          items: filteredAlasFin,
-          onChanged: (laborFinSeleccionado != null && isEditable)
-              ? (value) => setState(() => alaFinSeleccionado = value)
-              : null,
-          icon: Icons.compare_arrows,
-          color: Colors.red,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHorizontalDropdownsFin() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildCompactDropdownField(
-            label: 'Nivel',
-            value: nivelFinSeleccionado,
-            items: opcionesNivel,
+          _buildCompactDropdownField(
+            label: 'Seleccionar destino',
+            value: ubicacionDestinoSeleccionado,
+            items: opcionesDestino,
             onChanged: isEditable
                 ? (value) {
                     setState(() {
-                      nivelFinSeleccionado = value;
-                      tipoLaborFinSeleccionado = null;
-                      laborFinSeleccionado = null;
-                      alaFinSeleccionado = null;
+                      ubicacionDestinoSeleccionado = value;
+                      final destino = destinosDisponibles.firstWhere(
+                        (item) => item['nombre'] == value,
+                        orElse: () => <String, dynamic>{},
+                      );
+                      ubicacionDestinoId = destino['id'] as int?;
                     });
                   }
                 : null,
-            icon: Icons.stairs,
-            color: Colors.red,
+            icon: Icons.flag,
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildCompactDropdownField(
-            label: 'Tipo Labor',
-            value: tipoLaborFinSeleccionado,
-            items: filteredTiposLaborFin,
-            onChanged: (nivelFinSeleccionado != null && isEditable)
-                ? (value) {
-                    setState(() {
-                      tipoLaborFinSeleccionado = value;
-                      laborFinSeleccionado = null;
-                      alaFinSeleccionado = null;
-                    });
-                  }
-                : null,
-            icon: Icons.construction,
-            color: Colors.red,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildCompactDropdownField(
-            label: 'Labor',
-            value: laborFinSeleccionado,
-            items: filteredLaboresFin,
-            onChanged: (tipoLaborFinSeleccionado != null && isEditable)
-                ? (value) {
-                    setState(() {
-                      laborFinSeleccionado = value;
-                      alaFinSeleccionado = null;
-                    });
-                  }
-                : null,
-            icon: Icons.factory,
-            color: Colors.red,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildCompactDropdownField(
-            label: 'Ala',
-            value: alaFinSeleccionado,
-            items: filteredAlasFin,
-            onChanged: (laborFinSeleccionado != null && isEditable)
-                ? (value) => setState(() => alaFinSeleccionado = value)
-                : null,
-            icon: Icons.compare_arrows,
-            color: Colors.red,
-          ),
-        ),
-      ],
+          if (opcionesDestino.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'No hay destinos disponibles para Acarreo',
+                style: TextStyle(fontSize: 11, color: Colors.red.shade400),
+              ),
+            ),
+        ],
+      ),
     );
   }
 

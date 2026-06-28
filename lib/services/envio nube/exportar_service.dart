@@ -68,7 +68,6 @@ class ExportarService {
         return OperacionTalLargoUpsertRequest(
           fecha: op['fecha'],
           turnoId: op['turno_id'],
-          laborId: op['labor_id'],
           operadorId: op['operador_id'],
           jefeGuardiaId: op['jefe_guardia_id'],
           equipoId: op['equipo_id'],
@@ -264,7 +263,6 @@ class ExportarService {
     final registros = _decodeList(value);
     const keysToRemove = {
       'frente_origen',
-      'labor_id',
       'mina',
       'zona',
       'area',

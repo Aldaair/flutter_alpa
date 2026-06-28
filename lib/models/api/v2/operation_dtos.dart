@@ -105,6 +105,9 @@ class RegistroOperacionTalLargoDetalleRequest {
   final int? numBarras;
   final int? tipoPerforacionId;
   final String? observaciones;
+  final int? laborId;
+  final String? ala;
+  final int? alaId;
 
   RegistroOperacionTalLargoDetalleRequest({
     this.nTaladrosProduccion,
@@ -119,6 +122,9 @@ class RegistroOperacionTalLargoDetalleRequest {
     this.numBarras,
     this.tipoPerforacionId,
     this.observaciones,
+    this.laborId,
+    this.ala,
+    this.alaId,
   });
 
   factory RegistroOperacionTalLargoDetalleRequest.fromJson(
@@ -136,6 +142,9 @@ class RegistroOperacionTalLargoDetalleRequest {
     numBarras: json['num_barras'],
     tipoPerforacionId: json['tipo_perforacion_id'],
     observaciones: json['observaciones'],
+    laborId: json['labor_id'],
+    ala: json['ala'],
+    alaId: json['ala_id'],
   );
 
   Map<String, dynamic> toJson() => {
@@ -156,6 +165,9 @@ class RegistroOperacionTalLargoDetalleRequest {
     if (numBarras != null) 'num_barras': numBarras,
     if (tipoPerforacionId != null) 'tipo_perforacion_id': tipoPerforacionId,
     if (observaciones != null) 'observaciones': observaciones,
+    if (laborId != null) 'labor_id': laborId,
+    if (ala != null) 'ala': ala,
+    if (alaId != null) 'ala_id': alaId,
   };
 }
 

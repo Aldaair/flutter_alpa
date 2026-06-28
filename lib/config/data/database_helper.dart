@@ -35,7 +35,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 29;
+  static const int _sharedCatalogDbVersion = 30;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -1079,6 +1079,14 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
 
     if (oldVersion < 28) {
       await _resetPlanesProduccionTable(db);
+    }
+
+    if (oldVersion < 30) {
+      if (!await _columnaExiste(db, 'tipo_perforaciones', 'proceso_id')) {
+        await db.execute(
+          'ALTER TABLE tipo_perforaciones ADD COLUMN proceso_id INTEGER',
+        );
+      }
     }
   }
 
@@ -2742,15 +2750,15 @@ CREATE TABLE $tableName (
     );
   }
 
-  Future<List<TipoPerforacion>> getTiposPerforacionByProceso(
-    String proceso,
+  Future<List<TipoPerforacion>> getTiposPerforacionByProcesoId(
+    int procesoId,
   ) async {
     final db = await sharedCatalogDatabase;
 
     final List<Map<String, dynamic>> maps = await db.query(
       'tipo_perforaciones',
-      where: 'proceso = ?',
-      whereArgs: [proceso],
+      where: 'proceso_id = ?',
+      whereArgs: [procesoId],
     );
 
     return List.generate(maps.length, (i) => TipoPerforacion.fromJson(maps[i]));
