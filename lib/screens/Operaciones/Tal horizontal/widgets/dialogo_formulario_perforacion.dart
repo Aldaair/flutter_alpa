@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/DimAla.dart';
 import 'package:i_miner/models/DimLabor.dart';
@@ -50,6 +51,7 @@ class _DialogoFormularioPerforacionState
   final TextEditingController talAlivioController = TextEditingController();
   final TextEditingController talRepasoController = TextEditingController();
   final TextEditingController numBarrasController = TextEditingController();
+  final TextEditingController longitudBarraController = TextEditingController();
   final TextEditingController observacionesController = TextEditingController();
 
   // Variables para los campos seleccionables
@@ -78,6 +80,9 @@ class _DialogoFormularioPerforacionState
   AssignedLabor? laborAsignadaSeleccionada;
   DimLabor? selectedLaborFromCatalogo;
 
+  final Map<String, AssignedLabor> _plannedLaborMap = {};
+  final Map<String, DimLabor> _manualLaborMap = {};
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +102,14 @@ class _DialogoFormularioPerforacionState
         _cargarCatalogos(),
         _cargarPlanAvanceTH(),
       ]);
+
+      final planLaborIds = planesAvanceCompletos.map((p) => p.laborId).toSet();
+      _manualLaborMap.clear();
+      for (final l in laboresCatalogo) {
+        if (planLaborIds.contains(l.laborId)) {
+          _manualLaborMap[l.nombreLabor] = l;
+        }
+      }
     } catch (e) {
       print("Error cargando datos: $e");
     } finally {
@@ -116,6 +129,11 @@ class _DialogoFormularioPerforacionState
 
       setState(() {
         laboresAsignadas = labores;
+        _plannedLaborMap.clear();
+        for (final l in labores) {
+          final key = '${l.laborNombre} | ${l.nivel} | ${l.estructuraMineral}';
+          _plannedLaborMap[key] = l;
+        }
       });
 
       _sincronizarFrentePlanificado();
@@ -247,14 +265,13 @@ class _DialogoFormularioPerforacionState
   Future<void> _cargarTiposPerforacion() async {
     try {
       final dbHelper = DatabaseHelper();
-      tiposPerforacionCompletos =
-          await dbHelper.getTiposPerforacionByProcesoId(
-            widget.procesoId,
-          );
+      tiposPerforacionCompletos = await dbHelper.getTiposPerforacionByProcesoId(
+        widget.procesoId,
+      );
 
       final lista =
           tiposPerforacionCompletos
-              .map((t) => t.nombre ?? '')
+              .map((t) => t.nombre)
               .where((n) => n.isNotEmpty)
               .toSet()
               .toList()
@@ -342,13 +359,23 @@ class _DialogoFormularioPerforacionState
           laborSeleccionado,
         );
 
-        talProdController.text = widget.datosIniciales!['tal_prod'] ?? '';
-        talRimadosController.text = widget.datosIniciales!['tal_rimados'] ?? '';
-        talAlivioController.text = widget.datosIniciales!['tal_alivio'] ?? '';
-        talRepasoController.text = widget.datosIniciales!['tal_repaso'] ?? '';
-        longitudBarraSeleccionada = widget.datosIniciales!['long_barras']
-            ?.toString();
-        numBarrasController.text = widget.datosIniciales!['num_barras'] ?? '';
+        tipoPerforacionSeleccionado =
+            widget.datosIniciales!['tipo_perforacion']?.isNotEmpty == true
+            ? widget.datosIniciales!['tipo_perforacion']
+            : null;
+
+        talProdController.text =
+            widget.datosIniciales!['tal_prod']?.toString() ?? '';
+        talRimadosController.text =
+            widget.datosIniciales!['tal_rimados']?.toString() ?? '';
+        talAlivioController.text =
+            widget.datosIniciales!['tal_alivio']?.toString() ?? '';
+        talRepasoController.text =
+            widget.datosIniciales!['tal_repaso']?.toString() ?? '';
+        longitudBarraController.text =
+            widget.datosIniciales!['long_barras']?.toString() ?? '';
+        numBarrasController.text =
+            widget.datosIniciales!['num_barras']?.toString() ?? '';
         observacionesController.text =
             widget.datosIniciales!['observaciones'] ?? '';
       });
@@ -400,7 +427,7 @@ class _DialogoFormularioPerforacionState
       'tal_rimados': int.tryParse(talRimadosController.text) ?? 0,
       'tal_alivio': int.tryParse(talAlivioController.text) ?? 0,
       'tal_repaso': int.tryParse(talRepasoController.text) ?? 0,
-      'long_barras': double.tryParse(longitudBarraSeleccionada ?? '') ?? 0.0,
+      'long_barras': double.tryParse(longitudBarraController.text) ?? 0.0,
       'num_barras': int.tryParse(numBarrasController.text) ?? 0,
       'tipo_perforacion': tipoPerforacionSeleccionado ?? '',
 
@@ -445,6 +472,7 @@ class _DialogoFormularioPerforacionState
     talAlivioController.dispose();
     talRepasoController.dispose();
     numBarrasController.dispose();
+    longitudBarraController.dispose();
     observacionesController.dispose();
     super.dispose();
   }
@@ -572,16 +600,11 @@ class _DialogoFormularioPerforacionState
                             icon: Icons.height,
                             titulo: 'Barras',
                             children: [
-                              _buildCompactDropdownField(
+                              _buildCompactTextField(
                                 label: 'Longitud (pies)',
-                                value: longitudBarraSeleccionada,
-                                items: opcionesLongitudBarras,
-                                onChanged: isEditable
-                                    ? (value) => setState(
-                                        () => longitudBarraSeleccionada = value,
-                                      )
-                                    : null,
+                                controller: longitudBarraController,
                                 icon: Icons.straighten,
+                                allowDecimal: true,
                               ),
                               const SizedBox(width: 8),
                               _buildCompactTextField(
@@ -848,7 +871,12 @@ class _DialogoFormularioPerforacionState
     required TextEditingController controller,
     required IconData icon,
     TextInputType keyboardType = TextInputType.number,
+    bool allowDecimal = false,
   }) {
+    final formatter = allowDecimal
+        ? FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$'))
+        : FilteringTextInputFormatter.digitsOnly;
+
     return Container(
       height: 42,
       decoration: BoxDecoration(
@@ -859,7 +887,10 @@ class _DialogoFormularioPerforacionState
       child: TextField(
         controller: controller,
         enabled: isEditable,
-        keyboardType: keyboardType,
+        keyboardType: allowDecimal
+            ? const TextInputType.numberWithOptions(decimal: true)
+            : keyboardType,
+        inputFormatters: [formatter],
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(fontSize: 11, color: Colors.grey.shade600),
@@ -967,10 +998,6 @@ class _DialogoFormularioPerforacionState
         children: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              minimumSize: Size.zero,
-            ),
             child: Text(
               'Cancelar',
               style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
@@ -983,25 +1010,13 @@ class _DialogoFormularioPerforacionState
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                minimumSize: Size.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.save, size: 14),
-                  SizedBox(width: 6),
-                  Text(
-                    'Guardar',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                ],
+                children: [Text('Guardar')],
               ),
             ),
         ],
@@ -1010,39 +1025,84 @@ class _DialogoFormularioPerforacionState
   }
 
   Widget _buildManualFrontSelectors() {
-    final planLaborIds = planesAvanceCompletos.map((p) => p.laborId).toSet();
-    final laboresFiltradas =
-        laboresCatalogo.where((l) => planLaborIds.contains(l.laborId)).toList()
-          ..sort((a, b) => a.nombreLabor.compareTo(b.nombreLabor));
+    final manualOptions = _manualLaborMap.keys.toList()..sort();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButtonFormField<int>(
-          initialValue: selectedLaborFromCatalogo?.laborId,
-          decoration: const InputDecoration(
-            labelText: 'Seleccionar labor',
-            border: OutlineInputBorder(),
-            isDense: true,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          ),
-          items: laboresFiltradas.map((labor) {
-            return DropdownMenuItem<int>(
-              value: labor.laborId,
-              child: Text(labor.nombreLabor, overflow: TextOverflow.ellipsis),
+        RawAutocomplete<String>(
+          initialValue: selectedLaborFromCatalogo != null
+              ? TextEditingValue(text: selectedLaborFromCatalogo!.nombreLabor)
+              : TextEditingValue(text: laborSeleccionado ?? ''),
+          optionsBuilder: (textEditingValue) {
+            final query = textEditingValue.text.trim().toLowerCase();
+            if (query.isEmpty) return manualOptions;
+            return manualOptions.where(
+              (label) => label.toLowerCase().contains(query),
             );
-          }).toList(),
-          onChanged: isEditable
-              ? (laborId) {
-                  final match = laboresCatalogo.cast<DimLabor?>().firstWhere(
-                    (l) => l?.laborId == laborId,
-                    orElse: () => null,
-                  );
-                  if (match != null) {
-                    _onLaborFromCatalogSelected(match);
-                  }
+          },
+          onSelected: isEditable
+              ? (value) {
+                  final labor = _manualLaborMap[value];
+                  if (labor != null) _onLaborFromCatalogSelected(labor);
                 }
               : null,
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              enabled: isEditable,
+              onChanged: (value) {
+                setState(() {
+                  laborSeleccionado = value;
+                  selectedLaborFromCatalogo = null;
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Buscar labor...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                isDense: true,
+              ),
+            );
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 500,
+                  height: 240,
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: options.length,
+                    itemBuilder: (context, index) {
+                      final label = options.elementAt(index);
+                      return ListTile(
+                        dense: true,
+                        title: Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onTap: () => onSelected(label),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
         ),
         if (selectedLaborFromCatalogo != null) ...[
           const SizedBox(height: 8),
@@ -1065,35 +1125,86 @@ class _DialogoFormularioPerforacionState
 
   Widget _buildPlannedFrontSelector() {
     final selected = laborAsignadaSeleccionada;
+    final plannedOptions = _plannedLaborMap.keys.toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButtonFormField<int>(
-          initialValue: selected?.laborId,
-          decoration: const InputDecoration(
-            labelText: 'Labor asignada',
-            border: OutlineInputBorder(),
-            isDense: true,
-          ),
-          items: laboresAsignadas.map((labor) {
-            return DropdownMenuItem<int>(
-              value: labor.laborId,
-              child: Text(
-                '${labor.laborNombre} | ${labor.nivel} | ${labor.estructuraMineral}',
-                overflow: TextOverflow.ellipsis,
-              ),
+        RawAutocomplete<String>(
+          initialValue: selected != null
+              ? TextEditingValue(
+                  text:
+                      '${selected.laborNombre} | ${selected.nivel} | ${selected.estructuraMineral}',
+                )
+              : const TextEditingValue(),
+          optionsBuilder: (textEditingValue) {
+            final query = textEditingValue.text.trim().toLowerCase();
+            if (query.isEmpty) return plannedOptions;
+            return plannedOptions.where(
+              (label) => label.toLowerCase().contains(query),
             );
-          }).toList(),
-          onChanged: isEditable
-              ? (laborId) {
-                  final match = laboresAsignadas.where(
-                    (labor) => labor.laborId == laborId,
-                  );
-                  if (match.isNotEmpty) {
-                    _aplicarLaborAsignada(match.first);
-                  }
+          },
+          onSelected: isEditable
+              ? (value) {
+                  final labor = _plannedLaborMap[value];
+                  if (labor != null) _aplicarLaborAsignada(labor);
                 }
               : null,
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              enabled: isEditable,
+              onChanged: (value) {
+                setState(() {
+                  laborAsignadaSeleccionada = null;
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Buscar labor asignada...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                isDense: true,
+              ),
+            );
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 500,
+                  height: 240,
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: options.length,
+                    itemBuilder: (context, index) {
+                      final label = options.elementAt(index);
+                      return ListTile(
+                        dense: true,
+                        title: Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        onTap: () => onSelected(label),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
         ),
         if (selected != null) ...[
           const SizedBox(height: 8),

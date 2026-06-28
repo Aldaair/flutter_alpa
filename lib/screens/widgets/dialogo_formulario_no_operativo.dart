@@ -266,7 +266,7 @@ class _DialogoFormularioNoOperativoState
             ),
             child: Text(
               'Cancelar',
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+              style: TextStyle(color: Colors.grey.shade700),
             ),
           ),
           const SizedBox(width: 8),
@@ -276,11 +276,6 @@ class _DialogoFormularioNoOperativoState
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                minimumSize: Size.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -290,10 +285,7 @@ class _DialogoFormularioNoOperativoState
                 children: [
                   Icon(Icons.save, size: 14),
                   SizedBox(width: 6),
-                  Text(
-                    'Guardar',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
+                  Text('Guardar'),
                 ],
               ),
             ),

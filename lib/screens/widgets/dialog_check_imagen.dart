@@ -301,14 +301,7 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
         children: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              minimumSize: Size.zero,
-            ),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
-            ),
+            child: Text('Cancelar'),
           ),
           const SizedBox(width: 8),
           if (isEditable)
@@ -317,11 +310,6 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                minimumSize: Size.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -331,10 +319,7 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
                 children: [
                   Icon(Icons.save, size: 14),
                   SizedBox(width: 6),
-                  Text(
-                    'Guardar',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
+                  Text('Guardar'),
                 ],
               ),
             ),

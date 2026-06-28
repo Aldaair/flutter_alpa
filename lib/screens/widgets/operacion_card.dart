@@ -616,16 +616,91 @@ class _OperacionCardState extends State<OperacionCard> {
                 fieldWeights['jefe']! * scaleFactor,
                 fieldWeights,
               ),
-              child: CustomMaterialDropdown(
-                label: 'Jefe Guardia',
-                value: selectedJefeGuardia,
-                items: jefesGuardia,
-                onChanged: operacionBloqueada
+              child: RawAutocomplete<String>(
+                initialValue: TextEditingValue(
+                  text: selectedJefeGuardia ?? '',
+                ),
+                optionsBuilder: (textEditingValue) {
+                  final query = textEditingValue.text.trim().toLowerCase();
+                  if (query.isEmpty) return jefesGuardia;
+                  return jefesGuardia.where(
+                    (label) => label.toLowerCase().contains(query),
+                  );
+                },
+                onSelected: operacionBloqueada
                     ? null
-                    : (value) => setState(() => selectedJefeGuardia = value),
-                icon: Icons.person,
-                hint: jefesGuardia.isEmpty ? 'Cargando...' : 'Jefe',
-                primaryColor: widget.primaryColor,
+                    : (value) =>
+                        setState(() => selectedJefeGuardia = value),
+                fieldViewBuilder:
+                    (context, controller, focusNode, onFieldSubmitted) {
+                  return TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    enabled: !operacionBloqueada,
+                    onChanged: (value) {
+                      setState(() => selectedJefeGuardia = null);
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Jefe Guardia',
+                      labelStyle:
+                          TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      prefixIcon: Icon(Icons.person,
+                          size: 16, color: widget.primaryColor),
+                      hintText: jefesGuardia.isEmpty
+                          ? 'Cargando...'
+                          : 'Buscar jefe guardia...',
+                      hintStyle:
+                          TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                            BorderSide(color: Colors.grey[300]!),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                            color: widget.primaryColor, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      isDense: true,
+                    ),
+                  );
+                },
+                optionsViewBuilder:
+                    (context, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 350,
+                        height: 240,
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          itemCount: options.length,
+                          itemBuilder: (context, index) {
+                            final label = options.elementAt(index);
+                            return ListTile(
+                              dense: true,
+                              title: Text(
+                                label,
+                                style:
+                                    const TextStyle(fontSize: 12),
+                              ),
+                              onTap: () => onSelected(label),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -822,63 +897,101 @@ class _OperacionCardState extends State<OperacionCard> {
   Widget _buildOperadorField() {
     if (widget.canSelectOperators) {
       final selectedOperator = _selectedOperator();
-      final selectedValue = selectedOperator != null
-          ? selectedOperator['id'] as int?
-          : null;
+      final initialLabel = selectedOperator != null
+          ? _operatorLabel(selectedOperator)
+          : '';
+      final operatorLabels = widget.operators.map(_operatorLabel).toList();
 
-      return DropdownButtonFormField<int>(
-        initialValue: selectedValue,
-        decoration: InputDecoration(
-          labelText: 'Operador',
-          labelStyle: TextStyle(fontSize: 12, color: Colors.grey[600]),
-          prefixIcon: Icon(
-            Icons.person_outline,
-            size: 16,
-            color: widget.primaryColor,
-          ),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: Colors.grey[300]!),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: widget.primaryColor, width: 1.5),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-          isDense: true,
-        ),
-        items: widget.operators.map((operator) {
-          final operatorId = operator['id'] as int?;
-          return DropdownMenuItem<int>(
-            value: operatorId,
-            child: Text(
-              _operatorLabel(operator),
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13),
+      return RawAutocomplete<String>(
+        initialValue: TextEditingValue(text: initialLabel),
+        optionsBuilder: (textEditingValue) {
+          final query = textEditingValue.text.trim().toLowerCase();
+          if (query.isEmpty) return operatorLabels;
+          return operatorLabels.where(
+            (label) => label.toLowerCase().contains(query),
+          );
+        },
+        onSelected: widget.operators.isEmpty || operacionBloqueada
+            ? null
+            : (label) {
+                for (final op in widget.operators) {
+                  if (_operatorLabel(op) == label) {
+                    widget.onSelectedOperatorChanged
+                        ?.call(op['id'] as int?);
+                    break;
+                  }
+                }
+              },
+        fieldViewBuilder:
+            (context, controller, focusNode, onFieldSubmitted) {
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            enabled: !operacionBloqueada,
+            onChanged: (value) {
+              widget.onSelectedOperatorChanged?.call(null);
+            },
+            decoration: InputDecoration(
+              labelText: 'Operador',
+              labelStyle:
+                  TextStyle(fontSize: 12, color: Colors.grey[600]),
+              prefixIcon: Icon(Icons.person_outline,
+                  size: 16, color: widget.primaryColor),
+              hintText: widget.operators.isEmpty
+                  ? 'Aun no hay operadores conocidos en este dispositivo'
+                  : 'Buscar operador...',
+              hintStyle:
+                  TextStyle(fontSize: 13, color: Colors.grey[600]),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(
+                    color: widget.primaryColor, width: 1.5),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              isDense: true,
             ),
           );
-        }).toList(),
-        onChanged: widget.operators.isEmpty
-            ? null
-            : (value) {
-                widget.onSelectedOperatorChanged?.call(value);
-              },
-        hint: Text(
-          widget.operators.isEmpty
-              ? 'Aun no hay operadores conocidos en este dispositivo'
-              : 'Seleccionar operador',
-          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-        ),
-        icon: Icon(
-          Icons.keyboard_arrow_down,
-          size: 18,
-          color: widget.primaryColor,
-        ),
-        isExpanded: true,
+        },
+        optionsViewBuilder:
+            (context, onSelected, options) {
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              elevation: 4,
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 400,
+                height: 240,
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final label = options.elementAt(index);
+                    return ListTile(
+                      dense: true,
+                      title: Text(
+                        label,
+                        style:
+                            const TextStyle(fontSize: 12),
+                      ),
+                      onTap: () => onSelected(label),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
       );
     }
 

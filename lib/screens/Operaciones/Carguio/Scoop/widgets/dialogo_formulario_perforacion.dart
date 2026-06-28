@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/plan_produccion.dart';
 
@@ -459,6 +460,7 @@ class _DialogoFormularioPerforacionState
             controller: nCucharasController,
             enabled: isEditable,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
               hintText: 'Ingrese número entero',
               border: OutlineInputBorder(

@@ -180,6 +180,9 @@ class RegistroOperacionTalHorizontalDetalleRequest {
   final int? numBarras;
   final int? tipoPerforacionId;
   final String? observaciones;
+  final int? laborId;
+  final String? ala;
+  final int? alaId;
 
   RegistroOperacionTalHorizontalDetalleRequest({
     this.talProd,
@@ -190,6 +193,9 @@ class RegistroOperacionTalHorizontalDetalleRequest {
     this.numBarras,
     this.tipoPerforacionId,
     this.observaciones,
+    this.laborId,
+    this.ala,
+    this.alaId,
   });
 
   factory RegistroOperacionTalHorizontalDetalleRequest.fromJson(
@@ -203,6 +209,9 @@ class RegistroOperacionTalHorizontalDetalleRequest {
     numBarras: json['num_barras'],
     tipoPerforacionId: json['tipo_perforacion_id'],
     observaciones: json['observaciones'],
+    laborId: json['labor_id'],
+    ala: json['ala'],
+    alaId: json['ala_id'],
   );
 
   Map<String, dynamic> toJson() => {
@@ -214,6 +223,9 @@ class RegistroOperacionTalHorizontalDetalleRequest {
     if (numBarras != null) 'num_barras': numBarras,
     if (tipoPerforacionId != null) 'tipo_perforacion_id': tipoPerforacionId,
     if (observaciones != null) 'observaciones': observaciones,
+    if (laborId != null) 'labor_id': laborId,
+    if (ala != null) 'ala': ala,
+    if (alaId != null) 'ala_id': alaId,
   };
 }
 
@@ -259,8 +271,12 @@ class OperacionEmpernadorRegistroDetalleRequest {
     labor: json['labor'] as String?,
     ala: json['ala'] as String?,
     tipoPernos: json['tipo_pernos'] as String?,
-    logPernos: json['log_pernos'] as num?,
-    nPernosInstalados: json['n_pernos_instalados'] as num?,
+    logPernos: json['log_pernos'] is num
+        ? json['log_pernos'] as num?
+        : num.tryParse(json['log_pernos']?.toString() ?? ''),
+    nPernosInstalados: json['n_pernos_instalados'] is num
+        ? json['n_pernos_instalados'] as num?
+        : num.tryParse(json['n_pernos_instalados']?.toString() ?? ''),
     tipoMalla: json['tipo_malla'] as String?,
     mt52Malla: json['mt52_malla'] as String?,
     sistematicoPuntual: json['sistematico_puntual'] as String?,
