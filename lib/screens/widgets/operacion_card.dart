@@ -76,6 +76,7 @@ class _OperacionCardState extends State<OperacionCard> {
   final Map<String, List<String>> modelosPorCodigo = {};
   final Map<String, String> capacidadPorCodigo = {};
 
+  final Map<String, Equipo> _equipoLabelMap = {};
   List<Equipo> equiposCompletos = [];
   List<String> codigosFiltrados = [];
   List<String> modelosFiltrados = [];
@@ -120,6 +121,17 @@ class _OperacionCardState extends State<OperacionCard> {
 
   void _syncDisplayedOperator({String? fallbackName}) {
     operador = widget.selectedOperatorName ?? fallbackName ?? operadorEjemplo;
+  }
+
+  String _equipoLabel(Equipo e) =>
+      '${e.codigo} | ${e.nombre} ${e.modelo}'.trim();
+
+  String _equipoDisplayLabel() {
+    if (selectedCodigo == null || selectedEquipo == null) return '';
+    for (final entry in _equipoLabelMap.entries) {
+      if (entry.value.codigo == selectedCodigo) return entry.key;
+    }
+    return '$selectedCodigo | $selectedEquipo ${selectedModelo ?? ''}'.trim();
   }
 
   String _operatorLabel(Map<String, dynamic> operator) {
@@ -249,6 +261,11 @@ class _OperacionCardState extends State<OperacionCard> {
           }
           capacidadPorCodigo[equipo.codigo] = capacidadString;
         }
+      }
+
+      _equipoLabelMap.clear();
+      for (var equipo in equiposCompletos) {
+        _equipoLabelMap[_equipoLabel(equipo)] = equipo;
       }
 
       setState(() {
@@ -470,12 +487,10 @@ class _OperacionCardState extends State<OperacionCard> {
         Map<String, double> fieldWeights = {
           'fecha': 0.8,
           'turno': 0.7,
-          'equipo': 1.0,
-          'codigo': 1.0,
-          'operador': 1.2,
-          'jefe': 1.2,
+          'equipo': 1.5,
+          'operador': 1.7,
+          'jefe': 1.7,
         };
-        if (widget.config.mostrarModelo) fieldWeights['modelo'] = 1.0;
         if (widget.config.mostrarCapacidad) fieldWeights['capacidad'] = 0.7;
 
         double scaleFactor = cardWidth > 900
@@ -504,14 +519,17 @@ class _OperacionCardState extends State<OperacionCard> {
                 fieldWeights['turno']! * scaleFactor,
                 fieldWeights,
               ),
-              child: CustomMaterialDropdown(
-                label: 'Turno',
-                value: widget.selectedTurno,
-                items: turnos,
-                onChanged: operacionBloqueada ? null : widget.onTurnoChanged,
-                icon: Icons.access_time,
-                hint: 'Turno',
-                primaryColor: widget.primaryColor,
+              child: SizedBox(
+                height: 45,
+                child: CustomMaterialDropdown(
+                  label: 'Turno',
+                  value: widget.selectedTurno,
+                  items: turnos,
+                  onChanged: operacionBloqueada ? null : widget.onTurnoChanged,
+                  icon: Icons.access_time,
+                  hint: 'Turno',
+                  primaryColor: widget.primaryColor,
+                ),
               ),
             ),
             _buildFlexibleField(
@@ -520,79 +538,126 @@ class _OperacionCardState extends State<OperacionCard> {
                 fieldWeights['equipo']! * scaleFactor,
                 fieldWeights,
               ),
-              child: CustomMaterialDropdown(
-                label: 'Equipo',
-                value: selectedEquipo,
-                items: equipos,
-                onChanged: operacionBloqueada
+              child: RawAutocomplete<String>(
+                initialValue: TextEditingValue(text: _equipoDisplayLabel()),
+                optionsBuilder: (textEditingValue) {
+                  final query = textEditingValue.text.trim().toLowerCase();
+                  if (query.isEmpty) return _equipoLabelMap.keys.toList();
+                  return _equipoLabelMap.keys.where(
+                    (label) => label.toLowerCase().contains(query),
+                  );
+                },
+                onSelected: operacionBloqueada
                     ? null
-                    : (value) {
+                    : (label) {
+                        final equipo = _equipoLabelMap[label];
+                        if (equipo == null) return;
                         setState(() {
-                          selectedEquipo = value;
-                          selectedCodigo = null;
-                          selectedModelo = null;
-                          selectedCapacidad = null;
-                          codigosFiltrados = codigosPorEquipo[value] ?? [];
-                          modelosFiltrados = [];
-                        });
-                      },
-                icon: Icons.precision_manufacturing,
-                hint: equipos.isEmpty ? 'Cargando...' : 'Equipo',
-                primaryColor: widget.primaryColor,
-              ),
-            ),
-            _buildFlexibleField(
-              width: _calculateFieldWidth(
-                cardWidth,
-                fieldWeights['codigo']! * scaleFactor,
-                fieldWeights,
-              ),
-              child: CustomMaterialDropdown(
-                label: 'Código',
-                value: selectedCodigo,
-                items: codigosFiltrados,
-                onChanged: operacionBloqueada || selectedEquipo == null
-                    ? null
-                    : (value) {
-                        setState(() {
-                          selectedCodigo = value;
-                          selectedModelo = null;
-                          modelosFiltrados = modelosPorCodigo[value] ?? [];
-                          if (widget.config.mostrarCapacidad &&
-                              capacidadPorCodigo.containsKey(value)) {
-                            selectedCapacidad = capacidadPorCodigo[value];
+                          selectedEquipo = equipo.nombre;
+                          selectedCodigo = equipo.codigo;
+                          selectedModelo = equipo.modelo.isNotEmpty
+                              ? equipo.modelo
+                              : null;
+                          if (widget.config.mostrarCapacidad) {
+                            selectedCapacidad =
+                                capacidadPorCodigo[equipo.codigo] ?? '';
                           }
                         });
                       },
-                icon: Icons.qr_code,
-                hint: 'Código',
+                fieldViewBuilder:
+                    (context, controller, focusNode, onFieldSubmitted) {
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        enabled: !operacionBloqueada,
+                        onChanged: (value) {
+                          setState(() {
+                            selectedEquipo = null;
+                            selectedCodigo = null;
+                            selectedModelo = null;
+                            selectedCapacidad = null;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Equipo',
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                          prefixIcon: Icon(
+                            Icons.precision_manufacturing,
+                            size: 16,
+                            color: widget.primaryColor,
+                          ),
+                          hintText: _equipoLabelMap.isEmpty
+                              ? 'Cargando...'
+                              : 'Buscar equipo...',
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(
+                              color: widget.primaryColor,
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          isDense: true,
+                        ),
+                      );
+                    },
+                optionsViewBuilder: (context, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 450,
+                        height: 240,
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          itemCount: options.length,
+                          itemBuilder: (context, index) {
+                            final label = options.elementAt(index);
+                            final equipo = _equipoLabelMap[label];
+                            return ListTile(
+                              dense: true,
+                              title: Text(
+                                label,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              subtitle: equipo != null
+                                  ? Text(
+                                      '${equipo.marca} · ${equipo.proceso}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[600],
+                                      ),
+                                    )
+                                  : null,
+                              onTap: () => onSelected(label),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-            if (widget.config.mostrarModelo)
-              _buildFlexibleField(
-                width: _calculateFieldWidth(
-                  cardWidth,
-                  fieldWeights['modelo']! * scaleFactor,
-                  fieldWeights,
-                ),
-                child: CustomMaterialDropdown(
-                  label: 'Modelo',
-                  value: selectedModelo,
-                  items: modelosFiltrados,
-                  onChanged: operacionBloqueada
-                      ? null
-                      : selectedCodigo != null
-                      ? (value) => setState(() => selectedModelo = value)
-                      : null,
-                  icon: Icons.model_training,
-                  hint: selectedCodigo == null
-                      ? 'Sel. código'
-                      : modelosFiltrados.isEmpty
-                      ? 'Sin modelos'
-                      : 'Modelo',
-                  primaryColor: widget.primaryColor,
-                ),
-              ),
             if (widget.config.mostrarCapacidad)
               _buildFlexibleField(
                 width: _calculateFieldWidth(
@@ -617,9 +682,7 @@ class _OperacionCardState extends State<OperacionCard> {
                 fieldWeights,
               ),
               child: RawAutocomplete<String>(
-                initialValue: TextEditingValue(
-                  text: selectedJefeGuardia ?? '',
-                ),
+                initialValue: TextEditingValue(text: selectedJefeGuardia ?? ''),
                 optionsBuilder: (textEditingValue) {
                   final query = textEditingValue.text.trim().toLowerCase();
                   if (query.isEmpty) return jefesGuardia;
@@ -629,50 +692,57 @@ class _OperacionCardState extends State<OperacionCard> {
                 },
                 onSelected: operacionBloqueada
                     ? null
-                    : (value) =>
-                        setState(() => selectedJefeGuardia = value),
+                    : (value) => setState(() => selectedJefeGuardia = value),
                 fieldViewBuilder:
                     (context, controller, focusNode, onFieldSubmitted) {
-                  return TextField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    enabled: !operacionBloqueada,
-                    onChanged: (value) {
-                      setState(() => selectedJefeGuardia = null);
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        enabled: !operacionBloqueada,
+                        onChanged: (value) {
+                          setState(() => selectedJefeGuardia = null);
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Jefe Guardia',
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                          prefixIcon: Icon(
+                            Icons.person,
+                            size: 16,
+                            color: widget.primaryColor,
+                          ),
+                          hintText: jefesGuardia.isEmpty
+                              ? 'Cargando...'
+                              : 'Buscar jefe guardia...',
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(
+                              color: widget.primaryColor,
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          isDense: true,
+                        ),
+                      );
                     },
-                    decoration: InputDecoration(
-                      labelText: 'Jefe Guardia',
-                      labelStyle:
-                          TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      prefixIcon: Icon(Icons.person,
-                          size: 16, color: widget.primaryColor),
-                      hintText: jefesGuardia.isEmpty
-                          ? 'Cargando...'
-                          : 'Buscar jefe guardia...',
-                      hintStyle:
-                          TextStyle(fontSize: 13, color: Colors.grey[600]),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            BorderSide(color: Colors.grey[300]!),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(
-                            color: widget.primaryColor, width: 1.5),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      isDense: true,
-                    ),
-                  );
-                },
-                optionsViewBuilder:
-                    (context, onSelected, options) {
+                optionsViewBuilder: (context, onSelected, options) {
                   return Align(
                     alignment: Alignment.topLeft,
                     child: Material(
@@ -690,8 +760,7 @@ class _OperacionCardState extends State<OperacionCard> {
                               dense: true,
                               title: Text(
                                 label,
-                                style:
-                                    const TextStyle(fontSize: 12),
+                                style: const TextStyle(fontSize: 12),
                               ),
                               onTap: () => onSelected(label),
                             );
@@ -916,14 +985,12 @@ class _OperacionCardState extends State<OperacionCard> {
             : (label) {
                 for (final op in widget.operators) {
                   if (_operatorLabel(op) == label) {
-                    widget.onSelectedOperatorChanged
-                        ?.call(op['id'] as int?);
+                    widget.onSelectedOperatorChanged?.call(op['id'] as int?);
                     break;
                   }
                 }
               },
-        fieldViewBuilder:
-            (context, controller, focusNode, onFieldSubmitted) {
+        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
           return TextField(
             controller: controller,
             focusNode: focusNode,
@@ -933,26 +1000,26 @@ class _OperacionCardState extends State<OperacionCard> {
             },
             decoration: InputDecoration(
               labelText: 'Operador',
-              labelStyle:
-                  TextStyle(fontSize: 12, color: Colors.grey[600]),
-              prefixIcon: Icon(Icons.person_outline,
-                  size: 16, color: widget.primaryColor),
+              labelStyle: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              prefixIcon: Icon(
+                Icons.person_outline,
+                size: 16,
+                color: widget.primaryColor,
+              ),
               hintText: widget.operators.isEmpty
                   ? 'Aun no hay operadores conocidos en este dispositivo'
                   : 'Buscar operador...',
-              hintStyle:
-                  TextStyle(fontSize: 13, color: Colors.grey[600]),
+              hintStyle: TextStyle(fontSize: 13, color: Colors.grey[600]),
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide:
-                    BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: Colors.grey[300]!),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(
-                    color: widget.primaryColor, width: 1.5),
+                borderSide: BorderSide(color: widget.primaryColor, width: 1.5),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
@@ -962,8 +1029,7 @@ class _OperacionCardState extends State<OperacionCard> {
             ),
           );
         },
-        optionsViewBuilder:
-            (context, onSelected, options) {
+        optionsViewBuilder: (context, onSelected, options) {
           return Align(
             alignment: Alignment.topLeft,
             child: Material(
@@ -979,11 +1045,7 @@ class _OperacionCardState extends State<OperacionCard> {
                     final label = options.elementAt(index);
                     return ListTile(
                       dense: true,
-                      title: Text(
-                        label,
-                        style:
-                            const TextStyle(fontSize: 12),
-                      ),
+                      title: Text(label, style: const TextStyle(fontSize: 12)),
                       onTap: () => onSelected(label),
                     );
                   },
