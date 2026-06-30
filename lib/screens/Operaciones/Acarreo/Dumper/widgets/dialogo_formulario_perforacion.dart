@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/models/plan_avance_th.dart';
+import 'package:i_miner/models/plan_metraje_tl.dart';
+import 'package:i_miner/models/plan_produccion.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
@@ -26,6 +30,34 @@ class DialogoFormularioPerforacion extends StatefulWidget {
       _DialogoFormularioPerforacionState();
 }
 
+class _DumperFrontOption {
+  const _DumperFrontOption({
+    required this.laborId,
+    required this.alaId,
+    required this.tipoLabor,
+    required this.labor,
+    required this.ala,
+    required this.mina,
+    required this.zona,
+    required this.area,
+    required this.fase,
+    required this.estructuraMineral,
+    required this.nivel,
+  });
+
+  final int laborId;
+  final int alaId;
+  final String tipoLabor;
+  final String labor;
+  final String ala;
+  final String mina;
+  final String zona;
+  final String area;
+  final String fase;
+  final String estructuraMineral;
+  final String nivel;
+}
+
 class _DialogoFormularioPerforacionState
     extends State<DialogoFormularioPerforacion> {
   bool isEditable = false;
@@ -35,23 +67,32 @@ class _DialogoFormularioPerforacionState
   final TextEditingController observacionesController = TextEditingController();
   final TextEditingController nViajesController = TextEditingController();
 
-  // INICIO — labor desde planes
+  String? tipoLaborSeleccionado;
   String? laborInicioSeleccionado;
+  String? alaSeleccionado;
+  String? nivelSeleccionado;
   int? laborInicioId;
 
-  List<String> opcionesLaborInicio = [];
-  final Map<String, int> laborInicioMap = {};
-
-  // FIN — destino
   String? ubicacionDestinoSeleccionado;
   int? ubicacionDestinoId;
+
+  int laborFieldResetKey = 0;
+  int alaFieldResetKey = 0;
+
+  final Map<String, _DumperFrontOption> _frontOptionMap = {};
+  _DumperFrontOption? selectedFrontOption;
+
   List<Map<String, dynamic>> destinosDisponibles = [];
   List<String> opcionesDestino = [];
+  List<PlanMetrajeTL> planesMetrajeTLCompletos = [];
+  List<PlanAvanceTH> planesAvanceTHCompletos = [];
+  List<PlanProduccion> planesProduccionCompletos = [];
 
   @override
   void initState() {
     super.initState();
-    isEditable = widget.estado.toLowerCase() != "cerrado";
+    isEditable = widget.estado.toLowerCase() != 'cerrado';
+    _cargarDatosIniciales();
     _cargarDatos();
   }
 
@@ -69,53 +110,25 @@ class _DialogoFormularioPerforacionState
 
       if (!mounted) return;
 
-      final planMetrajeTL = results[0] as List;
-      final planAvanceTH = results[1] as List;
-      final planProduccion = results[2] as List;
-      destinosDisponibles = results[3] as List<Map<String, dynamic>>;
-
-      final laboresSet = <String>{};
-      for (final plan in [...planMetrajeTL, ...planAvanceTH, ...planProduccion]) {
-        final nombre = _extractLaborNombre(plan);
-        final id = _extractLaborId(plan);
-        if (nombre != null && nombre.trim().isNotEmpty) {
-          laboresSet.add(nombre.trim());
-          if (id != null) {
-            laborInicioMap[nombre.trim()] = id;
-          }
-        }
-      }
-
       setState(() {
-        opcionesLaborInicio = laboresSet.toList()..sort();
+        planesMetrajeTLCompletos = results[0] as List<PlanMetrajeTL>;
+        planesAvanceTHCompletos = results[1] as List<PlanAvanceTH>;
+        planesProduccionCompletos = results[2] as List<PlanProduccion>;
+        destinosDisponibles = results[3] as List<Map<String, dynamic>>;
         opcionesDestino = destinosDisponibles
             .map((d) => d['nombre']?.toString() ?? '')
             .where((n) => n.isNotEmpty)
             .toList();
-        _cargarDatosIniciales();
       });
+
+      _rebuildFrontOptions();
+      _preseleccionarInicio();
     } catch (e) {
-      print('Error cargando datos: $e');
+      print('Error cargando datos de Dumper: $e');
     } finally {
-      if (mounted) setState(() => isLoading = false);
-    }
-  }
-
-  String? _extractLaborNombre(dynamic plan) {
-    if (plan is Map) return plan['laborNombre']?.toString() ?? plan['labor_nombre']?.toString();
-    try {
-      return (plan as dynamic).laborNombre as String?;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  int? _extractLaborId(dynamic plan) {
-    if (plan is Map) return plan['laborId'] ?? plan['labor_id'];
-    try {
-      return (plan as dynamic).laborId as int?;
-    } catch (_) {
-      return null;
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -124,21 +137,132 @@ class _DialogoFormularioPerforacionState
 
     laborInicioSeleccionado = widget.datosIniciales!['labor']?.toString();
     laborInicioId = widget.datosIniciales!['labor_id'] as int?;
-
+    tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor']?.toString();
+    alaSeleccionado = widget.datosIniciales!['ala']?.toString();
+    nivelSeleccionado = widget.datosIniciales!['nivel']?.toString();
     ubicacionDestinoSeleccionado =
         widget.datosIniciales!['ubicacion_destino']?.toString();
     ubicacionDestinoId = widget.datosIniciales!['ubicacion_destino_id'] as int?;
-
-    nViajesController.text =
-        widget.datosIniciales!['n_viajes']?.toString() ?? '';
+    nViajesController.text = widget.datosIniciales!['n_viajes']?.toString() ?? '';
     observacionesController.text =
         widget.datosIniciales!['observaciones']?.toString() ?? '';
   }
 
+  void _rebuildFrontOptions() {
+    _frontOptionMap.clear();
+
+    void registerOption(_DumperFrontOption option) {
+      if (option.tipoLabor.trim().isEmpty ||
+          option.labor.trim().isEmpty ||
+          option.ala.trim().isEmpty) {
+        return;
+      }
+      final label = _buildSelectionLabel(option.tipoLabor, option.labor, option.ala);
+      _frontOptionMap[label] = option;
+    }
+
+    for (final plan in planesMetrajeTLCompletos) {
+      registerOption(_DumperFrontOption(
+        laborId: plan.laborId,
+        alaId: plan.alaId,
+        tipoLabor: plan.tipoLaborNombre,
+        labor: plan.laborNombre,
+        ala: plan.alaNombre,
+        mina: plan.minaNombre,
+        zona: plan.zonaNombre,
+        area: plan.areaNombre,
+        fase: plan.faseNombre,
+        estructuraMineral: plan.estructuraMineralNombre,
+        nivel: plan.nivelNombre,
+      ));
+    }
+
+    for (final plan in planesAvanceTHCompletos) {
+      registerOption(_DumperFrontOption(
+        laborId: plan.laborId,
+        alaId: plan.alaId,
+        tipoLabor: plan.tipoLaborNombre,
+        labor: plan.laborNombre,
+        ala: plan.alaNombre,
+        mina: plan.minaNombre,
+        zona: plan.zonaNombre,
+        area: plan.areaNombre,
+        fase: plan.faseNombre,
+        estructuraMineral: plan.estructuraMineralNombre,
+        nivel: plan.nivelNombre,
+      ));
+    }
+
+    for (final plan in planesProduccionCompletos) {
+      registerOption(_DumperFrontOption(
+        laborId: plan.laborId,
+        alaId: plan.alaId,
+        tipoLabor: plan.tipoLaborNombre,
+        labor: plan.laborNombre,
+        ala: plan.alaNombre,
+        mina: plan.minaNombre,
+        zona: plan.zonaNombre,
+        area: plan.areaNombre,
+        fase: plan.faseNombre,
+        estructuraMineral: plan.estructuraMineralNombre,
+        nivel: plan.nivelNombre,
+      ));
+    }
+  }
+
+  void _preseleccionarInicio() {
+    final label = _buildSelectionLabelFromState();
+    if (label == null) return;
+    final option = _frontOptionMap[label];
+    if (option != null) {
+      _aplicarFrontOption(option);
+    }
+  }
+
+  String _buildSelectionLabel(String tipoLabor, String labor, String ala) {
+    return '${tipoLabor.trim()} - ${labor.trim()} - ${ala.trim()}';
+  }
+
+  String? _buildSelectionLabelFromState() {
+    final tipoLabor = tipoLaborSeleccionado?.trim();
+    final labor = laborInicioSeleccionado?.trim();
+    final ala = alaSeleccionado?.trim();
+    if (tipoLabor == null || tipoLabor.isEmpty) return null;
+    if (labor == null || labor.isEmpty) return null;
+    if (ala == null || ala.isEmpty) return null;
+    return _buildSelectionLabel(tipoLabor, labor, ala);
+  }
+
+  _DumperFrontOption? _resolveSelectedFront() {
+    final label = _buildSelectionLabelFromState();
+    if (label == null) return null;
+    return _frontOptionMap[label];
+  }
+
+  void _aplicarFrontOption(_DumperFrontOption option) {
+    setState(() {
+      tipoLaborSeleccionado = option.tipoLabor;
+      laborInicioSeleccionado = option.labor;
+      alaSeleccionado = option.ala;
+      nivelSeleccionado = option.nivel;
+      laborInicioId = option.laborId;
+      selectedFrontOption = option;
+    });
+  }
+
   Future<void> _guardarDatos() async {
-    Map<String, dynamic> datosFormulario = {
-      'labor_id': laborInicioId,
-      'labor': laborInicioSeleccionado ?? '',
+    final selected = _resolveSelectedFront();
+    if (selected == null) {
+      _mostrarSnackbar('Debe seleccionar una opción válida en Ubicación INICIO', Colors.orange);
+      return;
+    }
+
+    final datosFormulario = <String, dynamic>{
+      'labor_id': selected.laborId,
+      'labor': selected.labor,
+      'tipo_labor': selected.tipoLabor,
+      'ala': selected.ala,
+      'nivel': selected.nivel,
       'ubicacion_destino_id': ubicacionDestinoId ?? 0,
       'ubicacion_destino': ubicacionDestinoSeleccionado ?? '',
       'n_viajes': int.tryParse(nViajesController.text) ?? 0,
@@ -174,10 +298,8 @@ class _DialogoFormularioPerforacionState
     isSmallScreen = screenWidth < 600;
 
     final dialogWidth = isSmallScreen ? screenWidth * 0.95 : 1000.0;
-
-    final dialogHeight = isSmallScreen
-        ? MediaQuery.of(context).size.height * 0.9
-        : 750.0;
+    final dialogHeight =
+        isSmallScreen ? MediaQuery.of(context).size.height * 0.9 : 750.0;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -194,7 +316,6 @@ class _DialogoFormularioPerforacionState
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildHeader(),
-
                   Expanded(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
@@ -212,7 +333,6 @@ class _DialogoFormularioPerforacionState
                       ),
                     ),
                   ),
-
                   _buildFooter(),
                 ],
               ),
@@ -221,6 +341,46 @@ class _DialogoFormularioPerforacionState
   }
 
   Widget _buildSeccionUbicacionInicio() {
+    final selected = _resolveSelectedFront() ?? selectedFrontOption;
+    final hasTipoLaborSeleccionado =
+        tipoLaborSeleccionado != null && tipoLaborSeleccionado!.trim().isNotEmpty;
+    final hasLaborSeleccionada =
+        laborInicioSeleccionado != null && laborInicioSeleccionado!.trim().isNotEmpty;
+
+    final tipos = _frontOptionMap.values
+        .map((option) => option.tipoLabor)
+        .where((value) => value.trim().isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    final labores = _frontOptionMap.values
+        .where(
+          (option) =>
+              tipoLaborSeleccionado == null ||
+              tipoLaborSeleccionado!.isEmpty ||
+              option.tipoLabor == tipoLaborSeleccionado,
+        )
+        .map((option) => option.labor)
+        .where((value) => value.trim().isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    final alas = _frontOptionMap.values
+        .where(
+          (option) =>
+              (tipoLaborSeleccionado == null ||
+                  tipoLaborSeleccionado!.isEmpty ||
+                  option.tipoLabor == tipoLaborSeleccionado) &&
+              (laborInicioSeleccionado == null ||
+                  laborInicioSeleccionado!.isEmpty ||
+                  option.labor == laborInicioSeleccionado),
+        )
+        .map((option) => option.ala)
+        .where((value) => value.trim().isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -257,82 +417,87 @@ class _DialogoFormularioPerforacionState
             ],
           ),
           const SizedBox(height: 8),
-          RawAutocomplete<String>(
-            initialValue: TextEditingValue(text: laborInicioSeleccionado ?? ''),
-            optionsBuilder: (textEditingValue) {
-              final query = textEditingValue.text.trim().toLowerCase();
-              if (query.isEmpty) return opcionesLaborInicio;
-              return opcionesLaborInicio.where(
-                (label) => label.toLowerCase().contains(query),
-              );
-            },
-            onSelected: isEditable
-                ? (value) {
-                    setState(() {
-                      laborInicioSeleccionado = value;
-                      laborInicioId = laborInicioMap[value];
-                    });
-                  }
-                : null,
-            fieldViewBuilder:
-                (context, controller, focusNode, onFieldSubmitted) {
-              return TextField(
-                controller: controller,
-                focusNode: focusNode,
-                enabled: isEditable,
-                onChanged: (value) {
-                  setState(() {
-                    laborInicioSeleccionado = value;
-                    laborInicioId = null;
-                  });
-                },
-                decoration: InputDecoration(
-                  hintText: 'Buscar labor de inicio...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  isDense: true,
-                ),
-              );
-            },
-            optionsViewBuilder: (context, onSelected, options) {
-              return Align(
-                alignment: Alignment.topLeft,
-                child: Material(
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 500,
-                    height: 240,
-                    child: ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: options.length,
-                      itemBuilder: (context, index) {
-                        final label = options.elementAt(index);
-                        return ListTile(
-                          dense: true,
-                          title: Text(
-                            label,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          onTap: () => onSelected(label),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              );
-            },
+          _buildThreeAutocompleteRow(
+            first: _buildSearchableAutocompleteField(
+              label: 'Tipo Labor',
+              hintText: 'Buscar tipo labor...',
+              options: tipos,
+              selectedValue: tipoLaborSeleccionado,
+              onChanged: (value) {
+                setState(() {
+                  tipoLaborSeleccionado = value;
+                  laborInicioSeleccionado = null;
+                  alaSeleccionado = null;
+                  laborInicioId = null;
+                  selectedFrontOption = null;
+                  laborFieldResetKey++;
+                  alaFieldResetKey++;
+                });
+              },
+              onSelected: (value) {
+                setState(() {
+                  tipoLaborSeleccionado = value;
+                  laborInicioSeleccionado = null;
+                  alaSeleccionado = null;
+                  laborInicioId = null;
+                  selectedFrontOption = null;
+                  laborFieldResetKey++;
+                  alaFieldResetKey++;
+                });
+              },
+            ),
+            second: _buildSearchableAutocompleteField(
+              label: 'Labor',
+              hintText: 'Buscar labor...',
+              options: labores,
+              selectedValue: laborInicioSeleccionado,
+              enabled: hasTipoLaborSeleccionado,
+              resetKey: laborFieldResetKey,
+              onChanged: (value) {
+                setState(() {
+                  laborInicioSeleccionado = value;
+                  alaSeleccionado = null;
+                  laborInicioId = null;
+                  selectedFrontOption = null;
+                  alaFieldResetKey++;
+                });
+              },
+              onSelected: (value) {
+                setState(() {
+                  laborInicioSeleccionado = value;
+                  alaSeleccionado = null;
+                  laborInicioId = null;
+                  selectedFrontOption = null;
+                  alaFieldResetKey++;
+                });
+              },
+            ),
+            third: _buildSearchableAutocompleteField(
+              label: 'Ala',
+              hintText: 'Buscar ala...',
+              options: alas,
+              selectedValue: alaSeleccionado,
+              enabled: hasLaborSeleccionada,
+              resetKey: alaFieldResetKey,
+              onChanged: (value) {
+                setState(() {
+                  alaSeleccionado = value;
+                  laborInicioId = null;
+                  selectedFrontOption = null;
+                });
+              },
+              onSelected: (value) {
+                setState(() {
+                  alaSeleccionado = value;
+                });
+                final option = _resolveSelectedFront();
+                if (option != null) {
+                  _aplicarFrontOption(option);
+                }
+              },
+            ),
           ),
-          if (opcionesLaborInicio.isEmpty)
+          if (_frontOptionMap.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
@@ -340,6 +505,17 @@ class _DialogoFormularioPerforacionState
                 style: TextStyle(fontSize: 11, color: Colors.red.shade400),
               ),
             ),
+          if (selected != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              '${selected.mina} / ${selected.zona} / ${selected.area} / ${selected.fase}',
+              style: const TextStyle(fontSize: 12),
+            ),
+            Text(
+              '${selected.estructuraMineral} / ${selected.nivel} / ${selected.tipoLabor} / ${selected.labor}${selected.ala.isNotEmpty ? ' / Ala ${selected.ala}' : ''}',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ],
         ],
       ),
     );
@@ -454,6 +630,7 @@ class _DialogoFormularioPerforacionState
             controller: nViajesController,
             enabled: isEditable,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
               hintText: 'Ingrese número de viajes',
               border: OutlineInputBorder(
@@ -514,6 +691,99 @@ class _DialogoFormularioPerforacionState
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSearchableAutocompleteField({
+    required String label,
+    required String hintText,
+    required List<String> options,
+    required String? selectedValue,
+    required ValueChanged<String> onChanged,
+    required ValueChanged<String> onSelected,
+    bool enabled = true,
+    int resetKey = 0,
+  }) {
+    final isFieldEnabled = isEditable && enabled;
+
+    return RawAutocomplete<String>(
+      key: ValueKey('$label-$resetKey'),
+      initialValue: TextEditingValue(text: selectedValue ?? ''),
+      optionsBuilder: (textEditingValue) {
+        if (!isFieldEnabled) {
+          return const Iterable<String>.empty();
+        }
+        final query = textEditingValue.text.trim().toLowerCase();
+        if (query.isEmpty) return options;
+        return options.where((option) => option.toLowerCase().contains(query));
+      },
+      onSelected: isFieldEnabled ? onSelected : null,
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return TextField(
+          controller: controller,
+          focusNode: focusNode,
+          enabled: isFieldEnabled,
+          onChanged: isFieldEnabled ? onChanged : null,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hintText,
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            isDense: true,
+          ),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, autocompleteOptions) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 500,
+              height: 240,
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: autocompleteOptions.length,
+                itemBuilder: (context, index) {
+                  final option = autocompleteOptions.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    title: Text(
+                      option,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildThreeAutocompleteRow({
+    required Widget first,
+    required Widget second,
+    required Widget third,
+  }) {
+    return Row(
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 8),
+        Expanded(child: second),
+        const SizedBox(width: 8),
+        Expanded(child: third),
+      ],
     );
   }
 
@@ -607,8 +877,8 @@ class _DialogoFormularioPerforacionState
     required IconData icon,
     Color color = Colors.blue,
   }) {
-    bool valueExists = value != null && items.contains(value);
-    bool isEnabled = onChanged != null && isEditable;
+    final valueExists = value != null && items.contains(value);
+    final isEnabled = onChanged != null && isEditable;
 
     return Container(
       height: 42,
@@ -662,7 +932,7 @@ class _DialogoFormularioPerforacionState
                     ),
                   ),
                 ]
-              : items.map((String item) {
+              : items.map((item) {
                   return DropdownMenuItem<String>(
                     value: item,
                     child: Text(

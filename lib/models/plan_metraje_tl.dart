@@ -3,15 +3,26 @@ class PlanMetrajeTL {
     required this.planMetrajeTlId,
     required this.laborId,
     required this.periodoId,
-    required this.turnoId,
-    required this.leyId,
-    required this.procesoId,
-    required this.procesoNombre,
-    required this.dia,
-    required this.valor,
+    required this.anchoVetaMetros,
+    required this.anchoMinadoSemMetros,
+    required this.anchoMinadoMesMetros,
+    required this.minaId,
+    required this.zonaId,
+    required this.areaId,
+    required this.faseId,
+    required this.tipoLaborId,
+    required this.estructuraMineralId,
+    required this.nivelId,
+    required this.alaId,
     required this.laborNombre,
-    required this.turnoNombre,
-    required this.leyNombre,
+    required this.minaNombre,
+    required this.zonaNombre,
+    required this.areaNombre,
+    required this.faseNombre,
+    required this.tipoLaborNombre,
+    required this.estructuraMineralNombre,
+    required this.nivelNombre,
+    required this.alaNombre,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -19,15 +30,26 @@ class PlanMetrajeTL {
   final int planMetrajeTlId;
   final int laborId;
   final int periodoId;
-  final int turnoId;
-  final int leyId;
-  final int procesoId;
-  final String procesoNombre;
-  final int dia;
-  final double valor;
+  final double anchoVetaMetros;
+  final double anchoMinadoSemMetros;
+  final double anchoMinadoMesMetros;
+  final int minaId;
+  final int zonaId;
+  final int areaId;
+  final int faseId;
+  final int tipoLaborId;
+  final int estructuraMineralId;
+  final int nivelId;
+  final int alaId;
   final String laborNombre;
-  final String turnoNombre;
-  final String leyNombre;
+  final String minaNombre;
+  final String zonaNombre;
+  final String areaNombre;
+  final String faseNombre;
+  final String tipoLaborNombre;
+  final String estructuraMineralNombre;
+  final String nivelNombre;
+  final String alaNombre;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -36,15 +58,27 @@ class PlanMetrajeTL {
       planMetrajeTlId: _asInt(json['planMetrajeTlId']) ?? 0,
       laborId: _asInt(json['labor_id']) ?? 0,
       periodoId: _asInt(json['periodo_id']) ?? 0,
-      turnoId: _asInt(json['turno_id']) ?? 0,
-      leyId: _asInt(json['ley_id']) ?? 0,
-      procesoId: _asInt(json['proceso_id']) ?? 0,
-      procesoNombre: json['proceso_nombre']?.toString() ?? '',
-      dia: _asInt(json['dia']) ?? 0,
-      valor: _asDouble(json['valor']) ?? 0,
+      anchoVetaMetros: _asDouble(json['ancho_veta_metros']) ?? 0,
+      anchoMinadoSemMetros: _asDouble(json['ancho_minado_sem_metros']) ?? 0,
+      anchoMinadoMesMetros: _asDouble(json['ancho_minado_mes_metros']) ?? 0,
+      minaId: _asInt(json['mina_id']) ?? 0,
+      zonaId: _asInt(json['zona_id']) ?? 0,
+      areaId: _asInt(json['area_id']) ?? 0,
+      faseId: _asInt(json['fase_id']) ?? 0,
+      tipoLaborId: _asInt(json['tipo_labor_id']) ?? 0,
+      estructuraMineralId: _asInt(json['estructura_mineral_id']) ?? 0,
+      nivelId: _asInt(json['nivel_id']) ?? 0,
+      alaId: _asInt(json['ala_id']) ?? 0,
       laborNombre: json['labor_nombre']?.toString() ?? '',
-      turnoNombre: json['turno_nombre']?.toString() ?? '',
-      leyNombre: json['ley_nombre']?.toString() ?? '',
+      minaNombre: json['mina_nombre']?.toString() ?? '',
+      zonaNombre: json['zona_nombre']?.toString() ?? '',
+      areaNombre: json['area_nombre']?.toString() ?? '',
+      faseNombre: json['fase_nombre']?.toString() ?? '',
+      tipoLaborNombre: json['tipo_labor_nombre']?.toString() ?? '',
+      estructuraMineralNombre:
+          json['estructura_mineral_nombre']?.toString() ?? '',
+      nivelNombre: json['nivel_nombre']?.toString() ?? '',
+      alaNombre: json['ala_nombre']?.toString() ?? '',
       createdAt: _asDateTime(json['created_at']),
       updatedAt: _asDateTime(json['updated_at']),
     );
@@ -55,15 +89,26 @@ class PlanMetrajeTL {
       'planMetrajeTlId': planMetrajeTlId,
       'labor_id': laborId,
       'periodo_id': periodoId,
-      'turno_id': turnoId,
-      'ley_id': leyId,
-      'proceso_id': procesoId,
-      'proceso_nombre': procesoNombre,
-      'dia': dia,
-      'valor': valor,
+      'ancho_veta_metros': anchoVetaMetros,
+      'ancho_minado_sem_metros': anchoMinadoSemMetros,
+      'ancho_minado_mes_metros': anchoMinadoMesMetros,
+      'mina_id': minaId,
+      'zona_id': zonaId,
+      'area_id': areaId,
+      'fase_id': faseId,
+      'tipo_labor_id': tipoLaborId,
+      'estructura_mineral_id': estructuraMineralId,
+      'nivel_id': nivelId,
+      'ala_id': alaId,
       'labor_nombre': laborNombre,
-      'turno_nombre': turnoNombre,
-      'ley_nombre': leyNombre,
+      'mina_nombre': minaNombre,
+      'zona_nombre': zonaNombre,
+      'area_nombre': areaNombre,
+      'fase_nombre': faseNombre,
+      'tipo_labor_nombre': tipoLaborNombre,
+      'estructura_mineral_nombre': estructuraMineralNombre,
+      'nivel_nombre': nivelNombre,
+      'ala_nombre': alaNombre,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

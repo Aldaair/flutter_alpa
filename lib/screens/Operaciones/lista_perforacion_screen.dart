@@ -1689,7 +1689,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         .getCheckListByProceso(widget.config.proceso);
 
     List<Map<String, dynamic>> checkListJson = checklistItems.map((item) {
-      return {'id': item['id'], 'decision': 0, 'observacion': ''};
+      return {'id': item['id'], 'decision': 1, 'observacion': ''};
     }).toList();
 
     await _insertOperacionDb(data, checkListJson);

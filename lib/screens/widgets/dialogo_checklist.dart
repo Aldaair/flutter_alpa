@@ -48,7 +48,6 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
     for (int i = 0; i < widget.checklistData.length; i++) {
       final item = widget.checklistData[i];
       final categoria = item['categoria'] ?? 'Sin categoria';
-
       final checklistItem = ChecklistItem(
         i + 1,
         item['nombre'] ?? 'Sin nombre',
@@ -56,7 +55,7 @@ class _DialogoChecklistState extends State<DialogoChecklist> {
             ? true
             : item['decision'] == 0
             ? false
-            : null,
+            : true,
         observaciones: item['observacion'] ?? '',
       );
 

@@ -24,10 +24,10 @@ class DialogoCheckImagen extends StatefulWidget {
 class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
   bool isEditable = false;
 
-  bool value1 = false;
-  bool value2 = false;
-  bool value3 = false;
-  bool value4 = false;
+  bool value1 = true;
+  bool value2 = true;
+  bool value3 = true;
+  bool value4 = true;
 
   @override
   void initState() {
@@ -37,10 +37,10 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
   }
 
   void _cargarDatos() {
-    value1 = widget.controlLlantasData['numero1'] ?? false;
-    value2 = widget.controlLlantasData['numero2'] ?? false;
-    value3 = widget.controlLlantasData['numero3'] ?? false;
-    value4 = widget.controlLlantasData['numero4'] ?? false;
+    value1 = widget.controlLlantasData['numero1'] ?? true;
+    value2 = widget.controlLlantasData['numero2'] ?? true;
+    value3 = widget.controlLlantasData['numero3'] ?? true;
+    value4 = widget.controlLlantasData['numero4'] ?? true;
   }
 
   Future<void> _guardarDatos() async {
@@ -79,50 +79,25 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        width: 420,
+        width: MediaQuery.sizeOf(context).width * 0.92,
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.8,
-          maxWidth: MediaQuery.of(context).size.width * 0.9,
+          maxWidth: 860,
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: Colors.white,
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
             _buildHeader(),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildItem(
-                    'NEUMÁTICO 1',
-                    value1,
-                    (v) => setState(() => value1 = v),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildItem(
-                    'NEUMÁTICO 2',
-                    value2,
-                    (v) => setState(() => value2 = v),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildItem(
-                    'NEUMÁTICO 3',
-                    value3,
-                    (v) => setState(() => value3 = v),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildItem(
-                    'NEUMÁTICO 4',
-                    value4,
-                    (v) => setState(() => value4 = v),
-                  ),
-                ],
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: _buildLlantaLayout(),
               ),
             ),
             _buildFooter(),
@@ -132,26 +107,129 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
     );
   }
 
-  Widget _buildItem(String titulo, bool valor, ValueChanged<bool> onChanged) {
+  Widget _buildLlantaLayout() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final compact = availableWidth < 520;
+        final cardWidth =
+            (compact ? availableWidth * 0.34 : availableWidth * 0.22)
+                .clamp(110.0, 150.0)
+                .toDouble();
+        final cardHeight = 138.0;
+        final imageHorizontalPadding = compact ? 12.0 : cardWidth * 0.48;
+        final imageWidth = (availableWidth - (imageHorizontalPadding * 2))
+            .clamp(180.0, availableWidth)
+            .toDouble();
+        final imageHeight = imageWidth / (1083 / 555);
+        final imageTop = cardHeight * 0.58;
+        final layoutHeight = imageHeight + (imageTop * 2);
+        final imageLeft = (availableWidth - imageWidth) / 2;
+        final leftCardX = (imageLeft - (cardWidth * 0.18))
+            .clamp(0.0, availableWidth - cardWidth)
+            .toDouble();
+        final rightCardX =
+            (imageLeft + imageWidth - cardWidth + (cardWidth * 0.18))
+                .clamp(0.0, availableWidth - cardWidth)
+                .toDouble();
+
+        return SizedBox(
+          height: layoutHeight,
+          child: Stack(
+            children: [
+              Positioned(
+                left: imageLeft,
+                top: imageTop,
+                width: imageWidth,
+                height: imageHeight,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/images/img_llantas.PNG',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: leftCardX,
+                top: 0,
+                width: cardWidth,
+                child: _buildCornerItem(
+                  'NEUMÁTICO 1',
+                  value1,
+                  (v) => setState(() => value1 = v),
+                ),
+              ),
+              Positioned(
+                left: rightCardX,
+                top: 0,
+                width: cardWidth,
+                child: _buildCornerItem(
+                  'NEUMÁTICO 2',
+                  value2,
+                  (v) => setState(() => value2 = v),
+                ),
+              ),
+              Positioned(
+                left: leftCardX,
+                top: layoutHeight - cardHeight,
+                width: cardWidth,
+                child: _buildCornerItem(
+                  'NEUMÁTICO 3',
+                  value3,
+                  (v) => setState(() => value3 = v),
+                ),
+              ),
+              Positioned(
+                left: rightCardX,
+                top: layoutHeight - cardHeight,
+                width: cardWidth,
+                child: _buildCornerItem(
+                  'NEUMÁTICO 4',
+                  value4,
+                  (v) => setState(() => value4 = v),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCornerItem(
+    String titulo,
+    bool valor,
+    ValueChanged<bool> onChanged,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      height: 138,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Text(
-              titulo,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+          Text(
+            titulo,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
             ),
           ),
+          const SizedBox(height: 10),
           _buildToggle(
             label: 'BUENO',
             icon: Icons.check_circle,
@@ -159,7 +237,7 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
             color: Colors.green,
             onTap: isEditable ? () => onChanged(true) : null,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(height: 8),
           _buildToggle(
             label: 'MALO',
             icon: Icons.cancel,

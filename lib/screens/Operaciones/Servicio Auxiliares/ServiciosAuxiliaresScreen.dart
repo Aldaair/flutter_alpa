@@ -19,8 +19,6 @@ import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/AnfoChanger/wi
     as ac;
 
 // Rompebancos widgets
-import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Rompebancos/widgets/dialogo_formulario_perforacion.dart'
-    as rb;
 
 // Scalamin widgets
 import 'package:i_miner/screens/Operaciones/Servicio%20Auxiliares/Scalamin/widgets/dialogo_formulario_perforacion.dart'

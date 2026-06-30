@@ -25,7 +25,6 @@ class ApiConfig {
   static const String longitudBarrasEndpoint = '/longitud-barras/';
   static const String pernosEndpoint = '/pernos/';
   static const String mallasEndpoint = '/mallas/';
-  static const String origenDestinoEndpoint = '/origen-destino/';
   static const String destinosEndpoint = '/destinos';
 
   static const String accesorioEndpoint = '/Accesorios/';

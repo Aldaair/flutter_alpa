@@ -15,9 +15,12 @@ class ChecklistHelper {
       );
       return {
         'id': item['id'],
+        'categoria_id': item['categoria_id'],
         'nombre': item['nombre'],
         'categoria': item['categoria'],
-        'decision': saved['decision'] ?? 0,
+        'orden': item['orden'],
+        'categoria_orden': item['categoria_orden'],
+        'decision': saved['decision'] ?? 1,
         'observacion': saved['observacion'] ?? '',
       };
     }).toList();

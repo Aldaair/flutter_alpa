@@ -35,7 +35,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 30;
+  static const int _sharedCatalogDbVersion = 33;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -262,15 +262,26 @@ CREATE TABLE PlanMetrajeTL (
   planMetrajeTlId INTEGER NOT NULL UNIQUE,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
-  turno_id INTEGER NOT NULL,
-  ley_id INTEGER NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  proceso_nombre TEXT NOT NULL,
-  dia INTEGER NOT NULL,
-  valor REAL NOT NULL,
+  ancho_veta_metros REAL NOT NULL,
+  ancho_minado_sem_metros REAL NOT NULL,
+  ancho_minado_mes_metros REAL NOT NULL,
+  mina_id INTEGER NOT NULL,
+  zona_id INTEGER NOT NULL,
+  area_id INTEGER NOT NULL,
+  fase_id INTEGER NOT NULL,
+  tipo_labor_id INTEGER NOT NULL,
+  estructura_mineral_id INTEGER NOT NULL,
+  nivel_id INTEGER NOT NULL,
+  ala_id INTEGER NOT NULL,
   labor_nombre TEXT NOT NULL,
-  turno_nombre TEXT NOT NULL,
-  ley_nombre TEXT NOT NULL,
+  mina_nombre TEXT NOT NULL,
+  zona_nombre TEXT NOT NULL,
+  area_nombre TEXT NOT NULL,
+  fase_nombre TEXT NOT NULL,
+  tipo_labor_nombre TEXT NOT NULL,
+  estructura_mineral_nombre TEXT NOT NULL,
+  nivel_nombre TEXT NOT NULL,
+  ala_nombre TEXT NOT NULL,
   created_at TEXT,
   updated_at TEXT
 )
@@ -361,15 +372,29 @@ CREATE TABLE IF NOT EXISTS labores (
   tipo_labor_id INTEGER,
   estructura_mineral_id INTEGER,
   nivel_id INTEGER,
+  ala_id INTEGER,
   nombre_labor TEXT NOT NULL,
   estado TEXT,
+  mina_nombre TEXT,
+  zona_nombre TEXT,
+  area_nombre TEXT,
+  fase_nombre TEXT,
+  tipo_labor_nombre TEXT,
+  estructura_mineral_nombre TEXT,
+  nivel_nombre TEXT,
+  ala_nombre TEXT,
+  created_at TEXT,
+  updated_at TEXT,
+  created_by TEXT,
+  updated_by TEXT,
   FOREIGN KEY (mina_id) REFERENCES minas(mina_id),
   FOREIGN KEY (zona_id) REFERENCES zona(zona_id),
   FOREIGN KEY (area_id) REFERENCES area(area_id),
   FOREIGN KEY (fase_id) REFERENCES fase(fase_id),
   FOREIGN KEY (tipo_labor_id) REFERENCES tipo_labor(tipo_labor_id),
   FOREIGN KEY (estructura_mineral_id) REFERENCES estructura_mineral(estructura_mineral_id),
-  FOREIGN KEY (nivel_id) REFERENCES nivel(nivel_id)
+  FOREIGN KEY (nivel_id) REFERENCES nivel(nivel_id),
+  FOREIGN KEY (ala_id) REFERENCES ala(ala_id)
 )
 ''');
 
@@ -408,15 +433,27 @@ CREATE TABLE IF NOT EXISTS planes_metrajes_avances (
   plan_metraje_avance_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
-  turno_id INTEGER NOT NULL,
-  ley_id INTEGER NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  proceso_nombre TEXT NOT NULL,
-  dia INTEGER NOT NULL,
-  valor REAL NOT NULL,
+  avance_metros REAL NOT NULL,
+  ancho_metros REAL NOT NULL,
+  alto_metros REAL NOT NULL,
+  tms REAL NOT NULL,
+  mina_id INTEGER NOT NULL,
+  zona_id INTEGER NOT NULL,
+  area_id INTEGER NOT NULL,
+  fase_id INTEGER NOT NULL,
+  tipo_labor_id INTEGER NOT NULL,
+  estructura_mineral_id INTEGER NOT NULL,
+  nivel_id INTEGER NOT NULL,
+  ala_id INTEGER NOT NULL,
   labor_nombre TEXT NOT NULL,
-  turno_nombre TEXT NOT NULL,
-  ley_nombre TEXT NOT NULL,
+  mina_nombre TEXT NOT NULL,
+  zona_nombre TEXT NOT NULL,
+  area_nombre TEXT NOT NULL,
+  fase_nombre TEXT NOT NULL,
+  tipo_labor_nombre TEXT NOT NULL,
+  estructura_mineral_nombre TEXT NOT NULL,
+  nivel_nombre TEXT NOT NULL,
+  ala_nombre TEXT NOT NULL,
   created_at TEXT,
   updated_at TEXT
 )
@@ -428,15 +465,34 @@ CREATE TABLE IF NOT EXISTS planes_produccion (
   plan_produccion_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
-  turno_id INTEGER NOT NULL,
-  ley_id INTEGER NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  proceso_nombre TEXT NOT NULL,
-  dia INTEGER NOT NULL,
-  valor REAL NOT NULL,
+  ancho_veta_metros REAL NOT NULL,
+  ancho_minado_sem_metros REAL NOT NULL,
+  ancho_minado_mes_metros REAL NOT NULL,
+  ag_gr REAL NOT NULL,
+  porcentaje_cu REAL NOT NULL,
+  porcentaje_pb REAL NOT NULL,
+  porcentaje_zn REAL NOT NULL,
+  vpt_actual REAL NOT NULL,
+  vpt_final REAL NOT NULL,
+  cut_off_1 REAL NOT NULL,
+  cut_off_2 REAL NOT NULL,
+  mina_id INTEGER NOT NULL,
+  zona_id INTEGER NOT NULL,
+  area_id INTEGER NOT NULL,
+  fase_id INTEGER NOT NULL,
+  tipo_labor_id INTEGER NOT NULL,
+  estructura_mineral_id INTEGER NOT NULL,
+  nivel_id INTEGER NOT NULL,
+  ala_id INTEGER NOT NULL,
   labor_nombre TEXT NOT NULL,
-  turno_nombre TEXT NOT NULL,
-  ley_nombre TEXT NOT NULL,
+  mina_nombre TEXT NOT NULL,
+  zona_nombre TEXT NOT NULL,
+  area_nombre TEXT NOT NULL,
+  fase_nombre TEXT NOT NULL,
+  tipo_labor_nombre TEXT NOT NULL,
+  estructura_mineral_nombre TEXT NOT NULL,
+  nivel_nombre TEXT NOT NULL,
+  ala_nombre TEXT NOT NULL,
   created_at TEXT,
   updated_at TEXT
 )
@@ -457,9 +513,11 @@ CREATE TABLE IF NOT EXISTS checklist_items (
   id INTEGER PRIMARY KEY,
   proceso_id INTEGER,
   proceso TEXT NOT NULL,
+  categoria_id INTEGER,
   categoria TEXT NOT NULL,
   nombre TEXT NOT NULL,
-  orden INTEGER
+  orden INTEGER,
+  categoria_orden INTEGER
 )
 ''');
 
@@ -616,15 +674,26 @@ CREATE TABLE PlanMetrajeTL (
   planMetrajeTlId INTEGER NOT NULL UNIQUE,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
-  turno_id INTEGER NOT NULL,
-  ley_id INTEGER NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  proceso_nombre TEXT NOT NULL,
-  dia INTEGER NOT NULL,
-  valor REAL NOT NULL,
+  ancho_veta_metros REAL NOT NULL,
+  ancho_minado_sem_metros REAL NOT NULL,
+  ancho_minado_mes_metros REAL NOT NULL,
+  mina_id INTEGER NOT NULL,
+  zona_id INTEGER NOT NULL,
+  area_id INTEGER NOT NULL,
+  fase_id INTEGER NOT NULL,
+  tipo_labor_id INTEGER NOT NULL,
+  estructura_mineral_id INTEGER NOT NULL,
+  nivel_id INTEGER NOT NULL,
+  ala_id INTEGER NOT NULL,
   labor_nombre TEXT NOT NULL,
-  turno_nombre TEXT NOT NULL,
-  ley_nombre TEXT NOT NULL,
+  mina_nombre TEXT NOT NULL,
+  zona_nombre TEXT NOT NULL,
+  area_nombre TEXT NOT NULL,
+  fase_nombre TEXT NOT NULL,
+  tipo_labor_nombre TEXT NOT NULL,
+  estructura_mineral_nombre TEXT NOT NULL,
+  nivel_nombre TEXT NOT NULL,
+  ala_nombre TEXT NOT NULL,
   created_at TEXT,
   updated_at TEXT
 )
@@ -732,15 +801,29 @@ CREATE TABLE IF NOT EXISTS labores (
   tipo_labor_id INTEGER,
   estructura_mineral_id INTEGER,
   nivel_id INTEGER,
+  ala_id INTEGER,
   nombre_labor TEXT NOT NULL,
   estado TEXT,
+  mina_nombre TEXT,
+  zona_nombre TEXT,
+  area_nombre TEXT,
+  fase_nombre TEXT,
+  tipo_labor_nombre TEXT,
+  estructura_mineral_nombre TEXT,
+  nivel_nombre TEXT,
+  ala_nombre TEXT,
+  created_at TEXT,
+  updated_at TEXT,
+  created_by TEXT,
+  updated_by TEXT,
   FOREIGN KEY (mina_id) REFERENCES minas(mina_id),
   FOREIGN KEY (zona_id) REFERENCES zona(zona_id),
   FOREIGN KEY (area_id) REFERENCES area(area_id),
   FOREIGN KEY (fase_id) REFERENCES fase(fase_id),
   FOREIGN KEY (tipo_labor_id) REFERENCES tipo_labor(tipo_labor_id),
   FOREIGN KEY (estructura_mineral_id) REFERENCES estructura_mineral(estructura_mineral_id),
-  FOREIGN KEY (nivel_id) REFERENCES nivel(nivel_id)
+  FOREIGN KEY (nivel_id) REFERENCES nivel(nivel_id),
+  FOREIGN KEY (ala_id) REFERENCES ala(ala_id)
 )
 ''');
     }
@@ -788,15 +871,27 @@ CREATE TABLE IF NOT EXISTS planes_metrajes_avances (
   plan_metraje_avance_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
-  turno_id INTEGER NOT NULL,
-  ley_id INTEGER NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  proceso_nombre TEXT NOT NULL,
-  dia INTEGER NOT NULL,
-  valor REAL NOT NULL,
+  avance_metros REAL NOT NULL,
+  ancho_metros REAL NOT NULL,
+  alto_metros REAL NOT NULL,
+  tms REAL NOT NULL,
+  mina_id INTEGER NOT NULL,
+  zona_id INTEGER NOT NULL,
+  area_id INTEGER NOT NULL,
+  fase_id INTEGER NOT NULL,
+  tipo_labor_id INTEGER NOT NULL,
+  estructura_mineral_id INTEGER NOT NULL,
+  nivel_id INTEGER NOT NULL,
+  ala_id INTEGER NOT NULL,
   labor_nombre TEXT NOT NULL,
-  turno_nombre TEXT NOT NULL,
-  ley_nombre TEXT NOT NULL,
+  mina_nombre TEXT NOT NULL,
+  zona_nombre TEXT NOT NULL,
+  area_nombre TEXT NOT NULL,
+  fase_nombre TEXT NOT NULL,
+  tipo_labor_nombre TEXT NOT NULL,
+  estructura_mineral_nombre TEXT NOT NULL,
+  nivel_nombre TEXT NOT NULL,
+  ala_nombre TEXT NOT NULL,
   created_at TEXT,
   updated_at TEXT
 )
@@ -810,15 +905,34 @@ CREATE TABLE IF NOT EXISTS planes_produccion (
   plan_produccion_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
-  turno_id INTEGER NOT NULL,
-  ley_id INTEGER NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  proceso_nombre TEXT NOT NULL,
-  dia INTEGER NOT NULL,
-  valor REAL NOT NULL,
+  ancho_veta_metros REAL NOT NULL,
+  ancho_minado_sem_metros REAL NOT NULL,
+  ancho_minado_mes_metros REAL NOT NULL,
+  ag_gr REAL NOT NULL,
+  porcentaje_cu REAL NOT NULL,
+  porcentaje_pb REAL NOT NULL,
+  porcentaje_zn REAL NOT NULL,
+  vpt_actual REAL NOT NULL,
+  vpt_final REAL NOT NULL,
+  cut_off_1 REAL NOT NULL,
+  cut_off_2 REAL NOT NULL,
+  mina_id INTEGER NOT NULL,
+  zona_id INTEGER NOT NULL,
+  area_id INTEGER NOT NULL,
+  fase_id INTEGER NOT NULL,
+  tipo_labor_id INTEGER NOT NULL,
+  estructura_mineral_id INTEGER NOT NULL,
+  nivel_id INTEGER NOT NULL,
+  ala_id INTEGER NOT NULL,
   labor_nombre TEXT NOT NULL,
-  turno_nombre TEXT NOT NULL,
-  ley_nombre TEXT NOT NULL,
+  mina_nombre TEXT NOT NULL,
+  zona_nombre TEXT NOT NULL,
+  area_nombre TEXT NOT NULL,
+  fase_nombre TEXT NOT NULL,
+  tipo_labor_nombre TEXT NOT NULL,
+  estructura_mineral_nombre TEXT NOT NULL,
+  nivel_nombre TEXT NOT NULL,
+  ala_nombre TEXT NOT NULL,
   created_at TEXT,
   updated_at TEXT
 )
@@ -888,9 +1002,11 @@ CREATE TABLE IF NOT EXISTS checklist_items (
   id INTEGER PRIMARY KEY,
   proceso_id INTEGER,
   proceso TEXT NOT NULL,
+  categoria_id INTEGER,
   categoria TEXT NOT NULL,
   nombre TEXT NOT NULL,
-  orden INTEGER
+  orden INTEGER,
+  categoria_orden INTEGER
 )
 ''');
       } else {
@@ -902,6 +1018,16 @@ CREATE TABLE IF NOT EXISTS checklist_items (
         if (!await _columnaExiste(db, 'checklist_items', 'orden')) {
           await db.execute(
             'ALTER TABLE checklist_items ADD COLUMN orden INTEGER',
+          );
+        }
+        if (!await _columnaExiste(db, 'checklist_items', 'categoria_id')) {
+          await db.execute(
+            'ALTER TABLE checklist_items ADD COLUMN categoria_id INTEGER',
+          );
+        }
+        if (!await _columnaExiste(db, 'checklist_items', 'categoria_orden')) {
+          await db.execute(
+            'ALTER TABLE checklist_items ADD COLUMN categoria_orden INTEGER',
           );
         }
       }
@@ -1088,6 +1214,20 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
         );
       }
     }
+
+    if (oldVersion < 31) {
+      await _resetPlanMetrajeTLTable(db);
+    }
+
+    if (oldVersion < 32) {
+      await _resetLaboresTable(db);
+      await _resetPlanesMetrajesAvancesTable(db);
+      await _resetPlanesProduccionTable(db);
+    }
+
+    if (oldVersion < 33) {
+      await _resetChecklistItemsTable(db);
+    }
   }
 
   Future<void> _resetEstadosTable(Database db) async {
@@ -1107,6 +1247,42 @@ CREATE TABLE estados (
     });
   }
 
+  Future<void> _resetPlanMetrajeTLTable(Database db) async {
+    await db.transaction((txn) async {
+      await txn.execute('DROP TABLE IF EXISTS PlanMetrajeTL');
+      await txn.execute('''
+CREATE TABLE PlanMetrajeTL (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  planMetrajeTlId INTEGER NOT NULL UNIQUE,
+  labor_id INTEGER NOT NULL,
+  periodo_id INTEGER NOT NULL,
+  ancho_veta_metros REAL NOT NULL,
+  ancho_minado_sem_metros REAL NOT NULL,
+  ancho_minado_mes_metros REAL NOT NULL,
+  mina_id INTEGER NOT NULL,
+  zona_id INTEGER NOT NULL,
+  area_id INTEGER NOT NULL,
+  fase_id INTEGER NOT NULL,
+  tipo_labor_id INTEGER NOT NULL,
+  estructura_mineral_id INTEGER NOT NULL,
+  nivel_id INTEGER NOT NULL,
+  ala_id INTEGER NOT NULL,
+  labor_nombre TEXT NOT NULL,
+  mina_nombre TEXT NOT NULL,
+  zona_nombre TEXT NOT NULL,
+  area_nombre TEXT NOT NULL,
+  fase_nombre TEXT NOT NULL,
+  tipo_labor_nombre TEXT NOT NULL,
+  estructura_mineral_nombre TEXT NOT NULL,
+  nivel_nombre TEXT NOT NULL,
+  ala_nombre TEXT NOT NULL,
+  created_at TEXT,
+  updated_at TEXT
+)
+''');
+    });
+  }
+
   Future<void> _resetPlanesMetrajesAvancesTable(Database db) async {
     await db.transaction((txn) async {
       await txn.execute('DROP TABLE IF EXISTS planes_metrajes_avances');
@@ -1116,15 +1292,27 @@ CREATE TABLE planes_metrajes_avances (
   plan_metraje_avance_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
-  turno_id INTEGER NOT NULL,
-  ley_id INTEGER NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  proceso_nombre TEXT NOT NULL,
-  dia INTEGER NOT NULL,
-  valor REAL NOT NULL,
+  avance_metros REAL NOT NULL,
+  ancho_metros REAL NOT NULL,
+  alto_metros REAL NOT NULL,
+  tms REAL NOT NULL,
+  mina_id INTEGER NOT NULL,
+  zona_id INTEGER NOT NULL,
+  area_id INTEGER NOT NULL,
+  fase_id INTEGER NOT NULL,
+  tipo_labor_id INTEGER NOT NULL,
+  estructura_mineral_id INTEGER NOT NULL,
+  nivel_id INTEGER NOT NULL,
+  ala_id INTEGER NOT NULL,
   labor_nombre TEXT NOT NULL,
-  turno_nombre TEXT NOT NULL,
-  ley_nombre TEXT NOT NULL,
+  mina_nombre TEXT NOT NULL,
+  zona_nombre TEXT NOT NULL,
+  area_nombre TEXT NOT NULL,
+  fase_nombre TEXT NOT NULL,
+  tipo_labor_nombre TEXT NOT NULL,
+  estructura_mineral_nombre TEXT NOT NULL,
+  nivel_nombre TEXT NOT NULL,
+  ala_nombre TEXT NOT NULL,
   created_at TEXT,
   updated_at TEXT
 )
@@ -1141,17 +1329,95 @@ CREATE TABLE planes_produccion (
   plan_produccion_id INTEGER NOT NULL,
   labor_id INTEGER NOT NULL,
   periodo_id INTEGER NOT NULL,
-  turno_id INTEGER NOT NULL,
-  ley_id INTEGER NOT NULL,
-  proceso_id INTEGER NOT NULL,
-  proceso_nombre TEXT NOT NULL,
-  dia INTEGER NOT NULL,
-  valor REAL NOT NULL,
+  ancho_veta_metros REAL NOT NULL,
+  ancho_minado_sem_metros REAL NOT NULL,
+  ancho_minado_mes_metros REAL NOT NULL,
+  ag_gr REAL NOT NULL,
+  porcentaje_cu REAL NOT NULL,
+  porcentaje_pb REAL NOT NULL,
+  porcentaje_zn REAL NOT NULL,
+  vpt_actual REAL NOT NULL,
+  vpt_final REAL NOT NULL,
+  cut_off_1 REAL NOT NULL,
+  cut_off_2 REAL NOT NULL,
+  mina_id INTEGER NOT NULL,
+  zona_id INTEGER NOT NULL,
+  area_id INTEGER NOT NULL,
+  fase_id INTEGER NOT NULL,
+  tipo_labor_id INTEGER NOT NULL,
+  estructura_mineral_id INTEGER NOT NULL,
+  nivel_id INTEGER NOT NULL,
+  ala_id INTEGER NOT NULL,
   labor_nombre TEXT NOT NULL,
-  turno_nombre TEXT NOT NULL,
-  ley_nombre TEXT NOT NULL,
+  mina_nombre TEXT NOT NULL,
+  zona_nombre TEXT NOT NULL,
+  area_nombre TEXT NOT NULL,
+  fase_nombre TEXT NOT NULL,
+  tipo_labor_nombre TEXT NOT NULL,
+  estructura_mineral_nombre TEXT NOT NULL,
+  nivel_nombre TEXT NOT NULL,
+  ala_nombre TEXT NOT NULL,
   created_at TEXT,
   updated_at TEXT
+)
+''');
+    });
+  }
+
+  Future<void> _resetLaboresTable(Database db) async {
+    await db.transaction((txn) async {
+      await txn.execute('DROP TABLE IF EXISTS labores');
+      await txn.execute('''
+CREATE TABLE labores (
+  labor_id INTEGER PRIMARY KEY,
+  mina_id INTEGER,
+  zona_id INTEGER,
+  area_id INTEGER,
+  fase_id INTEGER,
+  tipo_labor_id INTEGER,
+  estructura_mineral_id INTEGER,
+  nivel_id INTEGER,
+  ala_id INTEGER,
+  nombre_labor TEXT NOT NULL,
+  estado TEXT,
+  mina_nombre TEXT,
+  zona_nombre TEXT,
+  area_nombre TEXT,
+  fase_nombre TEXT,
+  tipo_labor_nombre TEXT,
+  estructura_mineral_nombre TEXT,
+  nivel_nombre TEXT,
+  ala_nombre TEXT,
+  created_at TEXT,
+  updated_at TEXT,
+  created_by TEXT,
+  updated_by TEXT,
+  FOREIGN KEY (mina_id) REFERENCES minas(mina_id),
+  FOREIGN KEY (zona_id) REFERENCES zona(zona_id),
+  FOREIGN KEY (area_id) REFERENCES area(area_id),
+  FOREIGN KEY (fase_id) REFERENCES fase(fase_id),
+  FOREIGN KEY (tipo_labor_id) REFERENCES tipo_labor(tipo_labor_id),
+  FOREIGN KEY (estructura_mineral_id) REFERENCES estructura_mineral(estructura_mineral_id),
+  FOREIGN KEY (nivel_id) REFERENCES nivel(nivel_id),
+  FOREIGN KEY (ala_id) REFERENCES ala(ala_id)
+)
+''');
+    });
+  }
+
+  Future<void> _resetChecklistItemsTable(Database db) async {
+    await db.transaction((txn) async {
+      await txn.execute('DROP TABLE IF EXISTS checklist_items');
+      await txn.execute('''
+CREATE TABLE checklist_items (
+  id INTEGER PRIMARY KEY,
+  proceso_id INTEGER,
+  proceso TEXT NOT NULL,
+  categoria_id INTEGER,
+  categoria TEXT NOT NULL,
+  nombre TEXT NOT NULL,
+  orden INTEGER,
+  categoria_orden INTEGER
 )
 ''');
     });
@@ -2508,18 +2774,118 @@ CREATE TABLE $tableName (
     );
   }
 
+  Map<String, dynamic> _defaultControlLlantas() {
+    return {
+      'numero1': true,
+      'numero2': true,
+      'numero3': true,
+      'numero4': true,
+    };
+  }
+
+  Future<Map<String, dynamic>> _getControlLlantasFromTable(
+    String tableName,
+    int operacionId,
+  ) async {
+    final db = await database;
+
+    final result = await db.query(
+      tableName,
+      columns: ['control_llantas'],
+      where: 'id = ?',
+      whereArgs: [operacionId],
+    );
+
+    if (result.isEmpty) {
+      return _defaultControlLlantas();
+    }
+
+    final controlJson = result.first['control_llantas'] as String? ?? '{}';
+
+    try {
+      final control = jsonDecode(controlJson);
+      if (control is Map<String, dynamic>) {
+        return {
+          ..._defaultControlLlantas(),
+          ...control,
+        };
+      }
+      if (control is Map) {
+        return {
+          ..._defaultControlLlantas(),
+          ...control.map((key, value) => MapEntry(key.toString(), value)),
+        };
+      }
+      return _defaultControlLlantas();
+    } catch (e) {
+      print('Error decodificando control de llantas: $e');
+      return _defaultControlLlantas();
+    }
+  }
+
   //CHECKLIST
   Future<List<Map<String, dynamic>>> getCheckListByProceso(
     String proceso,
   ) async {
     final db = await sharedCatalogDatabase;
+    final processNames = _buildChecklistProcessNames(proceso);
     final result = await db.query(
       'checklist_items',
-      where: 'proceso = ?',
-      whereArgs: [proceso],
-      orderBy: 'orden ASC, id ASC',
+      where:
+          'proceso IN (${List.filled(processNames.length, '?').join(', ')})',
+      whereArgs: processNames,
+      orderBy: 'categoria_orden ASC, orden ASC, id ASC',
     );
     return result;
+  }
+
+  List<String> _buildChecklistProcessNames(String proceso) {
+    final trimmed = proceso.trim();
+    final normalized = _normalizeChecklistProcessName(trimmed);
+    final names = <String>{trimmed};
+
+    if (normalized.isNotEmpty) {
+      names.add(normalized);
+    }
+
+    // Legacy/current API variants may differ only by accents.
+    if (normalized == 'PERFORACION HORIZONTAL') {
+      names.add('PERFORACIÓN HORIZONTAL');
+    }
+    if (normalized == 'PERFORACION TALADROS LARGOS') {
+      names.add('PERFORACIÓN TALADROS LARGOS');
+    }
+    if (normalized == 'SOSTENIMIENTO') {
+      names.add('EMPERNADOR');
+    }
+
+    return names.toList();
+  }
+
+  String _normalizeChecklistProcessName(String value) {
+    const replacements = {
+      'Á': 'A',
+      'É': 'E',
+      'Í': 'I',
+      'Ó': 'O',
+      'Ú': 'U',
+      'Ü': 'U',
+      'á': 'A',
+      'é': 'E',
+      'í': 'I',
+      'ó': 'O',
+      'ú': 'U',
+      'ü': 'U',
+    };
+
+    final buffer = StringBuffer();
+    for (final rune in value.runes) {
+      buffer.write(
+        replacements[String.fromCharCode(rune)] ?? String.fromCharCode(rune),
+      );
+    }
+
+    return buffer.toString().trim().toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
   }
 
   Future<List<TipoHorometro>> getTiposHorometro() async {
@@ -2624,16 +2990,27 @@ CREATE TABLE $tableName (
     return List.generate(maps.length, (i) => DimPeriodo.fromJson(maps[i]));
   }
 
-  Future<DimPeriodo?> getPeriodoVigente({DateTime? forDate}) async {
+  Future<DimPeriodo?> getPeriodoVigente({
+    DateTime? forDate,
+    String? tipo,
+  }) async {
     final db = await sharedCatalogDatabase;
     final targetDate = (forDate ?? DateTime.now())
         .toIso8601String()
         .split('T')
         .first;
+    final whereClause = StringBuffer('fecha_inicio <= ? AND fecha_fin >= ?');
+    final whereArgs = <Object>[targetDate, targetDate];
+
+    if (tipo != null && tipo.isNotEmpty) {
+      whereClause.write(' AND tipo = ?');
+      whereArgs.add(tipo);
+    }
+
     final maps = await db.query(
       'dim_periodo',
-      where: 'fecha_inicio <= ? AND fecha_fin >= ?',
-      whereArgs: [targetDate, targetDate],
+      where: whereClause.toString(),
+      whereArgs: whereArgs,
       orderBy: 'anno DESC, numero DESC',
       limit: 1,
     );
@@ -2859,12 +3236,7 @@ CREATE TABLE $tableName (
       'horaLlenado': '',
     };
 
-    Map<String, dynamic> controlLlantasJson = {
-      'numero1': false,
-      'numero2': false,
-      'numero3': false,
-      'numero4': false,
-    };
+    final controlLlantasJson = _defaultControlLlantas();
 
     String checkListStr = jsonEncode(checkListJson ?? []);
 
@@ -3421,39 +3793,7 @@ CREATE TABLE $tableName (
   Future<Map<String, dynamic>> getControlLlantasByOperacionId(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_tal_largo',
-      columns: ['control_llantas'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      // Si no hay datos devolver estructura por defecto
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
-
-    String controlJson = result.first['control_llantas'] as String? ?? '{}';
-
-    try {
-      Map<String, dynamic> control = jsonDecode(controlJson);
-      return control;
-    } catch (e) {
-      print('Error decodificando control de llantas: $e');
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
+    return _getControlLlantasFromTable('Operacion_tal_largo', operacionId);
   }
 
   // Actualizar control de llantas de una operación
@@ -3782,12 +4122,7 @@ CREATE TABLE $tableName (
       'horaLlenado': '',
     };
 
-    Map<String, dynamic> controlLlantasJson = {
-      'numero1': false,
-      'numero2': false,
-      'numero3': false,
-      'numero4': false,
-    };
+    final controlLlantasJson = _defaultControlLlantas();
 
     String checkListStr = jsonEncode(checkListJson ?? []);
 
@@ -4086,39 +4421,7 @@ CREATE TABLE $tableName (
   Future<Map<String, dynamic>> getControlLlantasByOperacionIdHorizontal(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_tal_horizontal',
-      columns: ['control_llantas'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      // Si no hay datos devolver estructura por defecto
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
-
-    String controlJson = result.first['control_llantas'] as String? ?? '{}';
-
-    try {
-      Map<String, dynamic> control = jsonDecode(controlJson);
-      return control;
-    } catch (e) {
-      print('Error decodificando control de llantas: $e');
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
+    return _getControlLlantasFromTable('Operacion_tal_horizontal', operacionId);
   }
 
   Future<bool> deleteEstadoHorizontal(int operacionId, int estadoId) async {
@@ -4256,12 +4559,7 @@ CREATE TABLE $tableName (
       'horaLlenado': '',
     };
 
-    Map<String, dynamic> controlLlantasJson = {
-      'numero1': false,
-      'numero2': false,
-      'numero3': false,
-      'numero4': false,
-    };
+    final controlLlantasJson = _defaultControlLlantas();
 
     String checkListStr = jsonEncode(checkListJson ?? []);
 
@@ -4559,39 +4857,7 @@ CREATE TABLE $tableName (
   Future<Map<String, dynamic>> getControlLlantasByOperacionIdEmpernador(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_empernador',
-      columns: ['control_llantas'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      // Si no hay datos devolver estructura por defecto
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
-
-    String controlJson = result.first['control_llantas'] as String? ?? '{}';
-
-    try {
-      Map<String, dynamic> control = jsonDecode(controlJson);
-      return control;
-    } catch (e) {
-      print('Error decodificando control de llantas: $e');
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
+    return _getControlLlantasFromTable('Operacion_empernador', operacionId);
   }
 
   Future<bool> deleteEstadoEmpernador(int operacionId, int estadoId) async {
@@ -4724,12 +4990,7 @@ CREATE TABLE $tableName (
     };
 
     /// Control llantas
-    Map<String, dynamic> controlLlantasJson = {
-      'numero1': false,
-      'numero2': false,
-      'numero3': false,
-      'numero4': false,
-    };
+    final controlLlantasJson = _defaultControlLlantas();
 
     /// Programa de trabajo
     Map<String, dynamic> programaTrabajoJson = {
@@ -5038,39 +5299,7 @@ CREATE TABLE $tableName (
   Future<Map<String, dynamic>> getControlLlantasByOperacionIdCarguio(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_carguio',
-      columns: ['control_llantas'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      // Si no hay datos devolver estructura por defecto
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
-
-    String controlJson = result.first['control_llantas'] as String? ?? '{}';
-
-    try {
-      Map<String, dynamic> control = jsonDecode(controlJson);
-      return control;
-    } catch (e) {
-      print('Error decodificando control de llantas: $e');
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
+    return _getControlLlantasFromTable('Operacion_carguio', operacionId);
   }
 
   Future<bool> deleteEstadoCarguio(int operacionId, int estadoId) async {
@@ -5294,12 +5523,7 @@ CREATE TABLE $tableName (
     };
 
     /// Control llantas
-    Map<String, dynamic> controlLlantasJson = {
-      'numero1': false,
-      'numero2': false,
-      'numero3': false,
-      'numero4': false,
-    };
+    final controlLlantasJson = _defaultControlLlantas();
 
     /// Programa de trabajo
     Map<String, dynamic> programaTrabajoJson = {
@@ -5611,39 +5835,7 @@ CREATE TABLE $tableName (
   Future<Map<String, dynamic>> getControlLlantasByOperacionIdDumper(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Dumper',
-      columns: ['control_llantas'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      // Si no hay datos devolver estructura por defecto
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
-
-    String controlJson = result.first['control_llantas'] as String? ?? '{}';
-
-    try {
-      Map<String, dynamic> control = jsonDecode(controlJson);
-      return control;
-    } catch (e) {
-      print('Error decodificando control de llantas: $e');
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
+    return _getControlLlantasFromTable('Operacion_Dumper', operacionId);
   }
 
   Future<bool> deleteEstadoDumper(int operacionId, int estadoId) async {
@@ -5896,12 +6088,7 @@ CREATE TABLE $tableName (
     };
 
     /// Control llantas
-    Map<String, dynamic> controlLlantasJson = {
-      'numero1': false,
-      'numero2': false,
-      'numero3': false,
-      'numero4': false,
-    };
+    final controlLlantasJson = _defaultControlLlantas();
 
     /// Checklist
     String checkListStr = jsonEncode(checkListJson ?? []);
@@ -6204,39 +6391,7 @@ CREATE TABLE $tableName (
   Future<Map<String, dynamic>> getControlLlantasByOperacionIdRompeBaco(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_rompebanco',
-      columns: ['control_llantas'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      // Si no hay datos devolver estructura por defecto
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
-
-    String controlJson = result.first['control_llantas'] as String? ?? '{}';
-
-    try {
-      Map<String, dynamic> control = jsonDecode(controlJson);
-      return control;
-    } catch (e) {
-      print('Error decodificando control de llantas: $e');
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
+    return _getControlLlantasFromTable('Operacion_rompebanco', operacionId);
   }
 
   Future<bool> deleteEstadoRompeBaco(int operacionId, int estadoId) async {
@@ -6367,12 +6522,7 @@ CREATE TABLE $tableName (
       'horaLlenado': '',
     };
 
-    Map<String, dynamic> controlLlantasJson = {
-      'numero1': false,
-      'numero2': false,
-      'numero3': false,
-      'numero4': false,
-    };
+    final controlLlantasJson = _defaultControlLlantas();
 
     String checkListStr = jsonEncode(checkListJson ?? []);
 
@@ -6674,39 +6824,7 @@ CREATE TABLE $tableName (
   Future<Map<String, dynamic>> getControlLlantasByOperacionIdScalamin(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_Scalamin',
-      columns: ['control_llantas'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      // Si no hay datos devolver estructura por defecto
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
-
-    String controlJson = result.first['control_llantas'] as String? ?? '{}';
-
-    try {
-      Map<String, dynamic> control = jsonDecode(controlJson);
-      return control;
-    } catch (e) {
-      print('Error decodificando control de llantas: $e');
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
+    return _getControlLlantasFromTable('Operacion_Scalamin', operacionId);
   }
 
   Future<bool> deleteEstadoScalamin(int operacionId, int estadoId) async {
@@ -6830,12 +6948,7 @@ CREATE TABLE $tableName (
       'horaLlenado': '',
     };
 
-    Map<String, dynamic> controlLlantasJson = {
-      'numero1': false,
-      'numero2': false,
-      'numero3': false,
-      'numero4': false,
-    };
+    final controlLlantasJson = _defaultControlLlantas();
 
     String checkListStr = jsonEncode(checkListJson ?? []);
 
@@ -7134,39 +7247,7 @@ CREATE TABLE $tableName (
   Future<Map<String, dynamic>> getControlLlantasByOperacionIdScissor(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_scissor',
-      columns: ['control_llantas'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      // Si no hay datos devolver estructura por defecto
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
-
-    String controlJson = result.first['control_llantas'] as String? ?? '{}';
-
-    try {
-      Map<String, dynamic> control = jsonDecode(controlJson);
-      return control;
-    } catch (e) {
-      print('Error decodificando control de llantas: $e');
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
+    return _getControlLlantasFromTable('Operacion_scissor', operacionId);
   }
 
   Future<bool> deleteEstadoScissor(int operacionId, int estadoId) async {
@@ -7302,12 +7383,7 @@ CREATE TABLE $tableName (
     };
 
     /// Control llantas
-    Map<String, dynamic> controlLlantasJson = {
-      'numero1': false,
-      'numero2': false,
-      'numero3': false,
-      'numero4': false,
-    };
+    final controlLlantasJson = _defaultControlLlantas();
 
     /// Checklist
     String checkListStr = jsonEncode(checkListJson ?? []);
@@ -7619,39 +7695,7 @@ CREATE TABLE $tableName (
   Future<Map<String, dynamic>> getControlLlantasByOperacionIdAnfochanger(
     int operacionId,
   ) async {
-    final db = await database;
-
-    final result = await db.query(
-      'Operacion_anfochanger',
-      columns: ['control_llantas'],
-      where: 'id = ?',
-      whereArgs: [operacionId],
-    );
-
-    if (result.isEmpty) {
-      // Si no hay datos devolver estructura por defecto
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
-
-    String controlJson = result.first['control_llantas'] as String? ?? '{}';
-
-    try {
-      Map<String, dynamic> control = jsonDecode(controlJson);
-      return control;
-    } catch (e) {
-      print('Error decodificando control de llantas: $e');
-      return {
-        'numero1': false,
-        'numero2': false,
-        'numero3': false,
-        'numero4': false,
-      };
-    }
+    return _getControlLlantasFromTable('Operacion_anfochanger', operacionId);
   }
 
   Future<bool> deleteEstadoAnfochanger(int operacionId, int estadoId) async {

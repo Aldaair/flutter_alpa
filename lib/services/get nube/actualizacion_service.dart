@@ -2,12 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:i_miner/screens/Dash/actualizacion_dialog.dart';
-import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual.dart';
 import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual_avance.dart';
 import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual_metraje.dart';
 import 'package:i_miner/services/get%20nube/Plan%20mensual/api_service_plan_mensual_produccion.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceAccesorio.dart';
-import 'package:i_miner/services/get%20nube/llamadas/ApiServiceHorometros%20.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceJefeGuardia.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceTipoEquipo.dart';
 import 'package:i_miner/services/get%20nube/llamadas/ApiServiceEquipoHorometroTipos.dart';
@@ -16,7 +14,6 @@ import 'package:i_miner/services/get%20nube/llamadas/api_service_checklist.dart'
 import 'package:i_miner/services/get%20nube/llamadas/api_service_estado.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_longitud_barras.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_mallas.dart';
-import 'package:i_miner/services/get%20nube/llamadas/api_service_origen_destino.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_pernos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_services_Equipo.dart';
 import 'package:i_miner/config/data/database_helper.dart';
@@ -66,10 +63,9 @@ class ActualizacionService {
       "Plan TL": () => fetchPlanMetrajeTL(),
       "Plan TH": () => fetchPlanAvanceTH(),
       "Plan CARGUIO y ACARREO": () => fetchPlanProduccion(),
-      "Origen y Destino": () => fetchOrigenDestino(),
       "Jefes Guardia": fetchJefesGuardia,
       "Minas": fetchMinas,
-      "Dim Zonas": fetchDimZonas,
+      "Zonas": fetchDimZonas,
       "Areas": fetchAreas,
       "Fases": fetchFases,
       "Tipos Labor": fetchTiposLabor,
@@ -77,13 +73,14 @@ class ActualizacionService {
       "Niveles": fetchNiveles,
       "Alas": fetchAlas,
       "Labores": fetchLabores,
-      "Dim Turnos": fetchDimTurnos,
+      "Turnos": fetchDimTurnos,
       "Procesos": fetchProcesos,
       "Destinos": fetchDestinos,
-      "Autorizaciones": refreshOfflineAuthorizationSnapshot,
+      //"Autorizaciones": refreshOfflineAuthorizationSnapshot,
       "Cargos": fetchCargos,
       "Usuarios": fetchUsuarios,
       "Categorías Estados": fetchCategoriasEstados,
+      'Periodos': fetchPeriodos,
     };
   }
 
@@ -393,25 +390,6 @@ class ActualizacionService {
     }
   }
 
-  Future<void> fetchOrigenDestino() async {
-    final apiService = ApiServiceOrigenDestino();
-
-    try {
-      final items = await apiService.fetchOrigenDestino(token);
-
-      print("✅ OrigenDestino guardado en SQLite:");
-
-      for (var item in items) {
-        print(
-          "Proceso: ${item.proceso} | Tipo: ${item.tipo} | Nombre: ${item.nombre}",
-        );
-      }
-    } catch (e) {
-      print("❌ Error al actualizar origen_destino: $e");
-      throw e;
-    }
-  }
-
   Future<void> fetchPdfsDelMes() async {}
 
   Future<void> fetchJefesGuardia() async {
@@ -480,7 +458,9 @@ class ActualizacionService {
 
     try {
       await fetchPeriodos();
-      final periodoVigente = await DatabaseHelper().getPeriodoVigente();
+      final periodoVigente = await DatabaseHelper().getPeriodoVigente(
+        tipo: 'SEMANAL',
+      );
       final periodoId = periodoVigente?.periodoId;
 
       print(
@@ -499,7 +479,7 @@ class ActualizacionService {
 
       for (final plan in planes) {
         print(
-          "Labor: ${plan.laborNombre} | Dia: ${plan.dia} | Valor: ${plan.valor}",
+          "Labor: ${plan.laborNombre} | Veta: ${plan.anchoVetaMetros} | Sem: ${plan.anchoMinadoSemMetros} | Mes: ${plan.anchoMinadoMesMetros}",
         );
       }
     } catch (e) {
@@ -513,7 +493,9 @@ class ActualizacionService {
 
     try {
       await fetchPeriodos();
-      final periodoVigente = await DatabaseHelper().getPeriodoVigente();
+      final periodoVigente = await DatabaseHelper().getPeriodoVigente(
+        tipo: 'MENSUAL',
+      );
       final periodoId = periodoVigente?.periodoId;
 
       if (periodoId == null) {
@@ -525,12 +507,6 @@ class ActualizacionService {
       final planes = await apiService.fetchPlanesAvance(token, periodoId);
 
       print("✅ Plan Avance TH guardado en SQLite:");
-
-      for (final plan in planes) {
-        print(
-          "Labor: ${plan.laborNombre} | Dia: ${plan.dia} | Valor: ${plan.valor}",
-        );
-      }
     } catch (e) {
       print("❌ Error al actualizar Plan Avance: $e");
       throw e;
@@ -542,7 +518,9 @@ class ActualizacionService {
 
     try {
       await fetchPeriodos();
-      final periodoVigente = await DatabaseHelper().getPeriodoVigente();
+      final periodoVigente = await DatabaseHelper().getPeriodoVigente(
+        tipo: 'SEMANAL',
+      );
       final periodoId = periodoVigente?.periodoId;
 
       if (periodoId == null) {

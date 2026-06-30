@@ -240,6 +240,7 @@ class OperacionEmpernadorRegistroDetalleRequest {
   final String? nivel;
   final String? tipoLabor;
   final String? labor;
+  final int? laborId;
   final String? ala;
   final String? tipoPernos;
   final num? logPernos;
@@ -253,6 +254,7 @@ class OperacionEmpernadorRegistroDetalleRequest {
     this.nivel,
     this.tipoLabor,
     this.labor,
+    this.laborId,
     this.ala,
     this.tipoPernos,
     this.logPernos,

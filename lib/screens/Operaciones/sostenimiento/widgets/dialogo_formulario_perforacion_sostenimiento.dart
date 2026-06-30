@@ -9,12 +9,17 @@ import 'package:i_miner/models/DimNivel.dart';
 import 'package:i_miner/models/DimTipoLabor.dart';
 import 'package:i_miner/models/DimZona.dart';
 import 'package:i_miner/models/DimEstructuraMineral.dart';
+import 'package:i_miner/models/plan_avance_th.dart';
+import 'package:i_miner/models/plan_metraje_tl.dart';
+import 'package:i_miner/models/plan_produccion.dart';
 
 class _LaborOption {
   final int laborId;
+  final int alaId;
   final String laborNombre;
   final String tipoLabor;
   final String nivel;
+  final String ala;
   final String mina;
   final String zona;
   final String area;
@@ -23,9 +28,11 @@ class _LaborOption {
 
   const _LaborOption({
     required this.laborId,
+    required this.alaId,
     required this.laborNombre,
     required this.tipoLabor,
     required this.nivel,
+    this.ala = '',
     this.mina = '',
     this.zona = '',
     this.area = '',
@@ -33,10 +40,10 @@ class _LaborOption {
     this.estructuraMineral = '',
   });
 
-  String get displayLabel => '$laborNombre | $nivel | $tipoLabor';
+  String get displayLabel => '$tipoLabor - $laborNombre - $ala';
 
   String get searchText =>
-      '$laborNombre $nivel $tipoLabor $mina $zona $area $fase $estructuraMineral';
+      '$laborNombre $nivel $tipoLabor $ala $mina $zona $area $fase $estructuraMineral';
 }
 
 class DialogoFormularioEmpernador extends StatefulWidget {
@@ -92,8 +99,8 @@ class _DialogoFormularioEmpernadorState
   List<String> opcionesLabor = [];
   final Map<String, _LaborOption> _laborOptionMap = {};
   _LaborOption? _selectedOption;
-
-  List<DimAla> alasCatalogo = [];
+  int laborFieldResetKey = 0;
+  int alaFieldResetKey = 0;
 
   String? sistematicoPuntualSeleccionado;
 
@@ -118,93 +125,59 @@ class _DialogoFormularioEmpernadorState
         dbHelper.getPlanesMetrajeTL(),
         dbHelper.getPlanesAvanceTH(),
         dbHelper.getPlanesProduccion(),
-        dbHelper.getMinas(),
-        dbHelper.getDimZonas(),
-        dbHelper.getAreas(),
-        dbHelper.getFases(),
-        dbHelper.getTiposLabor(),
-        dbHelper.getEstructurasMinerales(),
-        dbHelper.getNiveles(),
-        dbHelper.getAlas(),
-        dbHelper.getLabores(),
       ]);
 
       final pernos = results[0] as List<Map<String, dynamic>>;
       final mallas = results[1] as List<Map<String, dynamic>>;
 
-      final planMetrajeTL = results[2] as List;
-      final planAvanceTH = results[3] as List;
-      final planProduccion = results[4] as List;
-
-      final minasCatalogo = results[5] as List<DimMina>;
-      final zonasCatalogo = results[6] as List<DimZona>;
-      final areasCatalogo = results[7] as List<DimArea>;
-      final fasesCatalogo = results[8] as List<DimFase>;
-      final tiposLaborCatalogo = results[9] as List<DimTipoLabor>;
-      final estructurasMineralesCatalogo =
-          results[10] as List<DimEstructuraMineral>;
-      final nivelesCatalogo = results[11] as List<DimNivel>;
-      alasCatalogo = results[12] as List<DimAla>;
-      final laboresCatalogo = results[13] as List<DimLabor>;
-
-      final laborIdsUnicos = <int>{};
-      for (final plan in [
-        ...planMetrajeTL,
-        ...planAvanceTH,
-        ...planProduccion,
-      ]) {
-        final id = _extractLaborId(plan);
-        if (id != null) laborIdsUnicos.add(id);
-      }
+      final planMetrajeTL = results[2] as List<PlanMetrajeTL>;
+      final planAvanceTH = results[3] as List<PlanAvanceTH>;
+      final planProduccion = results[4] as List<PlanProduccion>;
 
       final opciones = <_LaborOption>[];
-      for (final laborId in laborIdsUnicos) {
-        final labor = laboresCatalogo.cast<DimLabor?>().firstWhere(
-          (l) => l?.laborId == laborId,
-          orElse: () => null,
-        );
-        if (labor == null) continue;
-
-        final tipoLabor = tiposLaborCatalogo.cast<DimTipoLabor?>().firstWhere(
-          (t) => t?.tipoLaborId == labor.tipoLaborId,
-          orElse: () => null,
-        );
-        final nivel = nivelesCatalogo.cast<DimNivel?>().firstWhere(
-          (n) => n?.nivelId == labor.nivelId,
-          orElse: () => null,
-        );
-        final mina = minasCatalogo.cast<DimMina?>().firstWhere(
-          (m) => m?.minaId == labor.minaId,
-          orElse: () => null,
-        );
-        final zona = zonasCatalogo.cast<DimZona?>().firstWhere(
-          (z) => z?.zonaId == labor.zonaId,
-          orElse: () => null,
-        );
-        final area = areasCatalogo.cast<DimArea?>().firstWhere(
-          (a) => a?.areaId == labor.areaId,
-          orElse: () => null,
-        );
-        final fase = fasesCatalogo.cast<DimFase?>().firstWhere(
-          (f) => f?.faseId == labor.faseId,
-          orElse: () => null,
-        );
-        final estructura =
-            estructurasMineralesCatalogo.cast<DimEstructuraMineral?>().firstWhere(
-              (e) => e?.estructuraMineralId == labor.estructuraMineralId,
-              orElse: () => null,
-            );
-
+      for (final plan in planMetrajeTL) {
         opciones.add(_LaborOption(
-          laborId: labor.laborId,
-          laborNombre: labor.nombreLabor,
-          tipoLabor: tipoLabor?.nombre ?? '',
-          nivel: nivel?.nombre ?? '',
-          mina: mina?.nombre ?? '',
-          zona: zona?.nombre ?? '',
-          area: area?.nombre ?? '',
-          fase: fase?.nombre ?? '',
-          estructuraMineral: estructura?.nombre ?? '',
+          laborId: plan.laborId,
+          alaId: plan.alaId,
+          laborNombre: plan.laborNombre,
+          tipoLabor: plan.tipoLaborNombre,
+          nivel: plan.nivelNombre,
+          ala: plan.alaNombre,
+          mina: plan.minaNombre,
+          zona: plan.zonaNombre,
+          area: plan.areaNombre,
+          fase: plan.faseNombre,
+          estructuraMineral: plan.estructuraMineralNombre,
+        ));
+      }
+      for (final plan in planAvanceTH) {
+        opciones.add(_LaborOption(
+          laborId: plan.laborId,
+          alaId: plan.alaId,
+          laborNombre: plan.laborNombre,
+          tipoLabor: plan.tipoLaborNombre,
+          nivel: plan.nivelNombre,
+          ala: plan.alaNombre,
+          mina: plan.minaNombre,
+          zona: plan.zonaNombre,
+          area: plan.areaNombre,
+          fase: plan.faseNombre,
+          estructuraMineral: plan.estructuraMineralNombre,
+        ));
+      }
+      for (final plan in planProduccion) {
+        opciones.add(_LaborOption(
+          laborId: plan.laborId,
+          alaId: plan.alaId,
+          laborNombre: plan.laborNombre,
+          tipoLabor: plan.tipoLaborNombre,
+          nivel: plan.nivelNombre,
+          ala: plan.alaNombre,
+          mina: plan.minaNombre,
+          zona: plan.zonaNombre,
+          area: plan.areaNombre,
+          fase: plan.faseNombre,
+          estructuraMineral: plan.estructuraMineralNombre,
         ));
       }
 
@@ -243,22 +216,18 @@ class _DialogoFormularioEmpernadorState
     }
   }
 
-  int? _extractLaborId(dynamic plan) {
-    if (plan is Map) return plan['laborId'] ?? plan['labor_id'];
-    try {
-      return (plan as dynamic).laborId as int?;
-    } catch (_) {
-      return null;
-    }
-  }
-
   void _preseleccionarLaborInicial(List<_LaborOption> opciones) {
     final laborInicial = widget.datosIniciales?['labor']?.toString() ?? '';
+    final tipoLaborInicial = widget.datosIniciales?['tipo_labor']?.toString() ?? '';
+    final alaInicial = widget.datosIniciales?['ala']?.toString() ?? '';
     if (laborInicial.isEmpty) return;
     if (opciones.isEmpty) return;
 
     final match = opciones.cast<_LaborOption?>().firstWhere(
-      (o) => o!.laborNombre == laborInicial,
+      (o) =>
+          o!.laborNombre == laborInicial &&
+          (tipoLaborInicial.isEmpty || o.tipoLabor == tipoLaborInicial) &&
+          (alaInicial.isEmpty || o.ala == alaInicial),
       orElse: () => null,
     );
     if (match != null) {
@@ -273,6 +242,7 @@ class _DialogoFormularioEmpernadorState
       laborIdSeleccionado = option.laborId;
       tipoLaborSeleccionado = option.tipoLabor;
       nivelSeleccionado = option.nivel;
+      alaSeleccionado = option.ala;
     });
   }
 
@@ -428,100 +398,110 @@ class _DialogoFormularioEmpernadorState
             ],
           ),
           const SizedBox(height: 8),
-          RawAutocomplete<String>(
-            initialValue: TextEditingValue(text: laborSeleccionada ?? ''),
-            optionsBuilder: (textEditingValue) {
-              final query = textEditingValue.text.trim().toLowerCase();
-              if (query.isEmpty) return opcionesLabor;
-              return opcionesLabor.where(
-                (label) => label.toLowerCase().contains(query),
-              );
-            },
-            onSelected: isEditable
-                ? (value) {
-                    final option = _laborOptionMap[value];
-                    if (option != null) {
-                      _aplicarLaborOption(option);
-                    }
-                  }
-                : null,
-            fieldViewBuilder:
-                (context, controller, focusNode, onFieldSubmitted) {
-              return TextField(
-                controller: controller,
-                focusNode: focusNode,
-                enabled: isEditable,
-                onChanged: (value) {
-                  setState(() {
-                    laborSeleccionada = value;
-                    laborIdSeleccionado = null;
-                    _selectedOption = null;
-                  });
-                },
-                decoration: InputDecoration(
-                  hintText: 'Buscar labor...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  isDense: true,
-                ),
-              );
-            },
-            optionsViewBuilder: (context, onSelected, options) {
-              return Align(
-                alignment: Alignment.topLeft,
-                child: Material(
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 500,
-                    height: 240,
-                    child: ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: options.length,
-                      itemBuilder: (context, index) {
-                        final label = options.elementAt(index);
-                        final option = _laborOptionMap[label];
-                        return ListTile(
-                          dense: true,
-                          title: Text(
-                            option?.laborNombre ?? label,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          subtitle: option != null
-                              ? Text(
-                                  '${option.nivel} | ${option.tipoLabor}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                )
-                              : null,
-                          trailing: option != null
-                              ? Text(
-                                  option.mina,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey.shade500,
-                                  ),
-                                )
-                              : null,
-                          onTap: () => onSelected(label),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              );
-            },
+          _buildThreeAutocompleteRow(
+            first: _buildSearchableAutocompleteField(
+              label: 'Tipo Labor',
+              hintText: 'Buscar tipo labor...',
+              options: _uniqueSorted(_laborOptionMap.values.map((o) => o.tipoLabor)),
+              selectedValue: tipoLaborSeleccionado,
+              onChanged: (value) {
+                setState(() {
+                  tipoLaborSeleccionado = value;
+                  laborSeleccionada = null;
+                  alaSeleccionado = null;
+                  laborIdSeleccionado = null;
+                  _selectedOption = null;
+                  laborFieldResetKey++;
+                  alaFieldResetKey++;
+                });
+              },
+              onSelected: (value) {
+                setState(() {
+                  tipoLaborSeleccionado = value;
+                  laborSeleccionada = null;
+                  alaSeleccionado = null;
+                  laborIdSeleccionado = null;
+                  _selectedOption = null;
+                  laborFieldResetKey++;
+                  alaFieldResetKey++;
+                });
+              },
+            ),
+            second: _buildSearchableAutocompleteField(
+              label: 'Labor',
+              hintText: 'Buscar labor...',
+              options: _uniqueSorted(
+                _laborOptionMap.values
+                    .where(
+                      (o) =>
+                          tipoLaborSeleccionado == null ||
+                          tipoLaborSeleccionado!.isEmpty ||
+                          o.tipoLabor == tipoLaborSeleccionado,
+                    )
+                    .map((o) => o.laborNombre),
+              ),
+              selectedValue: laborSeleccionada,
+              enabled:
+                  tipoLaborSeleccionado != null &&
+                  tipoLaborSeleccionado!.trim().isNotEmpty,
+              resetKey: laborFieldResetKey,
+              onChanged: (value) {
+                setState(() {
+                  laborSeleccionada = value;
+                  alaSeleccionado = null;
+                  laborIdSeleccionado = null;
+                  _selectedOption = null;
+                  alaFieldResetKey++;
+                });
+              },
+              onSelected: (value) {
+                setState(() {
+                  laborSeleccionada = value;
+                  alaSeleccionado = null;
+                  laborIdSeleccionado = null;
+                  _selectedOption = null;
+                  alaFieldResetKey++;
+                });
+              },
+            ),
+            third: _buildSearchableAutocompleteField(
+              label: 'Ala',
+              hintText: 'Buscar ala...',
+              options: _uniqueSorted(
+                _laborOptionMap.values
+                    .where(
+                      (o) =>
+                          (tipoLaborSeleccionado == null ||
+                              tipoLaborSeleccionado!.isEmpty ||
+                              o.tipoLabor == tipoLaborSeleccionado) &&
+                          (laborSeleccionada == null ||
+                              laborSeleccionada!.isEmpty ||
+                              o.laborNombre == laborSeleccionada),
+                    )
+                    .map((o) => o.ala),
+              ),
+              selectedValue: alaSeleccionado,
+              enabled:
+                  laborSeleccionada != null && laborSeleccionada!.trim().isNotEmpty,
+              resetKey: alaFieldResetKey,
+              onChanged: (value) {
+                setState(() {
+                  alaSeleccionado = value;
+                  laborIdSeleccionado = null;
+                  _selectedOption = null;
+                });
+              },
+              onSelected: (value) {
+                setState(() {
+                  alaSeleccionado = value;
+                });
+                final label = _buildSelectionLabel();
+                final option = label == null ? null : _laborOptionMap[label];
+                if (option != null) {
+                  _aplicarLaborOption(option);
+                }
+              },
+            ),
           ),
           if (opcionesLabor.isEmpty)
             Padding(
@@ -543,19 +523,112 @@ class _DialogoFormularioEmpernadorState
               '${_selectedOption!.tipoLabor}',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 8),
-            _buildDropdownField(
-              label: 'Ala',
-              value: alaSeleccionado,
-              items: _uniqueSorted(alasCatalogo.map((a) => a.nombre)),
-              onChanged: isEditable
-                  ? (value) => setState(() => alaSeleccionado = value)
-                  : null,
-              icon: Icons.compare_arrows,
-            ),
           ],
         ],
       ),
+    );
+  }
+
+  String? _buildSelectionLabel() {
+    final tipoLabor = tipoLaborSeleccionado?.trim();
+    final labor = laborSeleccionada?.trim();
+    final ala = alaSeleccionado?.trim();
+    if (tipoLabor == null || tipoLabor.isEmpty) return null;
+    if (labor == null || labor.isEmpty) return null;
+    if (ala == null || ala.isEmpty) return null;
+    return '$tipoLabor - $labor - $ala';
+  }
+
+  Widget _buildSearchableAutocompleteField({
+    required String label,
+    required String hintText,
+    required List<String> options,
+    required String? selectedValue,
+    required ValueChanged<String> onChanged,
+    required ValueChanged<String> onSelected,
+    bool enabled = true,
+    int resetKey = 0,
+  }) {
+    final isFieldEnabled = isEditable && enabled;
+
+    return RawAutocomplete<String>(
+      key: ValueKey('$label-$resetKey'),
+      initialValue: TextEditingValue(text: selectedValue ?? ''),
+      optionsBuilder: (textEditingValue) {
+        if (!isFieldEnabled) {
+          return const Iterable<String>.empty();
+        }
+        final query = textEditingValue.text.trim().toLowerCase();
+        if (query.isEmpty) return options;
+        return options.where((option) => option.toLowerCase().contains(query));
+      },
+      onSelected: isFieldEnabled ? onSelected : null,
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return TextField(
+          controller: controller,
+          focusNode: focusNode,
+          enabled: isFieldEnabled,
+          onChanged: isFieldEnabled ? onChanged : null,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hintText,
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            isDense: true,
+          ),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, autocompleteOptions) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 500,
+              height: 240,
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: autocompleteOptions.length,
+                itemBuilder: (context, index) {
+                  final option = autocompleteOptions.elementAt(index);
+                  return ListTile(
+                    dense: true,
+                    title: Text(
+                      option,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () => onSelected(option),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildThreeAutocompleteRow({
+    required Widget first,
+    required Widget second,
+    required Widget third,
+  }) {
+    return Row(
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 8),
+        Expanded(child: second),
+        const SizedBox(width: 8),
+        Expanded(child: third),
+      ],
     );
   }
 
