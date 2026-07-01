@@ -872,11 +872,6 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       );
     }
 
-    print("Operaciones encontradas: $data");
-
-    print(
-      "🔍 _fetchOperacionData: data.length=${data.length}, selectedTurno=$selectedTurno, turnoId=$turnoId, fechaActual=$fechaActual",
-    );
     setState(() {
       operaciones = data;
       if (data.isNotEmpty) {
@@ -1061,11 +1056,11 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       backgroundColor: primaryColor,
       foregroundColor: Colors.white,
       actions: [
-        IconButton(
+        /* IconButton(
           icon: const Icon(Icons.refresh, size: 20),
           onPressed: _refrescarDatos,
           tooltip: 'Refrescar',
-        ),
+        ), */
         IconButton(
           icon: const Icon(Icons.delete, size: 20),
           onPressed: _eliminarRegistro,

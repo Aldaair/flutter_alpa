@@ -51,6 +51,11 @@ class OperacionCard extends StatefulWidget {
 }
 
 class _OperacionCardState extends State<OperacionCard> {
+  final TextEditingController _equipoController = TextEditingController();
+  final TextEditingController _jefeGuardiaController = TextEditingController();
+  final FocusNode _equipoFocusNode = FocusNode();
+  final FocusNode _jefeGuardiaFocusNode = FocusNode();
+
   String? selectedEquipo;
   String? selectedCodigo;
   String? selectedModelo;
@@ -103,9 +108,14 @@ class _OperacionCardState extends State<OperacionCard> {
   void _restoreFromExisting(Map<String, dynamic> op) {
     selectedEquipo = op['equipo'];
     selectedCodigo = op['n_equipo'];
-    if (widget.config.mostrarModelo) selectedModelo = op['modelo_equipo'];
+    if (widget.config.mostrarModelo) {
+      selectedModelo = op['modelo_equipo'] ?? op['modelo'];
+    }
     selectedJefeGuardia = op['jefe_guardia'];
     if (widget.config.mostrarCapacidad) selectedCapacidad = op['capacidad'];
+
+    _equipoController.text = op['equipo']?.toString() ?? '';
+    _jefeGuardiaController.text = selectedJefeGuardia ?? '';
 
     codigosFiltrados = codigosPorEquipo[selectedEquipo] ?? [];
     if (selectedCodigo != null) {
@@ -117,6 +127,15 @@ class _OperacionCardState extends State<OperacionCard> {
         selectedCapacidad = capacidadPorCodigo[selectedCodigo];
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _equipoController.dispose();
+    _jefeGuardiaController.dispose();
+    _equipoFocusNode.dispose();
+    _jefeGuardiaFocusNode.dispose();
+    super.dispose();
   }
 
   void _syncDisplayedOperator({String? fallbackName}) {
@@ -284,6 +303,9 @@ class _OperacionCardState extends State<OperacionCard> {
             selectedCapacidad = capacidadPorCodigo[selectedCodigo];
           }
         }
+        if (!operacionBloqueada) {
+          _equipoController.text = _equipoDisplayLabel();
+        }
       });
     } catch (e) {
       setState(() {
@@ -443,6 +465,8 @@ class _OperacionCardState extends State<OperacionCard> {
         selectedCapacidad = null;
         codigosFiltrados = [];
         modelosFiltrados = [];
+        _equipoController.clear();
+        _jefeGuardiaController.clear();
       }
       setState(() {});
     }
@@ -539,7 +563,8 @@ class _OperacionCardState extends State<OperacionCard> {
                 fieldWeights,
               ),
               child: RawAutocomplete<String>(
-                initialValue: TextEditingValue(text: _equipoDisplayLabel()),
+                textEditingController: _equipoController,
+                focusNode: _equipoFocusNode,
                 optionsBuilder: (textEditingValue) {
                   final query = textEditingValue.text.trim().toLowerCase();
                   if (query.isEmpty) return _equipoLabelMap.keys.toList();
@@ -562,6 +587,7 @@ class _OperacionCardState extends State<OperacionCard> {
                             selectedCapacidad =
                                 capacidadPorCodigo[equipo.codigo] ?? '';
                           }
+                          _equipoController.text = label;
                         });
                       },
                 fieldViewBuilder:
@@ -682,7 +708,8 @@ class _OperacionCardState extends State<OperacionCard> {
                 fieldWeights,
               ),
               child: RawAutocomplete<String>(
-                initialValue: TextEditingValue(text: selectedJefeGuardia ?? ''),
+                textEditingController: _jefeGuardiaController,
+                focusNode: _jefeGuardiaFocusNode,
                 optionsBuilder: (textEditingValue) {
                   final query = textEditingValue.text.trim().toLowerCase();
                   if (query.isEmpty) return jefesGuardia;
@@ -692,7 +719,10 @@ class _OperacionCardState extends State<OperacionCard> {
                 },
                 onSelected: operacionBloqueada
                     ? null
-                    : (value) => setState(() => selectedJefeGuardia = value),
+                    : (value) => setState(() {
+                        selectedJefeGuardia = value;
+                        _jefeGuardiaController.text = value;
+                      }),
                 fieldViewBuilder:
                     (context, controller, focusNode, onFieldSubmitted) {
                       return TextField(
@@ -1247,6 +1277,8 @@ class _OperacionCardState extends State<OperacionCard> {
         selectedCapacidad = null;
         codigosFiltrados = [];
         modelosFiltrados = [];
+        _equipoController.clear();
+        _jefeGuardiaController.clear();
       });
     }
   }

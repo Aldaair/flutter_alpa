@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/plan_avance_th.dart';
 import 'package:i_miner/models/plan_metraje_tl.dart';
@@ -699,7 +700,9 @@ class _DialogoFormularioEmpernadorState
                 child: _buildTextField(
                   label: 'N° Pernos Instalados',
                   controller: nPernosInstaladosController,
+                  icon: Icons.format_list_numbered,
                   keyboardType: TextInputType.number,
+                  onlyDigits: true,
                 ),
               ),
             ],
@@ -766,7 +769,9 @@ class _DialogoFormularioEmpernadorState
                 child: _buildTextField(
                   label: 'M2 Malla',
                   controller: mt52MallaController,
+                  icon: Icons.grid_on,
                   keyboardType: TextInputType.number,
+                  onlyDigits: true,
                 ),
               ),
               const SizedBox(width: 8),
@@ -842,7 +847,9 @@ class _DialogoFormularioEmpernadorState
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
+    required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    bool onlyDigits = false,
   }) {
     return Container(
       height: 42,
@@ -855,14 +862,19 @@ class _DialogoFormularioEmpernadorState
         controller: controller,
         enabled: isEditable,
         keyboardType: keyboardType,
+        inputFormatters: onlyDigits
+            ? [FilteringTextInputFormatter.digitsOnly]
+            : null,
         decoration: InputDecoration(
-          hintText: label,
-          hintStyle: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+          labelText: label,
+          labelStyle: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+          prefixIcon: Icon(icon, size: 14, color: widget.primaryColor),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 8,
             vertical: 8,
           ),
+          floatingLabelBehavior: FloatingLabelBehavior.always,
           isDense: true,
         ),
         style: const TextStyle(fontSize: 12),

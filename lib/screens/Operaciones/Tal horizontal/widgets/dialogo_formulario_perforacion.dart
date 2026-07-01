@@ -724,22 +724,6 @@ class _DialogoFormularioPerforacionState
                                 allowDecimal: true,
                               ),
                               const SizedBox(width: 8),
-                              SizedBox(
-                                width: 1,
-                                child: const SizedBox.shrink(),
-                              ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                width: 1,
-                                child: const SizedBox.shrink(),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          _buildSeccionCompacta(
-                            icon: Icons.settings_input_component,
-                            titulo: 'Tipo Perforación',
-                            children: [
                               _buildCompactDropdownField(
                                 label: 'Seleccione tipo',
                                 value: tipoPerforacionSeleccionado,
@@ -751,16 +735,6 @@ class _DialogoFormularioPerforacionState
                                       )
                                     : null,
                                 icon: Icons.settings_input_component,
-                              ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                width: 1,
-                                child: const SizedBox.shrink(),
-                              ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                width: 1,
-                                child: const SizedBox.shrink(),
                               ),
                               const SizedBox(width: 8),
                               SizedBox(
