@@ -107,6 +107,27 @@ class ExportarService {
           ),
         );
 
+      case 'acarreo':
+        return OperacionAcarreoUpsertRequest(
+          fecha: op['fecha'],
+          turnoId: op['turno_id'],
+          operadorId: op['operador_id'],
+          jefeGuardiaId: op['jefe_guardia_id'],
+          equipoId: op['equipo_id'],
+          estado: estadoOperacion,
+          envio: enviado,
+          revisado: op['revisado'],
+          aprobacion: op['aprobacion'],
+          horometros: horometros,
+          condicionesEquipo: condiciones,
+          controlLlantas: controlLlantas,
+          checkList: checkListOrNull,
+          registros: _buildRegistros(
+            registrosRaw,
+            OperacionAcarreoRegistroDetalleRequest.fromJson,
+          ),
+        );
+
       case 'carguio':
         return OperacionCarguioUpsertRequest(
           fecha: op['fecha'],

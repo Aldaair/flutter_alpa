@@ -73,7 +73,6 @@ class _DialogoFormularioPerforacionState
   final TextEditingController talRimadosController = TextEditingController();
   final TextEditingController talAlivioController = TextEditingController();
   final TextEditingController talRepasoController = TextEditingController();
-  final TextEditingController numBarrasController = TextEditingController();
   final TextEditingController longitudBarraController = TextEditingController();
   final TextEditingController observacionesController = TextEditingController();
 
@@ -183,12 +182,13 @@ class _DialogoFormularioPerforacionState
         widget.procesoId,
       );
 
-      final lista = tiposPerforacionCompletos
-          .map((t) => t.nombre)
-          .where((n) => n.isNotEmpty)
-          .toSet()
-          .toList()
-        ..sort();
+      final lista =
+          tiposPerforacionCompletos
+              .map((t) => t.nombre)
+              .where((n) => n.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
 
       if (!mounted) return;
       setState(() {
@@ -232,20 +232,25 @@ class _DialogoFormularioPerforacionState
     if (widget.datosIniciales == null) return;
 
     setState(() {
-      minaSeleccionada = widget.datosIniciales!['mina']?.toString().isNotEmpty == true
+      minaSeleccionada =
+          widget.datosIniciales!['mina']?.toString().isNotEmpty == true
           ? widget.datosIniciales!['mina'].toString()
           : null;
-      zonaSeleccionada = widget.datosIniciales!['zona']?.toString().isNotEmpty == true
+      zonaSeleccionada =
+          widget.datosIniciales!['zona']?.toString().isNotEmpty == true
           ? widget.datosIniciales!['zona'].toString()
           : null;
-      areaSeleccionada = widget.datosIniciales!['area']?.toString().isNotEmpty == true
+      areaSeleccionada =
+          widget.datosIniciales!['area']?.toString().isNotEmpty == true
           ? widget.datosIniciales!['area'].toString()
           : null;
-      faseSeleccionada = widget.datosIniciales!['fase']?.toString().isNotEmpty == true
+      faseSeleccionada =
+          widget.datosIniciales!['fase']?.toString().isNotEmpty == true
           ? widget.datosIniciales!['fase'].toString()
           : null;
       estructuraMineralSeleccionada =
-          widget.datosIniciales!['estructura_mineral']?.toString().isNotEmpty == true
+          widget.datosIniciales!['estructura_mineral']?.toString().isNotEmpty ==
+              true
           ? widget.datosIniciales!['estructura_mineral'].toString()
           : null;
       tipoLaborSeleccionado =
@@ -256,7 +261,8 @@ class _DialogoFormularioPerforacionState
           widget.datosIniciales!['labor']?.toString().isNotEmpty == true
           ? widget.datosIniciales!['labor'].toString()
           : null;
-      alaSeleccionado = widget.datosIniciales!['ala']?.toString().isNotEmpty == true
+      alaSeleccionado =
+          widget.datosIniciales!['ala']?.toString().isNotEmpty == true
           ? widget.datosIniciales!['ala'].toString()
           : null;
       nivelSeleccionado =
@@ -264,11 +270,13 @@ class _DialogoFormularioPerforacionState
           ? widget.datosIniciales!['nivel'].toString()
           : null;
       tipoPerforacionSeleccionado =
-          widget.datosIniciales!['tipo_perforacion']?.toString().isNotEmpty == true
+          widget.datosIniciales!['tipo_perforacion']?.toString().isNotEmpty ==
+              true
           ? widget.datosIniciales!['tipo_perforacion'].toString()
           : null;
 
-      talProdController.text = widget.datosIniciales!['tal_prod']?.toString() ?? '';
+      talProdController.text =
+          widget.datosIniciales!['tal_prod']?.toString() ?? '';
       talRimadosController.text =
           widget.datosIniciales!['tal_rimados']?.toString() ?? '';
       talAlivioController.text =
@@ -277,8 +285,6 @@ class _DialogoFormularioPerforacionState
           widget.datosIniciales!['tal_repaso']?.toString() ?? '';
       longitudBarraController.text =
           widget.datosIniciales!['long_barras']?.toString() ?? '';
-      numBarrasController.text =
-          widget.datosIniciales!['num_barras']?.toString() ?? '';
       observacionesController.text =
           widget.datosIniciales!['observaciones']?.toString() ?? '';
     });
@@ -304,7 +310,8 @@ class _DialogoFormularioPerforacionState
 
   PlanAvanceTH? _buscarPlanInicial() {
     final laborActual = widget.datosIniciales?['labor']?.toString() ?? '';
-    final tipoLaborActual = widget.datosIniciales?['tipo_labor']?.toString() ?? '';
+    final tipoLaborActual =
+        widget.datosIniciales?['tipo_labor']?.toString() ?? '';
     final alaActual = widget.datosIniciales?['ala']?.toString() ?? '';
 
     for (final plan in planesAvanceCompletos) {
@@ -369,19 +376,21 @@ class _DialogoFormularioPerforacionState
     }
 
     for (final plan in planesMetrajeTLCompletos) {
-      registerOption(_HorizontalFrontOption(
-        laborId: plan.laborId,
-        alaId: plan.alaId,
-        tipoLabor: plan.tipoLaborNombre,
-        labor: plan.laborNombre,
-        ala: plan.alaNombre,
-        mina: plan.minaNombre,
-        zona: plan.zonaNombre,
-        area: plan.areaNombre,
-        fase: plan.faseNombre,
-        estructuraMineral: plan.estructuraMineralNombre,
-        nivel: plan.nivelNombre,
-      ));
+      registerOption(
+        _HorizontalFrontOption(
+          laborId: plan.laborId,
+          alaId: plan.alaId,
+          tipoLabor: plan.tipoLaborNombre,
+          labor: plan.laborNombre,
+          ala: plan.alaNombre,
+          mina: plan.minaNombre,
+          zona: plan.zonaNombre,
+          area: plan.areaNombre,
+          fase: plan.faseNombre,
+          estructuraMineral: plan.estructuraMineralNombre,
+          nivel: plan.nivelNombre,
+        ),
+      );
     }
 
     for (final plan in planesAvanceCompletos) {
@@ -389,19 +398,21 @@ class _DialogoFormularioPerforacionState
     }
 
     for (final plan in planesProduccionCompletos) {
-      registerOption(_HorizontalFrontOption(
-        laborId: plan.laborId,
-        alaId: plan.alaId,
-        tipoLabor: plan.tipoLaborNombre,
-        labor: plan.laborNombre,
-        ala: plan.alaNombre,
-        mina: plan.minaNombre,
-        zona: plan.zonaNombre,
-        area: plan.areaNombre,
-        fase: plan.faseNombre,
-        estructuraMineral: plan.estructuraMineralNombre,
-        nivel: plan.nivelNombre,
-      ));
+      registerOption(
+        _HorizontalFrontOption(
+          laborId: plan.laborId,
+          alaId: plan.alaId,
+          tipoLabor: plan.tipoLaborNombre,
+          labor: plan.laborNombre,
+          ala: plan.alaNombre,
+          mina: plan.minaNombre,
+          zona: plan.zonaNombre,
+          area: plan.areaNombre,
+          fase: plan.faseNombre,
+          estructuraMineral: plan.estructuraMineralNombre,
+          nivel: plan.nivelNombre,
+        ),
+      );
     }
 
     if (!usarFrentePlanificado) {
@@ -480,7 +491,10 @@ class _DialogoFormularioPerforacionState
 
   Future<void> _guardarDatos() async {
     if (tipoPerforacionSeleccionado == null) {
-      _mostrarSnackbar('Debe seleccionar un tipo de perforación', Colors.orange);
+      _mostrarSnackbar(
+        'Debe seleccionar un tipo de perforación',
+        Colors.orange,
+      );
       return;
     }
 
@@ -489,16 +503,26 @@ class _DialogoFormularioPerforacionState
       return;
     }
 
-    final plannedFront = usarFrentePlanificado ? _resolveSelectedPlannedFront() : null;
-    final manualFront = usarFrentePlanificado ? null : _resolveManualFrontSelection();
+    final plannedFront = usarFrentePlanificado
+        ? _resolveSelectedPlannedFront()
+        : null;
+    final manualFront = usarFrentePlanificado
+        ? null
+        : _resolveManualFrontSelection();
 
     if (usarFrentePlanificado && plannedFront == null) {
-      _mostrarSnackbar('Debe seleccionar una opción válida en Labor Plan', Colors.orange);
+      _mostrarSnackbar(
+        'Debe seleccionar una opción válida en Labor Plan',
+        Colors.orange,
+      );
       return;
     }
 
     if (!usarFrentePlanificado && manualFront == null) {
-      _mostrarSnackbar('Debe seleccionar una opción válida en Otro Frente', Colors.orange);
+      _mostrarSnackbar(
+        'Debe seleccionar una opción válida en Otro Frente',
+        Colors.orange,
+      );
       return;
     }
 
@@ -507,16 +531,25 @@ class _DialogoFormularioPerforacionState
         : manualFront?.laborId;
 
     if (resolvedLaborId == null) {
-      _mostrarSnackbar('No se pudo resolver la labor seleccionada', Colors.orange);
+      _mostrarSnackbar(
+        'No se pudo resolver la labor seleccionada',
+        Colors.orange,
+      );
       return;
     }
 
     final tipoLabor = usarFrentePlanificado
         ? plannedFront?.tipoLaborNombre
         : manualFront?.tipoLabor;
-    final labor = usarFrentePlanificado ? plannedFront?.laborNombre : manualFront?.labor;
-    final ala = usarFrentePlanificado ? plannedFront?.alaNombre : manualFront?.ala;
-    final nivel = usarFrentePlanificado ? plannedFront?.nivelNombre : manualFront?.nivel;
+    final labor = usarFrentePlanificado
+        ? plannedFront?.laborNombre
+        : manualFront?.labor;
+    final ala = usarFrentePlanificado
+        ? plannedFront?.alaNombre
+        : manualFront?.ala;
+    final nivel = usarFrentePlanificado
+        ? plannedFront?.nivelNombre
+        : manualFront?.nivel;
 
     final datosFormulario = <String, dynamic>{
       'labor_id': resolvedLaborId,
@@ -530,9 +563,10 @@ class _DialogoFormularioPerforacionState
       'tal_alivio': int.tryParse(talAlivioController.text) ?? 0,
       'tal_repaso': int.tryParse(talRepasoController.text) ?? 0,
       'long_barras': double.tryParse(longitudBarraController.text) ?? 0.0,
-      'num_barras': int.tryParse(numBarrasController.text) ?? 0,
       'tipo_perforacion': tipoPerforacionSeleccionado ?? '',
-      'tipo_perforacion_id': _obtenerIdTipoPerforacion(tipoPerforacionSeleccionado),
+      'tipo_perforacion_id': _obtenerIdTipoPerforacion(
+        tipoPerforacionSeleccionado,
+      ),
       'observaciones': observacionesController.text,
     };
 
@@ -544,7 +578,9 @@ class _DialogoFormularioPerforacionState
   int? _obtenerIdTipoPerforacion(String? nombre) {
     if (nombre == null) return null;
     try {
-      return tiposPerforacionCompletos.firstWhere((tipo) => tipo.nombre == nombre).id;
+      return tiposPerforacionCompletos
+          .firstWhere((tipo) => tipo.nombre == nombre)
+          .id;
     } catch (_) {
       return null;
     }
@@ -567,7 +603,6 @@ class _DialogoFormularioPerforacionState
     talRimadosController.dispose();
     talAlivioController.dispose();
     talRepasoController.dispose();
-    numBarrasController.dispose();
     longitudBarraController.dispose();
     observacionesController.dispose();
     super.dispose();
@@ -621,12 +656,15 @@ class _DialogoFormularioPerforacionState
                                       selected: {usarFrentePlanificado},
                                       onSelectionChanged: isEditable
                                           ? (selection) {
-                                              final usePlanned = selection.first;
+                                              final usePlanned =
+                                                  selection.first;
                                               setState(() {
-                                                usarFrentePlanificado = usePlanned;
+                                                usarFrentePlanificado =
+                                                    usePlanned;
                                               });
                                               if (usePlanned &&
-                                                  plannedFrontSeleccionado != null) {
+                                                  plannedFrontSeleccionado !=
+                                                      null) {
                                                 _aplicarPlanSeleccionado(
                                                   plannedFrontSeleccionado!,
                                                 );
@@ -686,15 +724,15 @@ class _DialogoFormularioPerforacionState
                                 allowDecimal: true,
                               ),
                               const SizedBox(width: 8),
-                              _buildCompactTextField(
-                                label: 'N° Barras',
-                                controller: numBarrasController,
-                                icon: Icons.format_list_numbered,
+                              SizedBox(
+                                width: 1,
+                                child: const SizedBox.shrink(),
                               ),
                               const SizedBox(width: 8),
-                              SizedBox(width: 1, child: const SizedBox.shrink()),
-                              const SizedBox(width: 8),
-                              SizedBox(width: 1, child: const SizedBox.shrink()),
+                              SizedBox(
+                                width: 1,
+                                child: const SizedBox.shrink(),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -708,17 +746,27 @@ class _DialogoFormularioPerforacionState
                                 items: opcionesTipoPerforacion,
                                 onChanged: isEditable
                                     ? (value) => setState(
-                                          () => tipoPerforacionSeleccionado = value,
-                                        )
+                                        () =>
+                                            tipoPerforacionSeleccionado = value,
+                                      )
                                     : null,
                                 icon: Icons.settings_input_component,
                               ),
                               const SizedBox(width: 8),
-                              SizedBox(width: 1, child: const SizedBox.shrink()),
+                              SizedBox(
+                                width: 1,
+                                child: const SizedBox.shrink(),
+                              ),
                               const SizedBox(width: 8),
-                              SizedBox(width: 1, child: const SizedBox.shrink()),
+                              SizedBox(
+                                width: 1,
+                                child: const SizedBox.shrink(),
+                              ),
                               const SizedBox(width: 8),
-                              SizedBox(width: 1, child: const SizedBox.shrink()),
+                              SizedBox(
+                                width: 1,
+                                child: const SizedBox.shrink(),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -1158,43 +1206,47 @@ class _DialogoFormularioPerforacionState
   Widget _buildPlannedFrontSelector() {
     final selected = _resolveSelectedPlannedFront() ?? plannedFrontSeleccionado;
     final hasTipoLaborSeleccionado =
-        tipoLaborSeleccionado != null && tipoLaborSeleccionado!.trim().isNotEmpty;
+        tipoLaborSeleccionado != null &&
+        tipoLaborSeleccionado!.trim().isNotEmpty;
     final hasLaborSeleccionada =
         laborSeleccionado != null && laborSeleccionado!.trim().isNotEmpty;
 
-    final plannedTipos = planesAvanceCompletos
-        .map((plan) => plan.tipoLaborNombre)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final plannedLabores = planesAvanceCompletos
-        .where(
-          (plan) =>
-              tipoLaborSeleccionado == null ||
-              tipoLaborSeleccionado!.isEmpty ||
-              plan.tipoLaborNombre == tipoLaborSeleccionado,
-        )
-        .map((plan) => plan.laborNombre)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final plannedAlas = planesAvanceCompletos
-        .where(
-          (plan) =>
-              (tipoLaborSeleccionado == null ||
+    final plannedTipos =
+        planesAvanceCompletos
+            .map((plan) => plan.tipoLaborNombre)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final plannedLabores =
+        planesAvanceCompletos
+            .where(
+              (plan) =>
+                  tipoLaborSeleccionado == null ||
                   tipoLaborSeleccionado!.isEmpty ||
-                  plan.tipoLaborNombre == tipoLaborSeleccionado) &&
-              (laborSeleccionado == null ||
-                  laborSeleccionado!.isEmpty ||
-                  plan.laborNombre == laborSeleccionado),
-        )
-        .map((plan) => plan.alaNombre)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+                  plan.tipoLaborNombre == tipoLaborSeleccionado,
+            )
+            .map((plan) => plan.laborNombre)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final plannedAlas =
+        planesAvanceCompletos
+            .where(
+              (plan) =>
+                  (tipoLaborSeleccionado == null ||
+                      tipoLaborSeleccionado!.isEmpty ||
+                      plan.tipoLaborNombre == tipoLaborSeleccionado) &&
+                  (laborSeleccionado == null ||
+                      laborSeleccionado!.isEmpty ||
+                      plan.laborNombre == laborSeleccionado),
+            )
+            .map((plan) => plan.alaNombre)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1281,10 +1333,7 @@ class _DialogoFormularioPerforacionState
         ),
         if (selected != null) ...[
           const SizedBox(height: 8),
-          Text(
-            _buildLocationSummary(),
-            style: const TextStyle(fontSize: 12),
-          ),
+          Text(_buildLocationSummary(), style: const TextStyle(fontSize: 12)),
           Text(
             'Plan del periodo: ${selected.estructuraMineralNombre} / Nivel ${selected.nivelNombre} / ${selected.tipoLaborNombre} / ${selected.laborNombre}${selected.alaNombre.isNotEmpty ? ' / Ala ${selected.alaNombre}' : ''}',
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
@@ -1301,43 +1350,47 @@ class _DialogoFormularioPerforacionState
   Widget _buildManualFrontSelectors() {
     final selected = _resolveManualFrontSelection() ?? selectedManualFront;
     final hasTipoLaborSeleccionado =
-        tipoLaborSeleccionado != null && tipoLaborSeleccionado!.trim().isNotEmpty;
+        tipoLaborSeleccionado != null &&
+        tipoLaborSeleccionado!.trim().isNotEmpty;
     final hasLaborSeleccionada =
         laborSeleccionado != null && laborSeleccionado!.trim().isNotEmpty;
 
-    final manualTipos = _manualFrontMap.values
-        .map((option) => option.tipoLabor)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final manualLabores = _manualFrontMap.values
-        .where(
-          (option) =>
-              tipoLaborSeleccionado == null ||
-              tipoLaborSeleccionado!.isEmpty ||
-              option.tipoLabor == tipoLaborSeleccionado,
-        )
-        .map((option) => option.labor)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final manualAlas = _manualFrontMap.values
-        .where(
-          (option) =>
-              (tipoLaborSeleccionado == null ||
+    final manualTipos =
+        _manualFrontMap.values
+            .map((option) => option.tipoLabor)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final manualLabores =
+        _manualFrontMap.values
+            .where(
+              (option) =>
+                  tipoLaborSeleccionado == null ||
                   tipoLaborSeleccionado!.isEmpty ||
-                  option.tipoLabor == tipoLaborSeleccionado) &&
-              (laborSeleccionado == null ||
-                  laborSeleccionado!.isEmpty ||
-                  option.labor == laborSeleccionado),
-        )
-        .map((option) => option.ala)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+                  option.tipoLabor == tipoLaborSeleccionado,
+            )
+            .map((option) => option.labor)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final manualAlas =
+        _manualFrontMap.values
+            .where(
+              (option) =>
+                  (tipoLaborSeleccionado == null ||
+                      tipoLaborSeleccionado!.isEmpty ||
+                      option.tipoLabor == tipoLaborSeleccionado) &&
+                  (laborSeleccionado == null ||
+                      laborSeleccionado!.isEmpty ||
+                      option.labor == laborSeleccionado),
+            )
+            .map((option) => option.ala)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1424,10 +1477,7 @@ class _DialogoFormularioPerforacionState
         ),
         if (selected != null) ...[
           const SizedBox(height: 8),
-          Text(
-            _buildLocationSummary(),
-            style: const TextStyle(fontSize: 12),
-          ),
+          Text(_buildLocationSummary(), style: const TextStyle(fontSize: 12)),
           Text(
             '${selected.estructuraMineral} / Nivel ${selected.nivel} / ${selected.tipoLabor} / ${selected.labor}${selected.ala.isNotEmpty ? ' / Ala ${selected.ala}' : ''}',
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),

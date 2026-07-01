@@ -35,7 +35,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 33;
+  static const int _sharedCatalogDbVersion = 34;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -583,7 +583,8 @@ CREATE TABLE IF NOT EXISTS estados (
     await db.execute('''
 CREATE TABLE IF NOT EXISTS categorias_estados (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL
+  nombre TEXT NOT NULL,
+  activo INTEGER NOT NULL DEFAULT 1
 )
 ''');
   }
@@ -1180,7 +1181,8 @@ CREATE TABLE usuario_directorio (
         await db.execute('''
 CREATE TABLE IF NOT EXISTS categorias_estados (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT NOT NULL
+  nombre TEXT NOT NULL,
+  activo INTEGER NOT NULL DEFAULT 1
 )
 ''');
       }
@@ -1227,6 +1229,14 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
 
     if (oldVersion < 33) {
       await _resetChecklistItemsTable(db);
+    }
+
+    if (oldVersion < 34) {
+      if (!await _columnaExiste(db, 'categorias_estados', 'activo')) {
+        await db.execute(
+          'ALTER TABLE categorias_estados ADD COLUMN activo INTEGER NOT NULL DEFAULT 1',
+        );
+      }
     }
   }
 
@@ -2775,12 +2785,7 @@ CREATE TABLE $tableName (
   }
 
   Map<String, dynamic> _defaultControlLlantas() {
-    return {
-      'numero1': true,
-      'numero2': true,
-      'numero3': true,
-      'numero4': true,
-    };
+    return {'numero1': true, 'numero2': true, 'numero3': true, 'numero4': true};
   }
 
   Future<Map<String, dynamic>> _getControlLlantasFromTable(
@@ -2805,10 +2810,7 @@ CREATE TABLE $tableName (
     try {
       final control = jsonDecode(controlJson);
       if (control is Map<String, dynamic>) {
-        return {
-          ..._defaultControlLlantas(),
-          ...control,
-        };
+        return {..._defaultControlLlantas(), ...control};
       }
       if (control is Map) {
         return {
@@ -2831,8 +2833,7 @@ CREATE TABLE $tableName (
     final processNames = _buildChecklistProcessNames(proceso);
     final result = await db.query(
       'checklist_items',
-      where:
-          'proceso IN (${List.filled(processNames.length, '?').join(', ')})',
+      where: 'proceso IN (${List.filled(processNames.length, '?').join(', ')})',
       whereArgs: processNames,
       orderBy: 'categoria_orden ASC, orden ASC, id ASC',
     );
@@ -2885,7 +2886,10 @@ CREATE TABLE $tableName (
       );
     }
 
-    return buffer.toString().trim().toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
+    return buffer.toString().trim().toUpperCase().replaceAll(
+      RegExp(r'\s+'),
+      ' ',
+    );
   }
 
   Future<List<TipoHorometro>> getTiposHorometro() async {
@@ -3096,7 +3100,11 @@ CREATE TABLE $tableName (
 
   Future<List<Map<String, dynamic>>> getCategoriasEstados() async {
     final db = await sharedCatalogDatabase;
-    return await db.query('categorias_estados', orderBy: 'nombre ASC');
+    return await db.query(
+      'categorias_estados',
+      where: 'activo = 1',
+      orderBy: 'nombre ASC',
+    );
   }
 
   Future<List<Map<String, dynamic>>> getProcesos() async {

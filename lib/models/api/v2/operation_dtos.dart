@@ -161,8 +161,6 @@ class RegistroOperacionTalLargoDetalleRequest {
     if (nTaladrosRepaso != null) 'n_taladros_repaso': nTaladrosRepaso,
     if (metrosPerforadosRepaso != null)
       'metros_perforados_repaso': metrosPerforadosRepaso,
-    if (longBarras != null) 'long_barras': longBarras,
-    if (numBarras != null) 'num_barras': numBarras,
     if (tipoPerforacionId != null) 'tipo_perforacion_id': tipoPerforacionId,
     if (observaciones != null) 'observaciones': observaciones,
     if (laborId != null) 'labor_id': laborId,
@@ -220,7 +218,6 @@ class RegistroOperacionTalHorizontalDetalleRequest {
     if (talAlivio != null) 'tal_alivio': talAlivio,
     if (talRepaso != null) 'tal_repaso': talRepaso,
     if (longBarras != null) 'long_barras': longBarras,
-    if (numBarras != null) 'num_barras': numBarras,
     if (tipoPerforacionId != null) 'tipo_perforacion_id': tipoPerforacionId,
     if (observaciones != null) 'observaciones': observaciones,
     if (laborId != null) 'labor_id': laborId,
@@ -305,6 +302,7 @@ class OperacionCarguioRegistroDetalleRequest {
   final String? tipoLaborInicio;
   final String? laborInicio;
   final String? alaInicio;
+  final int? laborId;
   final String? ubicacionDestino;
   final int? nCucharas;
   final String? observaciones;
@@ -314,6 +312,7 @@ class OperacionCarguioRegistroDetalleRequest {
     this.tipoLaborInicio,
     this.laborInicio,
     this.alaInicio,
+    this.laborId,
     this.ubicacionDestino,
     this.nCucharas,
     this.observaciones,
@@ -326,6 +325,7 @@ class OperacionCarguioRegistroDetalleRequest {
     tipoLaborInicio: json['tipo_labor_inicio'] as String?,
     laborInicio: json['labor_inicio'] as String?,
     alaInicio: json['ala_inicio'] as String?,
+    laborId: json['labor_id'] as int?,
     ubicacionDestino: json['ubicacion_destino'] as String?,
     nCucharas: json['n_cucharas'] as int?,
     observaciones: json['observaciones'] as String?,
@@ -336,6 +336,37 @@ class OperacionCarguioRegistroDetalleRequest {
     if (tipoLaborInicio != null) 'tipo_labor_inicio': tipoLaborInicio,
     if (laborInicio != null) 'labor_inicio': laborInicio,
     if (alaInicio != null) 'ala_inicio': alaInicio,
+    if (laborId != null) 'labor_id': laborId,
+    if (ubicacionDestino != null) 'ubicacion_destino': ubicacionDestino,
+    if (nCucharas != null) 'n_cucharas': nCucharas,
+    if (observaciones != null) 'observaciones': observaciones,
+  };
+}
+
+class OperacionAcarreoRegistroDetalleRequest {
+  final int? laborId;
+  final String? ubicacionDestino;
+  final int? nCucharas;
+  final String? observaciones;
+
+  OperacionAcarreoRegistroDetalleRequest({
+    this.laborId,
+    this.ubicacionDestino,
+    this.nCucharas,
+    this.observaciones,
+  });
+
+  factory OperacionAcarreoRegistroDetalleRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => OperacionAcarreoRegistroDetalleRequest(
+    laborId: json['labor_id'] as int?,
+    ubicacionDestino: json['ubicacion_destino'] as String?,
+    nCucharas: json['n_cucharas'] as int?,
+    observaciones: json['observaciones'] as String?,
+  );
+
+  Map<String, dynamic> toJson() => {
+    if (laborId != null) 'labor_id': laborId,
     if (ubicacionDestino != null) 'ubicacion_destino': ubicacionDestino,
     if (nCucharas != null) 'n_cucharas': nCucharas,
     if (observaciones != null) 'observaciones': observaciones,
@@ -563,6 +594,39 @@ class OperacionCarguioUpsertRequest extends OperacionUpsertRequest {
   registros;
 
   OperacionCarguioUpsertRequest({
+    super.fecha,
+    super.turnoId,
+    super.laborId,
+    super.operadorId,
+    super.jefeGuardiaId,
+    super.equipoId,
+    super.estado,
+    super.envio,
+    super.revisado,
+    super.aprobacion,
+    super.horometros,
+    super.condicionesEquipo,
+    super.checkList,
+    super.controlLlantas,
+    super.observacionesJefe,
+    super.observacionesJefe2,
+    super.observacionesJefe3,
+    this.registros,
+  });
+
+  @override
+  Map<String, dynamic> toJson() => {
+    ...super.toJson(),
+    if (registros != null)
+      'registros': registros!.map((r) => r.toJson()).toList(),
+  };
+}
+
+class OperacionAcarreoUpsertRequest extends OperacionUpsertRequest {
+  final List<RegistroRequest<OperacionAcarreoRegistroDetalleRequest>>?
+  registros;
+
+  OperacionAcarreoUpsertRequest({
     super.fecha,
     super.turnoId,
     super.laborId,

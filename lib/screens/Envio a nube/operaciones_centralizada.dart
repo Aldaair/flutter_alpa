@@ -94,15 +94,16 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
         formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
-      "DUMPER": (context) => DetalleEnvioScreen(
-        tipoOperacion: "DUMPER",
-        endpointTipo: "dumper",
+      "ACARREO": (context) => DetalleEnvioScreen(
+        tipoOperacion: "ACARREO",
+        endpointTipo: "acarreo",
         fetchOperaciones: () => _db.getOperacionesTaladroDumper(),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalDumperFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) => _db.actualizarEnvioDumper(id),
-        prepararDatosExportar: (ids, data) =>
-            ExportarService(_db).prepararDatosParaExportar('dumper', ids, data),
+        prepararDatosExportar: (ids, data) => ExportarService(
+          _db,
+        ).prepararDatosParaExportar('acarreo', ids, data),
         formatearJson: (data) => ExportarService(_db).formatearJson(data),
       ),
 
@@ -172,9 +173,9 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       'descripcion': "Operaciones de carguío",
     },
     {
-      'nombre': "DUMPER",
+      'nombre': "ACARREO",
       'icono': Icons.local_shipping,
-      'descripcion': "Operaciones de DUMPER",
+      'descripcion': "Operaciones de acarreo",
     },
     {
       'nombre': "ROMPEBANCO",

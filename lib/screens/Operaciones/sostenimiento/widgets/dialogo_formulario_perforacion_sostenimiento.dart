@@ -1,14 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/models/DimAla.dart';
-import 'package:i_miner/models/DimArea.dart';
-import 'package:i_miner/models/DimFase.dart';
-import 'package:i_miner/models/DimLabor.dart';
-import 'package:i_miner/models/DimMina.dart';
-import 'package:i_miner/models/DimNivel.dart';
-import 'package:i_miner/models/DimTipoLabor.dart';
-import 'package:i_miner/models/DimZona.dart';
-import 'package:i_miner/models/DimEstructuraMineral.dart';
 import 'package:i_miner/models/plan_avance_th.dart';
 import 'package:i_miner/models/plan_metraje_tl.dart';
 import 'package:i_miner/models/plan_produccion.dart';
@@ -136,49 +127,55 @@ class _DialogoFormularioEmpernadorState
 
       final opciones = <_LaborOption>[];
       for (final plan in planMetrajeTL) {
-        opciones.add(_LaborOption(
-          laborId: plan.laborId,
-          alaId: plan.alaId,
-          laborNombre: plan.laborNombre,
-          tipoLabor: plan.tipoLaborNombre,
-          nivel: plan.nivelNombre,
-          ala: plan.alaNombre,
-          mina: plan.minaNombre,
-          zona: plan.zonaNombre,
-          area: plan.areaNombre,
-          fase: plan.faseNombre,
-          estructuraMineral: plan.estructuraMineralNombre,
-        ));
+        opciones.add(
+          _LaborOption(
+            laborId: plan.laborId,
+            alaId: plan.alaId,
+            laborNombre: plan.laborNombre,
+            tipoLabor: plan.tipoLaborNombre,
+            nivel: plan.nivelNombre,
+            ala: plan.alaNombre,
+            mina: plan.minaNombre,
+            zona: plan.zonaNombre,
+            area: plan.areaNombre,
+            fase: plan.faseNombre,
+            estructuraMineral: plan.estructuraMineralNombre,
+          ),
+        );
       }
       for (final plan in planAvanceTH) {
-        opciones.add(_LaborOption(
-          laborId: plan.laborId,
-          alaId: plan.alaId,
-          laborNombre: plan.laborNombre,
-          tipoLabor: plan.tipoLaborNombre,
-          nivel: plan.nivelNombre,
-          ala: plan.alaNombre,
-          mina: plan.minaNombre,
-          zona: plan.zonaNombre,
-          area: plan.areaNombre,
-          fase: plan.faseNombre,
-          estructuraMineral: plan.estructuraMineralNombre,
-        ));
+        opciones.add(
+          _LaborOption(
+            laborId: plan.laborId,
+            alaId: plan.alaId,
+            laborNombre: plan.laborNombre,
+            tipoLabor: plan.tipoLaborNombre,
+            nivel: plan.nivelNombre,
+            ala: plan.alaNombre,
+            mina: plan.minaNombre,
+            zona: plan.zonaNombre,
+            area: plan.areaNombre,
+            fase: plan.faseNombre,
+            estructuraMineral: plan.estructuraMineralNombre,
+          ),
+        );
       }
       for (final plan in planProduccion) {
-        opciones.add(_LaborOption(
-          laborId: plan.laborId,
-          alaId: plan.alaId,
-          laborNombre: plan.laborNombre,
-          tipoLabor: plan.tipoLaborNombre,
-          nivel: plan.nivelNombre,
-          ala: plan.alaNombre,
-          mina: plan.minaNombre,
-          zona: plan.zonaNombre,
-          area: plan.areaNombre,
-          fase: plan.faseNombre,
-          estructuraMineral: plan.estructuraMineralNombre,
-        ));
+        opciones.add(
+          _LaborOption(
+            laborId: plan.laborId,
+            alaId: plan.alaId,
+            laborNombre: plan.laborNombre,
+            tipoLabor: plan.tipoLaborNombre,
+            nivel: plan.nivelNombre,
+            ala: plan.alaNombre,
+            mina: plan.minaNombre,
+            zona: plan.zonaNombre,
+            area: plan.areaNombre,
+            fase: plan.faseNombre,
+            estructuraMineral: plan.estructuraMineralNombre,
+          ),
+        );
       }
 
       opciones.sort((a, b) => a.laborNombre.compareTo(b.laborNombre));
@@ -186,19 +183,21 @@ class _DialogoFormularioEmpernadorState
       if (!mounted) return;
       setState(() {
         pernosCompletos = pernos;
-        tiposPerno = pernos
-            .map((e) => e['tipo_perno']?.toString() ?? '')
-            .where((n) => n.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+        tiposPerno =
+            pernos
+                .map((e) => e['tipo_perno']?.toString() ?? '')
+                .where((n) => n.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
 
-        opcionesMalla = mallas
-            .map((e) => e['tipo_malla']?.toString() ?? '')
-            .where((n) => n.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+        opcionesMalla =
+            mallas
+                .map((e) => e['tipo_malla']?.toString() ?? '')
+                .where((n) => n.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
 
         for (final opt in opciones) {
           opcionesLabor.add(opt.displayLabel);
@@ -218,7 +217,8 @@ class _DialogoFormularioEmpernadorState
 
   void _preseleccionarLaborInicial(List<_LaborOption> opciones) {
     final laborInicial = widget.datosIniciales?['labor']?.toString() ?? '';
-    final tipoLaborInicial = widget.datosIniciales?['tipo_labor']?.toString() ?? '';
+    final tipoLaborInicial =
+        widget.datosIniciales?['tipo_labor']?.toString() ?? '';
     final alaInicial = widget.datosIniciales?['ala']?.toString() ?? '';
     if (laborInicial.isEmpty) return;
     if (opciones.isEmpty) return;
@@ -402,7 +402,9 @@ class _DialogoFormularioEmpernadorState
             first: _buildSearchableAutocompleteField(
               label: 'Tipo Labor',
               hintText: 'Buscar tipo labor...',
-              options: _uniqueSorted(_laborOptionMap.values.map((o) => o.tipoLabor)),
+              options: _uniqueSorted(
+                _laborOptionMap.values.map((o) => o.tipoLabor),
+              ),
               selectedValue: tipoLaborSeleccionado,
               onChanged: (value) {
                 setState(() {
@@ -482,7 +484,8 @@ class _DialogoFormularioEmpernadorState
               ),
               selectedValue: alaSeleccionado,
               enabled:
-                  laborSeleccionada != null && laborSeleccionada!.trim().isNotEmpty,
+                  laborSeleccionada != null &&
+                  laborSeleccionada!.trim().isNotEmpty,
               resetKey: alaFieldResetKey,
               onChanged: (value) {
                 setState(() {
@@ -686,7 +689,7 @@ class _DialogoFormularioEmpernadorState
                   items: longitudesPerno,
                   onChanged: (tipoPernoSeleccionado != null && isEditable)
                       ? (value) =>
-                          setState(() => longitudPernoSeleccionada = value)
+                            setState(() => longitudPernoSeleccionada = value)
                       : null,
                   icon: Icons.straighten,
                 ),
@@ -727,7 +730,11 @@ class _DialogoFormularioEmpernadorState
                   color: Colors.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Icon(Icons.grid_on, size: 14, color: Colors.purple),
+                child: const Icon(
+                  Icons.grid_on,
+                  size: 14,
+                  color: Colors.purple,
+                ),
               ),
               const SizedBox(width: 6),
               const Text(
@@ -769,8 +776,9 @@ class _DialogoFormularioEmpernadorState
                   value: sistematicoPuntualSeleccionado,
                   items: opcionesSistematicoPuntual,
                   onChanged: isEditable
-                      ? (value) =>
-                          setState(() => sistematicoPuntualSeleccionado = value)
+                      ? (value) => setState(
+                          () => sistematicoPuntualSeleccionado = value,
+                        )
                       : null,
                   icon: Icons.timeline,
                 ),

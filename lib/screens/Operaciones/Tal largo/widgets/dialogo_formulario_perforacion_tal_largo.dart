@@ -123,8 +123,6 @@ class _DialogoFormularioPerforacionState
   final TextEditingController metrosPerforadosRepasoController =
       TextEditingController();
 
-  final TextEditingController numBarrasController = TextEditingController();
-  final TextEditingController longitudBarraController = TextEditingController();
   final TextEditingController observacionesController = TextEditingController();
 
   // Variables para los campos seleccionables (NUEVO ORDEN)
@@ -139,7 +137,6 @@ class _DialogoFormularioPerforacionState
   String? alaSeleccionado; // 3º
 
   String? tipoPerforacionSeleccionado;
-  String? longitudBarraSeleccionada;
   int plannedLaborFieldResetKey = 0;
   int plannedAlaFieldResetKey = 0;
   int manualLaborFieldResetKey = 0;
@@ -147,8 +144,6 @@ class _DialogoFormularioPerforacionState
 
   // Opciones para los dropdowns
   List<String> opcionesTipoPerforacion = [];
-  List<String> opcionesLongitudBarras = [];
-
   // Catálogos desde shared DB
   List<DimMina> minasCatalogo = [];
   List<DimZona> zonasCatalogo = [];
@@ -186,7 +181,6 @@ class _DialogoFormularioPerforacionState
     try {
       await Future.wait([
         _cargarTiposPerforacion(),
-        _cargarLongitudBarras(),
         _cargarCatalogos(),
         _cargarPlanMetrajeTL(),
         _cargarPlanAvanceTH(),
@@ -340,67 +334,6 @@ class _DialogoFormularioPerforacionState
     );
   }
 
-  _LongHolePlanLocation? _resolverUbicacionPorLaborId(int laborId) {
-    final labor = laboresCatalogo.cast<DimLabor?>().firstWhere(
-      (l) => l?.laborId == laborId,
-      orElse: () => null,
-    );
-    if (labor == null) return null;
-
-    final mina = minasCatalogo.cast<DimMina?>().firstWhere(
-      (m) => m?.minaId == labor.minaId,
-      orElse: () => null,
-    );
-    final zona = zonasCatalogo.cast<DimZona?>().firstWhere(
-      (z) => z?.zonaId == labor.zonaId,
-      orElse: () => null,
-    );
-    final area = areasCatalogo.cast<DimArea?>().firstWhere(
-      (a) => a?.areaId == labor.areaId,
-      orElse: () => null,
-    );
-    final fase = fasesCatalogo.cast<DimFase?>().firstWhere(
-      (f) => f?.faseId == labor.faseId,
-      orElse: () => null,
-    );
-    final tipoLabor = tiposLaborCatalogo.cast<DimTipoLabor?>().firstWhere(
-      (t) => t?.tipoLaborId == labor.tipoLaborId,
-      orElse: () => null,
-    );
-    final estructura = estructurasMineralesCatalogo
-        .cast<DimEstructuraMineral?>()
-        .firstWhere(
-          (e) => e?.estructuraMineralId == labor.estructuraMineralId,
-          orElse: () => null,
-        );
-    final nivel = nivelesCatalogo.cast<DimNivel?>().firstWhere(
-      (n) => n?.nivelId == labor.nivelId,
-      orElse: () => null,
-    );
-
-    if (mina == null ||
-        zona == null ||
-        area == null ||
-        fase == null ||
-        tipoLabor == null ||
-        estructura == null ||
-        nivel == null) {
-      return null;
-    }
-
-    return _LongHolePlanLocation(
-      mina: mina.nombre,
-      zona: zona.nombre,
-      area: area.nombre,
-      fase: fase.nombre,
-      estructuraMineral: estructura.nombre,
-      nivel: nivel.nombre,
-      tipoLabor: tipoLabor.nombre,
-      labor: labor.nombreLabor,
-      ala: '',
-    );
-  }
-
   void _rebuildManualFrontMap() {
     _manualFrontMap.clear();
 
@@ -417,7 +350,9 @@ class _DialogoFormularioPerforacionState
       required String estructuraMineral,
       required String nivel,
     }) {
-      if (tipoLabor.trim().isEmpty || labor.trim().isEmpty || ala.trim().isEmpty) {
+      if (tipoLabor.trim().isEmpty ||
+          labor.trim().isEmpty ||
+          ala.trim().isEmpty) {
         return;
       }
       final label = '${tipoLabor.trim()} - ${labor.trim()} - ${ala.trim()}';
@@ -634,23 +569,6 @@ class _DialogoFormularioPerforacionState
     );
   }
 
-  Future<void> _cargarLongitudBarras() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      final data = await dbHelper.getLongitudBarrasPorProceso(
-        "PERFORACIÓN TALADROS LARGOS",
-      );
-      final lista =
-          data.map((e) => e['longitud_pies'].toString()).toSet().toList()
-            ..sort((a, b) => double.parse(a).compareTo(double.parse(b)));
-      setState(() {
-        opcionesLongitudBarras = lista;
-      });
-    } catch (e) {
-      print("Error cargando longitudes: $e");
-    }
-  }
-
   Future<void> _cargarTiposPerforacion() async {
     try {
       final dbHelper = DatabaseHelper();
@@ -739,10 +657,6 @@ class _DialogoFormularioPerforacionState
             widget.datosIniciales!['metros_perforados_repaso']?.toString() ??
             '';
 
-        longitudBarraController.text =
-            widget.datosIniciales!['long_barras']?.toString() ?? '';
-        numBarrasController.text =
-            widget.datosIniciales!['num_barras']?.toString() ?? '';
         observacionesController.text =
             widget.datosIniciales!['observaciones'] ?? '';
       });
@@ -763,8 +677,12 @@ class _DialogoFormularioPerforacionState
       return;
     }
 
-    final plannedFront = usarFrentePlanificado ? _resolveSelectedPlannedFront() : null;
-    final manualFront = usarFrentePlanificado ? null : _resolveManualFrontSelection();
+    final plannedFront = usarFrentePlanificado
+        ? _resolveSelectedPlannedFront()
+        : null;
+    final manualFront = usarFrentePlanificado
+        ? null
+        : _resolveManualFrontSelection();
 
     if (usarFrentePlanificado && plannedFront == null) {
       _mostrarSnackbar(
@@ -795,7 +713,9 @@ class _DialogoFormularioPerforacionState
             ala: manualFront.ala,
           )
         : null;
-    final planUbicacion = plannedFront != null ? _buildPlanLocation(plannedFront) : null;
+    final planUbicacion = plannedFront != null
+        ? _buildPlanLocation(plannedFront)
+        : null;
 
     final resolvedLaborId = usarFrentePlanificado
         ? plannedFront?.laborId
@@ -855,8 +775,6 @@ class _DialogoFormularioPerforacionState
       'n_taladros_repaso': int.tryParse(nTaladrosRepasoController.text) ?? 0,
       'metros_perforados_repaso':
           double.tryParse(metrosPerforadosRepasoController.text) ?? 0.0,
-      'long_barras': double.tryParse(longitudBarraController.text) ?? 0.0,
-      'num_barras': int.tryParse(numBarrasController.text) ?? 0,
       'tipo_perforacion': tipoPerforacionSeleccionado ?? '',
       'tipo_perforacion_id': _obtenerIdTipoPerforacion(
         tipoPerforacionSeleccionado,
@@ -910,8 +828,6 @@ class _DialogoFormularioPerforacionState
     metrosPerforadosAlivioController.dispose();
     nTaladrosRepasoController.dispose();
     metrosPerforadosRepasoController.dispose();
-    numBarrasController.dispose();
-    longitudBarraController.dispose();
     observacionesController.dispose();
     super.dispose();
   }
@@ -1032,28 +948,6 @@ class _DialogoFormularioPerforacionState
                             nTaladrosController: nTaladrosRepasoController,
                             metrosController: metrosPerforadosRepasoController,
                             color: Colors.purple.shade700,
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          // Barras
-                          _buildSeccionCompacta(
-                            icon: Icons.height,
-                            titulo: 'Barras',
-                            children: [
-                              _buildCompactTextField(
-                                label: 'Longitud (pies)',
-                                controller: longitudBarraController,
-                                icon: Icons.straighten,
-                                allowDecimal: true,
-                              ),
-                              const SizedBox(width: 8),
-                              _buildCompactTextField(
-                                label: 'N° Barras',
-                                controller: numBarrasController,
-                                icon: Icons.format_list_numbered,
-                              ),
-                            ],
                           ),
 
                           const SizedBox(height: 12),
@@ -1360,10 +1254,9 @@ class _DialogoFormularioPerforacionState
       child: TextField(
         controller: controller,
         enabled: isEditable,
-        keyboardType:
-            allowDecimal
-                ? const TextInputType.numberWithOptions(decimal: true)
-                : keyboardType,
+        keyboardType: allowDecimal
+            ? const TextInputType.numberWithOptions(decimal: true)
+            : keyboardType,
         inputFormatters: [formatter],
         decoration: InputDecoration(
           labelText: label,
@@ -1501,42 +1394,46 @@ class _DialogoFormularioPerforacionState
   Widget _buildPlannedFrontSelector() {
     final selected = _resolveSelectedPlannedFront() ?? plannedFrontSeleccionado;
     final hasTipoLaborSeleccionado =
-        tipoLaborSeleccionado != null && tipoLaborSeleccionado!.trim().isNotEmpty;
+        tipoLaborSeleccionado != null &&
+        tipoLaborSeleccionado!.trim().isNotEmpty;
     final hasLaborSeleccionada =
         laborSeleccionado != null && laborSeleccionado!.trim().isNotEmpty;
-    final plannedTipos = planMetrajeTLCompletos
-        .map((plan) => plan.tipoLaborNombre)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final plannedLabores = planMetrajeTLCompletos
-        .where(
-          (plan) =>
-              tipoLaborSeleccionado == null ||
-              tipoLaborSeleccionado!.isEmpty ||
-              plan.tipoLaborNombre == tipoLaborSeleccionado,
-        )
-        .map((plan) => plan.laborNombre)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final plannedAlas = planMetrajeTLCompletos
-        .where(
-          (plan) =>
-              (tipoLaborSeleccionado == null ||
+    final plannedTipos =
+        planMetrajeTLCompletos
+            .map((plan) => plan.tipoLaborNombre)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final plannedLabores =
+        planMetrajeTLCompletos
+            .where(
+              (plan) =>
+                  tipoLaborSeleccionado == null ||
                   tipoLaborSeleccionado!.isEmpty ||
-                  plan.tipoLaborNombre == tipoLaborSeleccionado) &&
-              (laborSeleccionado == null ||
-                  laborSeleccionado!.isEmpty ||
-                  plan.laborNombre == laborSeleccionado),
-        )
-        .map((plan) => plan.alaNombre)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+                  plan.tipoLaborNombre == tipoLaborSeleccionado,
+            )
+            .map((plan) => plan.laborNombre)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final plannedAlas =
+        planMetrajeTLCompletos
+            .where(
+              (plan) =>
+                  (tipoLaborSeleccionado == null ||
+                      tipoLaborSeleccionado!.isEmpty ||
+                      plan.tipoLaborNombre == tipoLaborSeleccionado) &&
+                  (laborSeleccionado == null ||
+                      laborSeleccionado!.isEmpty ||
+                      plan.laborNombre == laborSeleccionado),
+            )
+            .map((plan) => plan.alaNombre)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1643,42 +1540,46 @@ class _DialogoFormularioPerforacionState
   Widget _buildManualFrontSelectors() {
     final selected = _resolveManualFrontSelection() ?? selectedManualFront;
     final hasTipoLaborSeleccionado =
-        tipoLaborSeleccionado != null && tipoLaborSeleccionado!.trim().isNotEmpty;
+        tipoLaborSeleccionado != null &&
+        tipoLaborSeleccionado!.trim().isNotEmpty;
     final hasLaborSeleccionada =
         laborSeleccionado != null && laborSeleccionado!.trim().isNotEmpty;
-    final manualTipos = _manualFrontMap.values
-        .map((option) => option.tipoLabor)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final manualLabores = _manualFrontMap.values
-        .where(
-          (option) =>
-              tipoLaborSeleccionado == null ||
-              tipoLaborSeleccionado!.isEmpty ||
-              option.tipoLabor == tipoLaborSeleccionado,
-        )
-        .map((option) => option.labor)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final manualAlas = _manualFrontMap.values
-        .where(
-          (option) =>
-              (tipoLaborSeleccionado == null ||
+    final manualTipos =
+        _manualFrontMap.values
+            .map((option) => option.tipoLabor)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final manualLabores =
+        _manualFrontMap.values
+            .where(
+              (option) =>
+                  tipoLaborSeleccionado == null ||
                   tipoLaborSeleccionado!.isEmpty ||
-                  option.tipoLabor == tipoLaborSeleccionado) &&
-              (laborSeleccionado == null ||
-                  laborSeleccionado!.isEmpty ||
-                  option.labor == laborSeleccionado),
-        )
-        .map((option) => option.ala)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+                  option.tipoLabor == tipoLaborSeleccionado,
+            )
+            .map((option) => option.labor)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final manualAlas =
+        _manualFrontMap.values
+            .where(
+              (option) =>
+                  (tipoLaborSeleccionado == null ||
+                      tipoLaborSeleccionado!.isEmpty ||
+                      option.tipoLabor == tipoLaborSeleccionado) &&
+                  (laborSeleccionado == null ||
+                      laborSeleccionado!.isEmpty ||
+                      option.labor == laborSeleccionado),
+            )
+            .map((option) => option.ala)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1817,5 +1718,4 @@ class _DialogoFormularioPerforacionState
       ],
     );
   }
-
 }

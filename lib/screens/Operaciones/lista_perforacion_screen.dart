@@ -179,14 +179,6 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
   List<Map<String, dynamic>> operacionesTabla = [];
 
-  final Map<String, Color> coloresEstado = {
-    'OPERATIVO': const Color(0xFF4CAF50),
-    'DEMORA': const Color(0xFFFF9800),
-    'MANTENIMIENTO': const Color(0xFF2196F3),
-    'RESERVA': const Color(0xFF9C27B0),
-    'FUERA DE PLAN': const Color(0xFFF44336),
-  };
-
   @override
   void initState() {
     super.initState();
