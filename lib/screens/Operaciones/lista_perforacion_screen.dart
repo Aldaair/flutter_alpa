@@ -1323,6 +1323,30 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     final estadoNombre = (operacion['estado'] ?? 'OPERATIVO')
         .toString()
         .toUpperCase();
+
+    final estadosDelMismoTipo = operacionesTabla
+        .where(
+          (item) =>
+              (item['estado'] ?? '').toString().toUpperCase() == estadoNombre,
+        )
+        .toList()
+      ..sort((a, b) {
+        final numeroA = (a['numero'] as int?) ?? 0;
+        final numeroB = (b['numero'] as int?) ?? 0;
+        return numeroA.compareTo(numeroB);
+      });
+
+    final currentIndex = estadosDelMismoTipo.indexWhere(
+      (item) => item['id'] == operacion['id'],
+    );
+    final prevHoraInicio = currentIndex > 0
+        ? estadosDelMismoTipo[currentIndex - 1]['horaInicio']?.toString() ?? ''
+        : '';
+    final nextHoraInicio =
+        currentIndex >= 0 && currentIndex < estadosDelMismoTipo.length - 1
+        ? estadosDelMismoTipo[currentIndex + 1]['horaInicio']?.toString() ?? ''
+        : '';
+
     final cats = await DatabaseHelper().getCategoriasEstados();
     final catMatch = cats.firstWhere(
       (c) => (c['nombre']?.toString() ?? '').toUpperCase() == estadoNombre,
@@ -1343,6 +1367,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         'codigo': operacion['codigo']?.toString() ?? '',
         'hora_inicio': operacion['hora_inicio']?.toString() ?? '',
         'hora_final': operacion['hora_final']?.toString() ?? '',
+        'prev_hora_inicio': prevHoraInicio,
+        'next_hora_inicio': nextHoraInicio,
       },
     );
 
@@ -1463,6 +1489,18 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     try {
       if (operacionActual == null) return;
 
+      final estadoId = data['id'] is int
+          ? data['id'] as int
+          : int.tryParse(data['id']?.toString() ?? '');
+      final numero = data['numero'] is int
+          ? data['numero'] as int
+          : int.tryParse(data['numero']?.toString() ?? '');
+
+      if (estadoId == null) {
+        _mostrarSnackBar('Error: no se pudo resolver el ID del registro', Colors.red);
+        return;
+      }
+
       DateTime? parseHoraCompleta(String horaStr) {
         try {
           if (horaStr.contains(' ')) {
@@ -1493,8 +1531,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
       bool actualizado = await _updateEstadoDispatch(
         operacionActual!['id'],
-        data['id'],
-        numero: data['numero'],
+        estadoId,
+        numero: numero,
         estado: data['estado'],
         codigo: data['codigo'],
         horaInicio: data['hora_inicio'],

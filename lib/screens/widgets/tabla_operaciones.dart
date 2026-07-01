@@ -222,12 +222,12 @@ class TablaOperaciones extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildAccionButton(
+                /* _buildAccionButton(
                   icon: Icons.visibility_outlined,
                   color: Colors.blue,
                   onPressed: () => onVerDetalle(operacion),
                   size: isMobile ? 14 : 16,
-                ),
+                ), */
                 SizedBox(width: isMobile ? 4 : 8),
                 _buildAccionButton(
                   icon: Icons.edit_outlined,

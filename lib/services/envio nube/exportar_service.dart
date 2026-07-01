@@ -245,8 +245,8 @@ class ExportarService {
     return registros.map((r) {
       final opDetalle = r['operacion'] as Map<String, dynamic>?;
       return RegistroRequest<T>(
-        id: r['id'],
-        numero: r['numero'] ?? 0,
+        id: _asInt(r['id']),
+        numero: _asInt(r['numero']) ?? 0,
         estado: r['estado'] ?? '',
         codigo: r['codigo'] ?? '',
         horaInicio: r['hora_inicio'] ?? '',
@@ -307,5 +307,12 @@ class ExportarService {
 
   String formatearJson(List<Map<String, dynamic>> jsonData) {
     return const JsonEncoder.withIndent('  ').convert(jsonData);
+  }
+
+  int? _asInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
   }
 }

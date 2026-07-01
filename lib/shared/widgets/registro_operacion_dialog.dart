@@ -125,34 +125,64 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
   ) {
     if (!isEditing || widget.existingRecord == null) return [];
 
+    String? minTime = widget.existingRecord!['prev_hora_inicio'];
+    String? maxTime = widget.existingRecord!['next_hora_inicio'];
+
+    if ((minTime != null && minTime.isNotEmpty) ||
+        (maxTime != null && maxTime.isNotEmpty)) {
+      if (minTime?.contains(' ') == true) {
+        minTime = minTime!.split(' ')[1];
+      }
+      if (maxTime?.contains(' ') == true) {
+        maxTime = maxTime!.split(' ')[1];
+      }
+
+      final allTimes = _generateTimeIntervals(widget.turno);
+      return allTimes.where((time) {
+        if (minTime != null && minTime!.isNotEmpty &&
+            _compareTimes(time, minTime!) <= 0) {
+          return false;
+        }
+        if (maxTime != null && maxTime!.isNotEmpty &&
+            _compareTimes(time, maxTime!) >= 0) {
+          return false;
+        }
+        return true;
+      }).toList();
+    }
+
     int currentIndex = codigoOperativos.indexWhere(
       (item) => item["id"].toString() == widget.existingRecord!["id"],
     );
 
     if (currentIndex == -1) return [];
 
-    String? minTime;
-    String? maxTime;
+    String? fallbackMinTime;
+    String? fallbackMaxTime;
 
     if (currentIndex > 0) {
-      minTime = codigoOperativos[currentIndex - 1]["hora_inicio"]?.toString();
-      if (minTime?.contains(' ') == true) {
-        minTime = minTime!.split(' ')[1];
+      fallbackMinTime = codigoOperativos[currentIndex - 1]["hora_inicio"]?.toString();
+      if (fallbackMinTime?.contains(' ') == true) {
+        fallbackMinTime = fallbackMinTime!.split(' ')[1];
       }
     }
 
     if (currentIndex < codigoOperativos.length - 1) {
-      maxTime = codigoOperativos[currentIndex + 1]["hora_inicio"]?.toString();
-      if (maxTime?.contains(' ') == true) {
-        maxTime = maxTime!.split(' ')[1];
+      fallbackMaxTime = codigoOperativos[currentIndex + 1]["hora_inicio"]?.toString();
+      if (fallbackMaxTime?.contains(' ') == true) {
+        fallbackMaxTime = fallbackMaxTime!.split(' ')[1];
       }
     }
 
     List<String> allTimes = _generateTimeIntervals(widget.turno);
 
     return allTimes.where((time) {
-      if (minTime != null && _compareTimes(time, minTime) <= 0) return false;
-      if (maxTime != null && _compareTimes(time, maxTime) >= 0) return false;
+      if (fallbackMinTime != null && _compareTimes(time, fallbackMinTime) <= 0) {
+        return false;
+      }
+      if (fallbackMaxTime != null && _compareTimes(time, fallbackMaxTime) >= 0) {
+        return false;
+      }
       return true;
     }).toList();
   }
@@ -273,12 +303,19 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
   void _handleConfirm(List<Map<String, dynamic>> codigoOperativos) {
     if (!_validateSelection(codigoOperativos)) return;
 
+    final editingId = isEditing
+        ? int.tryParse(widget.existingRecord!['id'] ?? '')
+        : null;
+    final editingNumero = isEditing
+        ? int.tryParse(widget.existingRecord!['numero'] ?? '')
+        : null;
+
     final data = {
       'codigo': selectedCodigo,
       'hora_inicio': selectedTime,
       'estado': widget.selectedState,
-      if (isEditing) 'id': widget.existingRecord!['id'],
-      if (isEditing) 'numero': widget.existingRecord!['numero'],
+      if (isEditing && editingId != null) 'id': editingId,
+      if (isEditing && editingNumero != null) 'numero': editingNumero,
       if (isEditing) 'hora_final': widget.existingRecord!['hora_final'],
     };
 

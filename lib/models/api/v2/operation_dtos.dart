@@ -30,7 +30,16 @@ class ControlLlantasRequest {
   factory ControlLlantasRequest.fromJson(Map<String, dynamic> json) =>
       ControlLlantasRequest(Map<String, dynamic>.from(json));
 
-  Map<String, dynamic> toJson() => data;
+  Map<String, dynamic> toJson() => {
+    'llanta1': _toBool(data['llanta1'] ?? data['numero1']),
+    'llanta2': _toBool(data['llanta2'] ?? data['numero2']),
+    'llanta3': _toBool(data['llanta3'] ?? data['numero3']),
+    'llanta4': _toBool(data['llanta4'] ?? data['numero4']),
+    'llanta1_presion': _toDouble(data['llanta1_presion']),
+    'llanta2_presion': _toDouble(data['llanta2_presion']),
+    'llanta3_presion': _toDouble(data['llanta3_presion']),
+    'llanta4_presion': _toDouble(data['llanta4_presion']),
+  };
 }
 
 class ChecklistRespuestaRequest {
@@ -46,8 +55,8 @@ class ChecklistRespuestaRequest {
 
   factory ChecklistRespuestaRequest.fromJson(Map<String, dynamic> json) =>
       ChecklistRespuestaRequest(
-        id: json['id'] as int?,
-        decision: json['decision'] as int? ?? 0,
+        id: _toInt(json['id']),
+        decision: _toInt(json['decision']) ?? 0,
         observacion: json['observacion'] as String? ?? '',
       );
 
@@ -130,21 +139,21 @@ class RegistroOperacionTalLargoDetalleRequest {
   factory RegistroOperacionTalLargoDetalleRequest.fromJson(
     Map<String, dynamic> json,
   ) => RegistroOperacionTalLargoDetalleRequest(
-    nTaladrosProduccion: json['n_taladros_produccion'],
+    nTaladrosProduccion: _toInt(json['n_taladros_produccion']),
     metrosPerforadosProduccion: _toDouble(json['metros_perforados_produccion']),
-    nTaladrosRimados: json['n_taladros_rimados'],
+    nTaladrosRimados: _toInt(json['n_taladros_rimados']),
     metrosPerforadosRimados: _toDouble(json['metros_perforados_rimados']),
-    nTaladrosAlivio: json['n_taladros_alivio'],
+    nTaladrosAlivio: _toInt(json['n_taladros_alivio']),
     metrosPerforadosAlivio: _toDouble(json['metros_perforados_alivio']),
-    nTaladrosRepaso: json['n_taladros_repaso'],
+    nTaladrosRepaso: _toInt(json['n_taladros_repaso']),
     metrosPerforadosRepaso: _toDouble(json['metros_perforados_repaso']),
     longBarras: _toDouble(json['long_barras']),
-    numBarras: json['num_barras'],
-    tipoPerforacionId: json['tipo_perforacion_id'],
+    numBarras: _toInt(json['num_barras']),
+    tipoPerforacionId: _toInt(json['tipo_perforacion_id']),
     observaciones: json['observaciones'],
-    laborId: json['labor_id'],
+    laborId: _toInt(json['labor_id']),
     ala: json['ala'],
-    alaId: json['ala_id'],
+    alaId: _toInt(json['ala_id']),
   );
 
   Map<String, dynamic> toJson() => {
@@ -199,17 +208,17 @@ class RegistroOperacionTalHorizontalDetalleRequest {
   factory RegistroOperacionTalHorizontalDetalleRequest.fromJson(
     Map<String, dynamic> json,
   ) => RegistroOperacionTalHorizontalDetalleRequest(
-    talProd: json['tal_prod'],
-    talRimados: json['tal_rimados'],
-    talAlivio: json['tal_alivio'],
-    talRepaso: json['tal_repaso'],
+    talProd: _toInt(json['tal_prod']),
+    talRimados: _toInt(json['tal_rimados']),
+    talAlivio: _toInt(json['tal_alivio']),
+    talRepaso: _toInt(json['tal_repaso']),
     longBarras: _toDouble(json['long_barras']),
-    numBarras: json['num_barras'],
-    tipoPerforacionId: json['tipo_perforacion_id'],
+    numBarras: _toInt(json['num_barras']),
+    tipoPerforacionId: _toInt(json['tipo_perforacion_id']),
     observaciones: json['observaciones'],
-    laborId: json['labor_id'],
+    laborId: _toInt(json['labor_id']),
     ala: json['ala'],
-    alaId: json['ala_id'],
+    alaId: _toInt(json['ala_id']),
   );
 
   Map<String, dynamic> toJson() => {
@@ -224,6 +233,23 @@ class RegistroOperacionTalHorizontalDetalleRequest {
     if (ala != null) 'ala': ala,
     if (alaId != null) 'ala_id': alaId,
   };
+}
+
+int? _toInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
+}
+
+bool? _toBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final normalized = value.toString().trim().toLowerCase();
+  if (normalized == 'true' || normalized == '1') return true;
+  if (normalized == 'false' || normalized == '0') return false;
+  return null;
 }
 
 double? _toDouble(dynamic value) {
@@ -325,9 +351,9 @@ class OperacionCarguioRegistroDetalleRequest {
     tipoLaborInicio: json['tipo_labor_inicio'] as String?,
     laborInicio: json['labor_inicio'] as String?,
     alaInicio: json['ala_inicio'] as String?,
-    laborId: json['labor_id'] as int?,
+    laborId: _toInt(json['labor_id']),
     ubicacionDestino: json['ubicacion_destino'] as String?,
-    nCucharas: json['n_cucharas'] as int?,
+    nCucharas: _toInt(json['n_cucharas']),
     observaciones: json['observaciones'] as String?,
   );
 
@@ -359,9 +385,9 @@ class OperacionAcarreoRegistroDetalleRequest {
   factory OperacionAcarreoRegistroDetalleRequest.fromJson(
     Map<String, dynamic> json,
   ) => OperacionAcarreoRegistroDetalleRequest(
-    laborId: json['labor_id'] as int?,
+    laborId: _toInt(json['labor_id']),
     ubicacionDestino: json['ubicacion_destino'] as String?,
-    nCucharas: json['n_cucharas'] as int?,
+    nCucharas: _toInt(json['n_cucharas']),
     observaciones: json['observaciones'] as String?,
   );
 
