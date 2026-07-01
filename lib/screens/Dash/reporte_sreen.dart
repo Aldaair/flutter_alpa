@@ -641,6 +641,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _handleModulePress(String title) async {
+    if (title == 'SERVICIOS\nAUXILIARES') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ServiciosAuxiliaresScreen(
+            rolUsuario: rol,
+            dniUsuario: widget.dni,
+          ),
+        ),
+      );
+      return;
+    }
+
     final resolvedProcesoId = await _resolveProcesoIdForTitle(title);
     if (!mounted) return;
 
