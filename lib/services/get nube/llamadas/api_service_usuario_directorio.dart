@@ -27,7 +27,6 @@ class ApiServiceUsuarioDirectorio {
 
     batch.delete('usuario_directorio');
     batch.delete('usuario_procesos');
-    batch.delete('usuario_equipos');
 
     for (final row in decoded) {
       final item = row as Map;
@@ -50,14 +49,6 @@ class ApiServiceUsuarioDirectorio {
           batch.insert('usuario_procesos', {
             'usuarios_id': operadorId,
             'proceso_id': (p as Map)['id'],
-          });
-        }
-
-        final equipos = item['equipos'] as List? ?? [];
-        for (final e in equipos) {
-          batch.insert('usuario_equipos', {
-            'usuarios_id': operadorId,
-            'equipo_id': (e as Map)['id'],
           });
         }
       }

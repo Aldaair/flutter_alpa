@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/config/data/offline_authorization_repository.dart';
 import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/models/Equipo.dart';
 import 'package:i_miner/models/tipo_horometro.dart';
@@ -236,30 +235,13 @@ class _OperacionCardState extends State<OperacionCard> {
       modelosPorCodigo.clear();
       capacidadPorCodigo.clear();
 
-      if (widget.config.usarAutorizacion &&
-          (widget.dniUsuario == null || widget.dniUsuario!.trim().isEmpty)) {
-        setState(() {
-          _loadingEquipos = false;
-          equipos = [];
-          codigosFiltrados = [];
-          modelosFiltrados = [];
-        });
-        return;
-      }
-
-      if (widget.config.usarAutorizacion) {
-        equiposCompletos = await _loadAuthorizedEquipos(
-          dni: widget.dniUsuario!,
-        );
-      } else {
-        final dbHelper = DatabaseHelper();
-        equiposCompletos = await dbHelper.getEquipos();
-        equiposCompletos =
-            equiposCompletos
-                .where((e) => e.matchesProceso(widget.config.proceso))
-                .toList()
-              ..sort((a, b) => a.nombre.compareTo(b.nombre));
-      }
+      final dbHelper = DatabaseHelper();
+      equiposCompletos = await dbHelper.getEquipos();
+      equiposCompletos =
+          equiposCompletos
+              .where((e) => e.matchesProceso(widget.config.proceso))
+              .toList()
+            ..sort((a, b) => a.nombre.compareTo(b.nombre));
 
       Set<String> nombresEquipos = {};
 
@@ -323,39 +305,6 @@ class _OperacionCardState extends State<OperacionCard> {
         modelosFiltrados = [];
       });
     }
-  }
-
-  Future<List<Equipo>> _loadAuthorizedEquipos({required String dni}) async {
-    final repository = OfflineAuthorizationRepository();
-    final dbHelper = DatabaseHelper();
-    final authorizedProcesses = await repository.getAuthorizedProcesses(dni);
-
-    AuthorizedProcess? matchingProcess;
-    for (final process in authorizedProcesses) {
-      final normalized = normalizeAuthorizationName(process.name);
-      if (normalized == normalizeAuthorizationName(widget.config.proceso)) {
-        matchingProcess = process;
-        break;
-      }
-    }
-
-    final equipos = await dbHelper.getEquipos();
-    final filteredByProceso = equipos.where((e) {
-      return normalizeAuthorizationName(e.proceso) ==
-          normalizeAuthorizationName(widget.config.proceso);
-    });
-
-    if (matchingProcess == null) return [];
-
-    final authorizedIds = await repository.getAuthorizedEquipoIds(
-      dni: dni,
-      processId: matchingProcess.id,
-    );
-
-    return filteredByProceso
-        .where((e) => e.id != null && authorizedIds.contains(e.id))
-        .toList()
-      ..sort((a, b) => a.nombre.compareTo(b.nombre));
   }
 
   Future<void> _cargarJefesGuardia() async {

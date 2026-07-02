@@ -17,7 +17,6 @@ class OperacionScreenConfig {
   final bool hasChecklistTelemando;
   final bool hasProgramaTrabajo;
   final bool mostrarModelo;
-  final bool usarAutorizacion;
 
   const OperacionScreenConfig({
     required this.proceso,
@@ -27,7 +26,6 @@ class OperacionScreenConfig {
     this.hasChecklistTelemando = false,
     this.hasProgramaTrabajo = false,
     this.mostrarModelo = true,
-    this.usarAutorizacion = true,
   });
 }
 
@@ -980,7 +978,6 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
               config: OperacionCardConfig(
                 proceso: widget.config.proceso,
                 mostrarModelo: widget.config.mostrarModelo,
-                usarAutorizacion: widget.config.usarAutorizacion,
                 soloIds: false,
               ),
             ),

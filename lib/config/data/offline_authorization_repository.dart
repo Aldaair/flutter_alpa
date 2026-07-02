@@ -144,21 +144,4 @@ class OfflineAuthorizationRepository {
 
     return false;
   }
-
-  Future<Set<int>> getAuthorizedEquipoIds({
-    required String dni,
-    required int processId,
-  }) async {
-    final operadorId = await _getOperadorId(dni);
-    if (operadorId == null) return {};
-    final db = await _sharedDb;
-    final rows = await db.query(
-      'usuario_equipos',
-      columns: ['equipo_id'],
-      where: 'usuarios_id = ?',
-      whereArgs: [operadorId],
-    );
-
-    return rows.map((row) => row['equipo_id']).whereType<int>().toSet();
-  }
 }

@@ -35,7 +35,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 35;
+  static const int _sharedCatalogDbVersion = 36;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -535,13 +535,6 @@ CREATE TABLE IF NOT EXISTS usuario_procesos (
 CREATE TABLE IF NOT EXISTS cargos (
   cargo_id INTEGER PRIMARY KEY,
   nombre TEXT NOT NULL
-)
-''');
-
-    await db.execute('''
-CREATE TABLE IF NOT EXISTS usuario_equipos (
-  usuarios_id INTEGER NOT NULL,
-  equipo_id INTEGER NOT NULL
 )
 ''');
 
@@ -1235,6 +1228,10 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
 
     if (oldVersion < 35) {
       await _resetTipoPerforacionesTable(db);
+    }
+
+    if (oldVersion < 36) {
+      await db.execute('DROP TABLE IF EXISTS usuario_equipos');
     }
   }
 
