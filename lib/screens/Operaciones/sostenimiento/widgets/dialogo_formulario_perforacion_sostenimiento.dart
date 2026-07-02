@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/models/plan_avance_th.dart';
-import 'package:i_miner/models/plan_metraje_tl.dart';
-import 'package:i_miner/models/plan_produccion.dart';
+import 'package:i_miner/models/DimLabor.dart';
 
 class _LaborOption {
   final int laborId;
@@ -114,67 +112,28 @@ class _DialogoFormularioEmpernadorState
       final results = await Future.wait([
         dbHelper.getPernos(),
         dbHelper.getMallas(),
-        dbHelper.getPlanesMetrajeTL(),
-        dbHelper.getPlanesAvanceTH(),
-        dbHelper.getPlanesProduccion(),
+        dbHelper.getLabores(),
       ]);
 
       final pernos = results[0] as List<Map<String, dynamic>>;
       final mallas = results[1] as List<Map<String, dynamic>>;
-
-      final planMetrajeTL = results[2] as List<PlanMetrajeTL>;
-      final planAvanceTH = results[3] as List<PlanAvanceTH>;
-      final planProduccion = results[4] as List<PlanProduccion>;
+      final labores = results[2] as List<DimLabor>;
 
       final opciones = <_LaborOption>[];
-      for (final plan in planMetrajeTL) {
+      for (final labor in labores) {
         opciones.add(
           _LaborOption(
-            laborId: plan.laborId,
-            alaId: plan.alaId,
-            laborNombre: plan.laborNombre,
-            tipoLabor: plan.tipoLaborNombre,
-            nivel: plan.nivelNombre,
-            ala: plan.alaNombre,
-            mina: plan.minaNombre,
-            zona: plan.zonaNombre,
-            area: plan.areaNombre,
-            fase: plan.faseNombre,
-            estructuraMineral: plan.estructuraMineralNombre,
-          ),
-        );
-      }
-      for (final plan in planAvanceTH) {
-        opciones.add(
-          _LaborOption(
-            laborId: plan.laborId,
-            alaId: plan.alaId,
-            laborNombre: plan.laborNombre,
-            tipoLabor: plan.tipoLaborNombre,
-            nivel: plan.nivelNombre,
-            ala: plan.alaNombre,
-            mina: plan.minaNombre,
-            zona: plan.zonaNombre,
-            area: plan.areaNombre,
-            fase: plan.faseNombre,
-            estructuraMineral: plan.estructuraMineralNombre,
-          ),
-        );
-      }
-      for (final plan in planProduccion) {
-        opciones.add(
-          _LaborOption(
-            laborId: plan.laborId,
-            alaId: plan.alaId,
-            laborNombre: plan.laborNombre,
-            tipoLabor: plan.tipoLaborNombre,
-            nivel: plan.nivelNombre,
-            ala: plan.alaNombre,
-            mina: plan.minaNombre,
-            zona: plan.zonaNombre,
-            area: plan.areaNombre,
-            fase: plan.faseNombre,
-            estructuraMineral: plan.estructuraMineralNombre,
+            laborId: labor.laborId,
+            alaId: labor.alaId ?? 0,
+            laborNombre: labor.nombreLabor,
+            tipoLabor: labor.tipoLaborNombre,
+            nivel: labor.nivelNombre,
+            ala: labor.alaNombre,
+            mina: labor.minaNombre,
+            zona: labor.zonaNombre,
+            area: labor.areaNombre,
+            fase: labor.faseNombre,
+            estructuraMineral: labor.estructuraMineralNombre,
           ),
         );
       }
@@ -511,7 +470,7 @@ class _DialogoFormularioEmpernadorState
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'No hay labores disponibles en los planes de producción',
+                'No hay labores disponibles en el catálogo',
                 style: TextStyle(fontSize: 11, color: Colors.red.shade400),
               ),
             ),

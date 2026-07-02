@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/models/DimTurno.dart';
 
 class RegistroOperacionDialog extends StatefulWidget {
   final String turno;
@@ -32,6 +33,8 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
   late bool isEditing;
   List<Map<String, dynamic>> _estadosCatalogo = [];
   bool _loadingEstados = true;
+  List<DimTurno> _turnosCatalogo = [];
+  bool _loadingTurnos = true;
 
   @override
   void initState() {
@@ -43,23 +46,86 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
       selectedTime = widget.existingRecord!['hora_inicio'];
     }
 
-    _cargarEstados();
+    _cargarCatalogos();
   }
 
-  Future<void> _cargarEstados() async {
-    print(
-      "🔍 _cargarEstados: procesoId=${widget.procesoId}, categoriaId=${widget.categoriaId}",
-    );
-    final estados = await DatabaseHelper().getEstadosByProcesoAndCategoria(
-      widget.procesoId,
-      widget.categoriaId,
-    );
-    print("🔍 _cargarEstados: encontrados ${estados.length} estados");
-    if (!mounted) return;
-    setState(() {
-      _estadosCatalogo = estados;
-      _loadingEstados = false;
-    });
+  Future<void> _cargarCatalogos() async {
+    try {
+      print(
+        "🔍 _cargarEstados: procesoId=${widget.procesoId}, categoriaId=${widget.categoriaId}",
+      );
+      final dbHelper = DatabaseHelper();
+      final results = await Future.wait([
+        dbHelper.getEstadosByProcesoAndCategoria(
+          widget.procesoId,
+          widget.categoriaId,
+        ),
+        dbHelper.getDimTurnos(),
+      ]);
+      final estados = results[0] as List<Map<String, dynamic>>;
+      final turnos = results[1] as List<DimTurno>;
+      print("🔍 _cargarEstados: encontrados ${estados.length} estados");
+      if (!mounted) return;
+      setState(() {
+        _estadosCatalogo = estados;
+        _turnosCatalogo = turnos;
+        _loadingEstados = false;
+        _loadingTurnos = false;
+      });
+    } catch (e) {
+      print('Error cargando catálogos de registro: $e');
+      if (!mounted) return;
+      setState(() {
+        _loadingEstados = false;
+        _loadingTurnos = false;
+      });
+    }
+  }
+
+  String _normalizarTurno(String value) {
+    return value
+        .trim()
+        .toUpperCase()
+        .replaceAll('Á', 'A')
+        .replaceAll('É', 'E')
+        .replaceAll('Í', 'I')
+        .replaceAll('Ó', 'O')
+        .replaceAll('Ú', 'U');
+  }
+
+  DimTurno? _resolverTurnoCatalogo(String turno) {
+    final turnoNormalizado = _normalizarTurno(turno);
+    for (final item in _turnosCatalogo) {
+      final nombreNormalizado = _normalizarTurno(item.nombre);
+      final codigoNormalizado = _normalizarTurno(item.codigo ?? '');
+      if (nombreNormalizado == turnoNormalizado ||
+          codigoNormalizado == turnoNormalizado ||
+          nombreNormalizado.contains(turnoNormalizado) ||
+          turnoNormalizado.contains(nombreNormalizado) ||
+          (codigoNormalizado.isNotEmpty &&
+              (codigoNormalizado.contains(turnoNormalizado) ||
+                  turnoNormalizado.contains(codigoNormalizado)))) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  int? _parseHorario(String? horario) {
+    if (horario == null || horario.trim().isEmpty) return null;
+    final parts = horario.split(':');
+    if (parts.length < 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    return hour * 60 + minute;
+  }
+
+  String _formatMinutes(int totalMinutes) {
+    final normalized = totalMinutes % (24 * 60);
+    final hour = normalized ~/ 60;
+    final minute = normalized % 60;
+    return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
   }
 
   int _convertToShiftMinutes(String time) {
@@ -68,8 +134,13 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     int minute = parts[1];
 
     int totalMinutes = hour * 60 + minute;
+    final turnoCatalogo = _resolverTurnoCatalogo(widget.turno);
+    final inicioTurno = _parseHorario(turnoCatalogo?.horarioInicio);
 
-    if (widget.turno != "DÍA") {
+    if (inicioTurno != null && totalMinutes < inicioTurno) {
+      totalMinutes += 24 * 60;
+    } else if (turnoCatalogo == null &&
+        _normalizarTurno(widget.turno) != "DIA") {
       if (hour < 7) {
         totalMinutes += 24 * 60;
       }
@@ -87,12 +158,24 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
   }
 
   List<String> _generateTimeIntervals(String turno) {
-    List<String> times = [];
+    final turnoCatalogo = _resolverTurnoCatalogo(turno);
+    final inicio = _parseHorario(turnoCatalogo?.horarioInicio);
+    final fin = _parseHorario(turnoCatalogo?.horarioFin);
+    if (inicio != null && fin != null) {
+      final List<String> times = [];
+      final adjustedFin = fin > inicio ? fin : fin + (24 * 60);
+      for (int current = inicio; current <= adjustedFin; current += 5) {
+        times.add(_formatMinutes(current));
+      }
+      return times;
+    }
 
-    if (turno == "DÍA") {
+    final turnoNormalizado = _normalizarTurno(turno);
+    List<String> times = [];
+    if (turnoNormalizado == "DIA") {
       for (int hour = 7; hour <= 17; hour++) {
         for (int minute = 0; minute < 60; minute += 5) {
-          if (hour == 17 && minute > 25) break;
+          if (hour == 17 && minute > 30) break;
           times.add(
             "${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}",
           );
@@ -109,14 +192,13 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
 
       for (int hour = 0; hour <= 5; hour++) {
         for (int minute = 0; minute < 60; minute += 5) {
-          if (hour == 5 && minute > 25) break;
+          if (hour == 5 && minute > 30) break;
           times.add(
             "${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}",
           );
         }
       }
     }
-
     return times;
   }
 
@@ -139,12 +221,14 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
 
       final allTimes = _generateTimeIntervals(widget.turno);
       return allTimes.where((time) {
-        if (minTime != null && minTime!.isNotEmpty &&
-            _compareTimes(time, minTime!) <= 0) {
+        if (minTime != null &&
+            minTime.isNotEmpty &&
+            _compareTimes(time, minTime) <= 0) {
           return false;
         }
-        if (maxTime != null && maxTime!.isNotEmpty &&
-            _compareTimes(time, maxTime!) >= 0) {
+        if (maxTime != null &&
+            maxTime.isNotEmpty &&
+            _compareTimes(time, maxTime) >= 0) {
           return false;
         }
         return true;
@@ -161,14 +245,16 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     String? fallbackMaxTime;
 
     if (currentIndex > 0) {
-      fallbackMinTime = codigoOperativos[currentIndex - 1]["hora_inicio"]?.toString();
+      fallbackMinTime = codigoOperativos[currentIndex - 1]["hora_inicio"]
+          ?.toString();
       if (fallbackMinTime?.contains(' ') == true) {
         fallbackMinTime = fallbackMinTime!.split(' ')[1];
       }
     }
 
     if (currentIndex < codigoOperativos.length - 1) {
-      fallbackMaxTime = codigoOperativos[currentIndex + 1]["hora_inicio"]?.toString();
+      fallbackMaxTime = codigoOperativos[currentIndex + 1]["hora_inicio"]
+          ?.toString();
       if (fallbackMaxTime?.contains(' ') == true) {
         fallbackMaxTime = fallbackMaxTime!.split(' ')[1];
       }
@@ -177,10 +263,12 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     List<String> allTimes = _generateTimeIntervals(widget.turno);
 
     return allTimes.where((time) {
-      if (fallbackMinTime != null && _compareTimes(time, fallbackMinTime) <= 0) {
+      if (fallbackMinTime != null &&
+          _compareTimes(time, fallbackMinTime) <= 0) {
         return false;
       }
-      if (fallbackMaxTime != null && _compareTimes(time, fallbackMaxTime) >= 0) {
+      if (fallbackMaxTime != null &&
+          _compareTimes(time, fallbackMaxTime) >= 0) {
         return false;
       }
       return true;
@@ -189,14 +277,28 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
 
   bool _isValidTimeForShift(String time, String shift) {
     try {
+      final turnoCatalogo = _resolverTurnoCatalogo(shift);
+      final inicio = _parseHorario(turnoCatalogo?.horarioInicio);
+      final fin = _parseHorario(turnoCatalogo?.horarioFin);
+      if (inicio != null && fin != null) {
+        final timeMinutes = _parseHorario(time);
+        if (timeMinutes == null) return false;
+        if (inicio <= fin) {
+          return timeMinutes >= inicio && timeMinutes <= fin;
+        }
+        return timeMinutes >= inicio || timeMinutes <= fin;
+      }
+
       final hour = int.parse(time.split(':')[0]);
       final minute = int.parse(time.split(':')[1]);
-      if (shift == "DÍA") {
+      if (_normalizarTurno(shift) == "DIA") {
         if (hour < 7 || hour > 18) return false;
-        if (hour == 18 && minute > 55) return false;
+        if (hour == 17 && minute > 30) return false;
+        if (hour > 17) return false;
       } else {
         if (hour > 6 && hour < 19) return false;
-        if (hour == 6 && minute > 55) return false;
+        if (hour == 5 && minute > 30) return false;
+        if (hour == 6) return false;
       }
       return true;
     } catch (e) {
@@ -336,7 +438,7 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loadingEstados) {
+    if (_loadingEstados || _loadingTurnos) {
       return AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: const SizedBox(
@@ -347,6 +449,7 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     }
 
     List<String> timeOptions = _generateTimeIntervals(widget.turno);
+    final turnoSeleccionado = _resolverTurnoCatalogo(widget.turno);
 
     List<String> availableTimeOptions;
 
@@ -413,7 +516,9 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Estado: ${widget.selectedState}',
+                        turnoSeleccionado != null
+                            ? 'Estado: ${widget.selectedState}\nTurno ${turnoSeleccionado.nombre}: ${turnoSeleccionado.horarioInicio ?? '--:--'} - ${turnoSeleccionado.horarioFin ?? '--:--'}'
+                            : 'Estado: ${widget.selectedState}',
                         style: TextStyle(
                           fontWeight: FontWeight.w500,
                           color: Colors.blue.shade700,

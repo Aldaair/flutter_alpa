@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
+import 'package:i_miner/models/DimLabor.dart';
 import 'package:i_miner/models/plan_avance_th.dart';
-import 'package:i_miner/models/plan_metraje_tl.dart';
-import 'package:i_miner/models/plan_produccion.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
@@ -97,8 +96,7 @@ class _DialogoFormularioPerforacionState
   List<String> opcionesLongitudBarras = [];
   List<TipoPerforacion> tiposPerforacionCompletos = [];
   List<PlanAvanceTH> planesAvanceCompletos = [];
-  List<PlanMetrajeTL> planesMetrajeTLCompletos = [];
-  List<PlanProduccion> planesProduccionCompletos = [];
+  List<DimLabor> laboresCatalogo = [];
 
   PlanAvanceTH? plannedFrontSeleccionado;
   _HorizontalFrontOption? selectedManualFront;
@@ -120,9 +118,8 @@ class _DialogoFormularioPerforacionState
       await Future.wait([
         _cargarTiposPerforacion(),
         _cargarLongitudBarras(),
+        _cargarLabores(),
         _cargarPlanAvanceTH(),
-        _cargarPlanMetrajeTL(),
-        _cargarPlanProduccion(),
       ]);
 
       _rebuildManualFrontMap();
@@ -149,29 +146,16 @@ class _DialogoFormularioPerforacionState
     }
   }
 
-  Future<void> _cargarPlanMetrajeTL() async {
+  Future<void> _cargarLabores() async {
     try {
       final dbHelper = DatabaseHelper();
-      final data = await dbHelper.getPlanesMetrajeTL();
+      final data = await dbHelper.getLabores();
       if (!mounted) return;
       setState(() {
-        planesMetrajeTLCompletos = data;
+        laboresCatalogo = data;
       });
     } catch (e) {
-      print('Error cargando PlanMetrajeTL: $e');
-    }
-  }
-
-  Future<void> _cargarPlanProduccion() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      final data = await dbHelper.getPlanesProduccion();
-      if (!mounted) return;
-      setState(() {
-        planesProduccionCompletos = data;
-      });
-    } catch (e) {
-      print('Error cargando PlanProduccion: $e');
+      print('Error cargando labores: $e');
     }
   }
 
@@ -375,42 +359,20 @@ class _DialogoFormularioPerforacionState
       _manualFrontMap[label] = option;
     }
 
-    for (final plan in planesMetrajeTLCompletos) {
+    for (final labor in laboresCatalogo) {
       registerOption(
         _HorizontalFrontOption(
-          laborId: plan.laborId,
-          alaId: plan.alaId,
-          tipoLabor: plan.tipoLaborNombre,
-          labor: plan.laborNombre,
-          ala: plan.alaNombre,
-          mina: plan.minaNombre,
-          zona: plan.zonaNombre,
-          area: plan.areaNombre,
-          fase: plan.faseNombre,
-          estructuraMineral: plan.estructuraMineralNombre,
-          nivel: plan.nivelNombre,
-        ),
-      );
-    }
-
-    for (final plan in planesAvanceCompletos) {
-      registerOption(_buildPlanOption(plan));
-    }
-
-    for (final plan in planesProduccionCompletos) {
-      registerOption(
-        _HorizontalFrontOption(
-          laborId: plan.laborId,
-          alaId: plan.alaId,
-          tipoLabor: plan.tipoLaborNombre,
-          labor: plan.laborNombre,
-          ala: plan.alaNombre,
-          mina: plan.minaNombre,
-          zona: plan.zonaNombre,
-          area: plan.areaNombre,
-          fase: plan.faseNombre,
-          estructuraMineral: plan.estructuraMineralNombre,
-          nivel: plan.nivelNombre,
+          laborId: labor.laborId,
+          alaId: labor.alaId ?? 0,
+          tipoLabor: labor.tipoLaborNombre,
+          labor: labor.nombreLabor,
+          ala: labor.alaNombre,
+          mina: labor.minaNombre,
+          zona: labor.zonaNombre,
+          area: labor.areaNombre,
+          fase: labor.faseNombre,
+          estructuraMineral: labor.estructuraMineralNombre,
+          nivel: labor.nivelNombre,
         ),
       );
     }

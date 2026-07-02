@@ -11,9 +11,7 @@ import 'package:i_miner/models/DimEstructuraMineral.dart';
 import 'package:i_miner/models/DimNivel.dart';
 import 'package:i_miner/models/DimAla.dart';
 import 'package:i_miner/models/DimLabor.dart';
-import 'package:i_miner/models/plan_avance_th.dart';
 import 'package:i_miner/models/plan_metraje_tl.dart';
-import 'package:i_miner/models/plan_produccion.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
@@ -157,8 +155,6 @@ class _DialogoFormularioPerforacionState
 
   // Almacenar objetos completos
   List<PlanMetrajeTL> planMetrajeTLCompletos = [];
-  List<PlanAvanceTH> planesAvanceTHCompletos = [];
-  List<PlanProduccion> planesProduccionCompletos = [];
   List<_LongHolePlanLocation> ubicacionesPlanCompletas = [];
   List<TipoPerforacion> tiposPerforacionCompletos = [];
   PlanMetrajeTL? plannedFrontSeleccionado;
@@ -183,8 +179,6 @@ class _DialogoFormularioPerforacionState
         _cargarTiposPerforacion(),
         _cargarCatalogos(),
         _cargarPlanMetrajeTL(),
-        _cargarPlanAvanceTH(),
-        _cargarPlanProduccion(),
       ]);
 
       _rebuildManualFrontMap();
@@ -207,30 +201,6 @@ class _DialogoFormularioPerforacionState
       print('🔍 _cargarPlanMetrajeTL → ${data.length} registros');
     } catch (e) {
       print('Error cargando PlanMetrajeTL: $e');
-    }
-  }
-
-  Future<void> _cargarPlanAvanceTH() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      final data = await dbHelper.getPlanesAvanceTH();
-      setState(() {
-        planesAvanceTHCompletos = data;
-      });
-    } catch (e) {
-      print('Error cargando PlanAvanceTH: $e');
-    }
-  }
-
-  Future<void> _cargarPlanProduccion() async {
-    try {
-      final dbHelper = DatabaseHelper();
-      final data = await dbHelper.getPlanesProduccion();
-      setState(() {
-        planesProduccionCompletos = data;
-      });
-    } catch (e) {
-      print('Error cargando PlanProduccion: $e');
     }
   }
 
@@ -337,86 +307,36 @@ class _DialogoFormularioPerforacionState
   void _rebuildManualFrontMap() {
     _manualFrontMap.clear();
 
-    void registerOption({
-      required int laborId,
-      required int alaId,
-      required String tipoLabor,
-      required String labor,
-      required String ala,
-      required String mina,
-      required String zona,
-      required String area,
-      required String fase,
-      required String estructuraMineral,
-      required String nivel,
-    }) {
+    void registerOption(DimLabor labor) {
+      final laborId = labor.laborId;
+      final alaId = labor.alaId ?? 0;
+      final tipoLabor = labor.tipoLaborNombre;
+      final laborNombre = labor.nombreLabor;
+      final ala = labor.alaNombre;
       if (tipoLabor.trim().isEmpty ||
-          labor.trim().isEmpty ||
+          laborNombre.trim().isEmpty ||
           ala.trim().isEmpty) {
         return;
       }
-      final label = '${tipoLabor.trim()} - ${labor.trim()} - ${ala.trim()}';
+      final label =
+          '${tipoLabor.trim()} - ${laborNombre.trim()} - ${ala.trim()}';
       _manualFrontMap[label] = _ManualFrontOption(
         laborId: laborId,
         alaId: alaId,
         tipoLabor: tipoLabor.trim(),
-        labor: labor.trim(),
+        labor: laborNombre.trim(),
         ala: ala.trim(),
-        mina: mina.trim(),
-        zona: zona.trim(),
-        area: area.trim(),
-        fase: fase.trim(),
-        estructuraMineral: estructuraMineral.trim(),
-        nivel: nivel.trim(),
+        mina: labor.minaNombre.trim(),
+        zona: labor.zonaNombre.trim(),
+        area: labor.areaNombre.trim(),
+        fase: labor.faseNombre.trim(),
+        estructuraMineral: labor.estructuraMineralNombre.trim(),
+        nivel: labor.nivelNombre.trim(),
       );
     }
 
-    for (final plan in planMetrajeTLCompletos) {
-      registerOption(
-        laborId: plan.laborId,
-        alaId: plan.alaId,
-        tipoLabor: plan.tipoLaborNombre,
-        labor: plan.laborNombre,
-        ala: plan.alaNombre,
-        mina: plan.minaNombre,
-        zona: plan.zonaNombre,
-        area: plan.areaNombre,
-        fase: plan.faseNombre,
-        estructuraMineral: plan.estructuraMineralNombre,
-        nivel: plan.nivelNombre,
-      );
-    }
-
-    for (final plan in planesAvanceTHCompletos) {
-      registerOption(
-        laborId: plan.laborId,
-        alaId: plan.alaId,
-        tipoLabor: plan.tipoLaborNombre,
-        labor: plan.laborNombre,
-        ala: plan.alaNombre,
-        mina: plan.minaNombre,
-        zona: plan.zonaNombre,
-        area: plan.areaNombre,
-        fase: plan.faseNombre,
-        estructuraMineral: plan.estructuraMineralNombre,
-        nivel: plan.nivelNombre,
-      );
-    }
-
-    for (final plan in planesProduccionCompletos) {
-      registerOption(
-        laborId: plan.laborId,
-        alaId: plan.alaId,
-        tipoLabor: plan.tipoLaborNombre,
-        labor: plan.laborNombre,
-        ala: plan.alaNombre,
-        mina: plan.minaNombre,
-        zona: plan.zonaNombre,
-        area: plan.areaNombre,
-        fase: plan.faseNombre,
-        estructuraMineral: plan.estructuraMineralNombre,
-        nivel: plan.nivelNombre,
-      );
+    for (final labor in laboresCatalogo) {
+      registerOption(labor);
     }
 
     if (!usarFrentePlanificado) {

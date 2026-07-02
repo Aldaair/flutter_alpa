@@ -328,7 +328,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
   int? _parseHorario(String? horario) {
     if (horario == null) return null;
     final parts = horario.split(':');
-    if (parts.length != 2) return null;
+    if (parts.length < 2) return null;
     final h = int.tryParse(parts[0]);
     final m = int.tryParse(parts[1]);
     if (h == null || m == null) return null;

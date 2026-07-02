@@ -72,7 +72,7 @@ class _OperacionCardState extends State<OperacionCard> {
 
   final String operadorEjemplo = 'Juan Pérez';
 
-  List<String> turnos = ['DÍA', 'NOCHE'];
+  List<String> turnos = [];
 
   List<String> equipos = [];
   List<String> jefesGuardia = [];
@@ -214,9 +214,17 @@ class _OperacionCardState extends State<OperacionCard> {
       setState(() {
         turnosCatalogo = turnosDb;
         if (turnosDb.isNotEmpty) {
-          turnos = turnosDb.map((t) => t.nombre).toList()..sort();
+          turnos = turnosDb.map((t) => t.nombre).toList();
         }
       });
+
+      final turnoActual = _resolverNombreTurno(widget.selectedTurno);
+      if (!operacionBloqueada &&
+          widget.selectedTurno != null &&
+          turnoActual != null &&
+          turnoActual != widget.selectedTurno) {
+        widget.onTurnoChanged(turnoActual);
+      }
     } catch (_) {
       // Mantener fallback DÍA/NOCHE si el catálogo no está disponible.
     }
@@ -379,16 +387,25 @@ class _OperacionCardState extends State<OperacionCard> {
   }
 
   int? _resolverTurnoId(String? turnoNombre) {
+    return _resolverTurnoCatalogo(turnoNombre)?.turnoId;
+  }
+
+  DimTurno? _resolverTurnoCatalogo(String? turnoNombre) {
     if (turnoNombre == null) return null;
     final buscado = _normalizarClave(turnoNombre);
 
     for (final turno in turnosCatalogo) {
       if (_normalizarClave(turno.nombre) == buscado ||
           _normalizarClave(turno.codigo) == buscado) {
-        return turno.turnoId;
+        return turno;
       }
     }
     return null;
+  }
+
+  String? _resolverNombreTurno(String? turnoNombre) {
+    final turno = _resolverTurnoCatalogo(turnoNombre);
+    return turno?.nombre ?? turnoNombre;
   }
 
   String _normalizarClave(String? value) {
@@ -504,6 +521,8 @@ class _OperacionCardState extends State<OperacionCard> {
   }
 
   Widget _buildFormFields() {
+    final turnoSeleccionado = _resolverNombreTurno(widget.selectedTurno);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         double cardWidth = constraints.maxWidth;
@@ -547,7 +566,7 @@ class _OperacionCardState extends State<OperacionCard> {
                 height: 45,
                 child: CustomMaterialDropdown(
                   label: 'Turno',
-                  value: widget.selectedTurno,
+                  value: turnoSeleccionado,
                   items: turnos,
                   onChanged: operacionBloqueada ? null : widget.onTurnoChanged,
                   icon: Icons.access_time,
@@ -1221,7 +1240,8 @@ class _OperacionCardState extends State<OperacionCard> {
     equipoId = match.id;
 
     String? tiposJsonString;
-    final turnoId = _resolverTurnoId(widget.selectedTurno);
+    final turnoNombre = _resolverNombreTurno(widget.selectedTurno);
+    final turnoId = _resolverTurnoId(turnoNombre);
     final jefeGuardiaId = jefeGuardiaIdPorNombre[selectedJefeGuardia];
     final equipoSnapshot = widget.config.mostrarModelo && selectedModelo != null
         ? '$selectedEquipo $selectedModelo'
@@ -1246,7 +1266,7 @@ class _OperacionCardState extends State<OperacionCard> {
       'fecha': widget.fechaActual,
     };
 
-    data['turno'] = widget.selectedTurno;
+    data['turno'] = turnoNombre;
     data['equipo'] = equipoSnapshot;
     data[widget.config.claveCodigo] = selectedCodigo;
     data['operador'] = operador ?? operadorEjemplo;

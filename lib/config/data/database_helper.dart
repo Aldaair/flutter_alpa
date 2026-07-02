@@ -35,7 +35,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 34;
+  static const int _sharedCatalogDbVersion = 35;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -504,7 +504,8 @@ CREATE TABLE IF NOT EXISTS tipo_perforaciones (
   id INTEGER PRIMARY KEY,
   nombre TEXT NOT NULL,
   proceso TEXT NULL,
-  permitido_medicion INTEGER NOT NULL DEFAULT 0
+  permitido_medicion INTEGER NOT NULL DEFAULT 0,
+  proceso_id INTEGER
 )
 ''');
 
@@ -952,7 +953,8 @@ CREATE TABLE IF NOT EXISTS tipo_perforaciones (
   id INTEGER PRIMARY KEY,
   nombre TEXT NOT NULL,
   proceso TEXT NULL,
-  permitido_medicion INTEGER NOT NULL DEFAULT 0
+  permitido_medicion INTEGER NOT NULL DEFAULT 0,
+  proceso_id INTEGER
 )
 ''');
       }
@@ -1209,14 +1211,6 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
       await _resetPlanesProduccionTable(db);
     }
 
-    if (oldVersion < 30) {
-      if (!await _columnaExiste(db, 'tipo_perforaciones', 'proceso_id')) {
-        await db.execute(
-          'ALTER TABLE tipo_perforaciones ADD COLUMN proceso_id INTEGER',
-        );
-      }
-    }
-
     if (oldVersion < 31) {
       await _resetPlanMetrajeTLTable(db);
     }
@@ -1238,6 +1232,10 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
         );
       }
     }
+
+    if (oldVersion < 35) {
+      await _resetTipoPerforacionesTable(db);
+    }
   }
 
   Future<void> _resetEstadosTable(Database db) async {
@@ -1252,6 +1250,21 @@ CREATE TABLE estados (
   proceso TEXT NOT NULL,
   proceso_id INTEGER,
   categoria_id INTEGER
+)
+''');
+    });
+  }
+
+  Future<void> _resetTipoPerforacionesTable(Database db) async {
+    await db.transaction((txn) async {
+      await txn.execute('DROP TABLE IF EXISTS tipo_perforaciones');
+      await txn.execute('''
+CREATE TABLE tipo_perforaciones (
+  id INTEGER PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  proceso TEXT,
+  permitido_medicion INTEGER NOT NULL DEFAULT 0,
+  proceso_id INTEGER
 )
 ''');
     });

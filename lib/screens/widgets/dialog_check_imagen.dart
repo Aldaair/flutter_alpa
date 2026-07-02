@@ -118,8 +118,10 @@ class _DialogoCheckImagenState extends State<DialogoCheckImagen> {
                 .toDouble();
         final cardHeight = 138.0;
         final imageHorizontalPadding = compact ? 12.0 : cardWidth * 0.48;
-        final imageWidth = (availableWidth - (imageHorizontalPadding * 2))
-            .clamp(180.0, availableWidth)
+        final imageScale = compact ? 0.88 : 0.8;
+        final imageWidth =
+            ((availableWidth - (imageHorizontalPadding * 2)) * imageScale)
+                .clamp(180.0, availableWidth)
             .toDouble();
         final imageHeight = imageWidth / (1083 / 555);
         final imageTop = cardHeight * 0.58;

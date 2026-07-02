@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/models/plan_avance_th.dart';
-import 'package:i_miner/models/plan_metraje_tl.dart';
-import 'package:i_miner/models/plan_produccion.dart';
+import 'package:i_miner/models/DimLabor.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
@@ -84,9 +82,7 @@ class _DialogoFormularioPerforacionState
 
   List<Map<String, dynamic>> destinosDisponibles = [];
   List<String> opcionesDestino = [];
-  List<PlanMetrajeTL> planesMetrajeTLCompletos = [];
-  List<PlanAvanceTH> planesAvanceTHCompletos = [];
-  List<PlanProduccion> planesProduccionCompletos = [];
+  List<DimLabor> laboresCatalogo = [];
 
   @override
   void initState() {
@@ -102,19 +98,15 @@ class _DialogoFormularioPerforacionState
     try {
       final db = DatabaseHelper();
       final results = await Future.wait([
-        db.getPlanesMetrajeTL(),
-        db.getPlanesAvanceTH(),
-        db.getPlanesProduccion(),
+        db.getLabores(),
         db.getDestinosByProcesoId(widget.procesoId),
       ]);
 
       if (!mounted) return;
 
       setState(() {
-        planesMetrajeTLCompletos = results[0] as List<PlanMetrajeTL>;
-        planesAvanceTHCompletos = results[1] as List<PlanAvanceTH>;
-        planesProduccionCompletos = results[2] as List<PlanProduccion>;
-        destinosDisponibles = results[3] as List<Map<String, dynamic>>;
+        laboresCatalogo = results[0] as List<DimLabor>;
+        destinosDisponibles = results[1] as List<Map<String, dynamic>>;
         opcionesDestino = destinosDisponibles
             .map((d) => d['nombre']?.toString() ?? '')
             .where((n) => n.isNotEmpty)
@@ -161,51 +153,19 @@ class _DialogoFormularioPerforacionState
       _frontOptionMap[label] = option;
     }
 
-    for (final plan in planesMetrajeTLCompletos) {
+    for (final labor in laboresCatalogo) {
       registerOption(_DumperFrontOption(
-        laborId: plan.laborId,
-        alaId: plan.alaId,
-        tipoLabor: plan.tipoLaborNombre,
-        labor: plan.laborNombre,
-        ala: plan.alaNombre,
-        mina: plan.minaNombre,
-        zona: plan.zonaNombre,
-        area: plan.areaNombre,
-        fase: plan.faseNombre,
-        estructuraMineral: plan.estructuraMineralNombre,
-        nivel: plan.nivelNombre,
-      ));
-    }
-
-    for (final plan in planesAvanceTHCompletos) {
-      registerOption(_DumperFrontOption(
-        laborId: plan.laborId,
-        alaId: plan.alaId,
-        tipoLabor: plan.tipoLaborNombre,
-        labor: plan.laborNombre,
-        ala: plan.alaNombre,
-        mina: plan.minaNombre,
-        zona: plan.zonaNombre,
-        area: plan.areaNombre,
-        fase: plan.faseNombre,
-        estructuraMineral: plan.estructuraMineralNombre,
-        nivel: plan.nivelNombre,
-      ));
-    }
-
-    for (final plan in planesProduccionCompletos) {
-      registerOption(_DumperFrontOption(
-        laborId: plan.laborId,
-        alaId: plan.alaId,
-        tipoLabor: plan.tipoLaborNombre,
-        labor: plan.laborNombre,
-        ala: plan.alaNombre,
-        mina: plan.minaNombre,
-        zona: plan.zonaNombre,
-        area: plan.areaNombre,
-        fase: plan.faseNombre,
-        estructuraMineral: plan.estructuraMineralNombre,
-        nivel: plan.nivelNombre,
+        laborId: labor.laborId,
+        alaId: labor.alaId ?? 0,
+        tipoLabor: labor.tipoLaborNombre,
+        labor: labor.nombreLabor,
+        ala: labor.alaNombre,
+        mina: labor.minaNombre,
+        zona: labor.zonaNombre,
+        area: labor.areaNombre,
+        fase: labor.faseNombre,
+        estructuraMineral: labor.estructuraMineralNombre,
+        nivel: labor.nivelNombre,
       ));
     }
   }

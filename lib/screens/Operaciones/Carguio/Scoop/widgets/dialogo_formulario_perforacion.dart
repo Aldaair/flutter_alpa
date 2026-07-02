@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/models/plan_avance_th.dart';
-import 'package:i_miner/models/plan_metraje_tl.dart';
+import 'package:i_miner/models/DimLabor.dart';
 import 'package:i_miner/models/plan_produccion.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
@@ -80,8 +79,7 @@ class _DialogoFormularioPerforacionState
   int manualAlaFieldResetKey = 0;
 
   List<PlanProduccion> planesProduccionCompletos = [];
-  List<PlanMetrajeTL> planesMetrajeTLCompletos = [];
-  List<PlanAvanceTH> planesAvanceTHCompletos = [];
+  List<DimLabor> laboresCatalogo = [];
   List<Map<String, dynamic>> destinosDisponibles = [];
   List<String> opcionesUbicacionDestino = [];
 
@@ -104,17 +102,15 @@ class _DialogoFormularioPerforacionState
       final dbHelper = DatabaseHelper();
       final results = await Future.wait([
         dbHelper.getPlanesProduccion(),
-        dbHelper.getPlanesMetrajeTL(),
-        dbHelper.getPlanesAvanceTH(),
+        dbHelper.getLabores(),
         dbHelper.getDestinosByProcesoId(widget.procesoId),
       ]);
 
       if (!mounted) return;
       setState(() {
         planesProduccionCompletos = results[0] as List<PlanProduccion>;
-        planesMetrajeTLCompletos = results[1] as List<PlanMetrajeTL>;
-        planesAvanceTHCompletos = results[2] as List<PlanAvanceTH>;
-        destinosDisponibles = results[3] as List<Map<String, dynamic>>;
+        laboresCatalogo = results[1] as List<DimLabor>;
+        destinosDisponibles = results[2] as List<Map<String, dynamic>>;
         opcionesUbicacionDestino = destinosDisponibles
             .map((destino) => destino['nombre']?.toString() ?? '')
             .where((nombre) => nombre.isNotEmpty)
@@ -128,8 +124,7 @@ class _DialogoFormularioPerforacionState
       if (!mounted) return;
       setState(() {
         planesProduccionCompletos = [];
-        planesMetrajeTLCompletos = [];
-        planesAvanceTHCompletos = [];
+        laboresCatalogo = [];
         destinosDisponibles = [];
         opcionesUbicacionDestino = [];
       });
@@ -149,8 +144,8 @@ class _DialogoFormularioPerforacionState
     alaSeleccionado = widget.datosIniciales!['ala']?.toString();
     nivelSeleccionado = widget.datosIniciales!['nivel']?.toString();
     ubicacionDestinoId = widget.datosIniciales!['ubicacion_destino_id'] as int?;
-    ubicacionDestinoSeleccionado =
-        widget.datosIniciales!['ubicacion_destino']?.toString();
+    ubicacionDestinoSeleccionado = widget.datosIniciales!['ubicacion_destino']
+        ?.toString();
 
     nCucharasController.text =
         widget.datosIniciales!['n_cucharas']?.toString() ?? '0';
@@ -178,7 +173,8 @@ class _DialogoFormularioPerforacionState
 
   PlanProduccion? _buscarPlanInicial() {
     final laborActual = widget.datosIniciales?['labor']?.toString() ?? '';
-    final tipoLaborActual = widget.datosIniciales?['tipo_labor']?.toString() ?? '';
+    final tipoLaborActual =
+        widget.datosIniciales?['tipo_labor']?.toString() ?? '';
     final alaActual = widget.datosIniciales?['ala']?.toString() ?? '';
 
     for (final plan in planesProduccionCompletos) {
@@ -230,44 +226,30 @@ class _DialogoFormularioPerforacionState
           option.ala.trim().isEmpty) {
         return;
       }
-      final label = _buildSelectionLabel(option.tipoLabor, option.labor, option.ala);
+      final label = _buildSelectionLabel(
+        option.tipoLabor,
+        option.labor,
+        option.ala,
+      );
       _manualFrontMap[label] = option;
     }
 
-    for (final plan in planesMetrajeTLCompletos) {
-      registerOption(_ScoopFrontOption(
-        laborId: plan.laborId,
-        alaId: plan.alaId,
-        tipoLabor: plan.tipoLaborNombre,
-        labor: plan.laborNombre,
-        ala: plan.alaNombre,
-        mina: plan.minaNombre,
-        zona: plan.zonaNombre,
-        area: plan.areaNombre,
-        fase: plan.faseNombre,
-        estructuraMineral: plan.estructuraMineralNombre,
-        nivel: plan.nivelNombre,
-      ));
-    }
-
-    for (final plan in planesAvanceTHCompletos) {
-      registerOption(_ScoopFrontOption(
-        laborId: plan.laborId,
-        alaId: plan.alaId,
-        tipoLabor: plan.tipoLaborNombre,
-        labor: plan.laborNombre,
-        ala: plan.alaNombre,
-        mina: plan.minaNombre,
-        zona: plan.zonaNombre,
-        area: plan.areaNombre,
-        fase: plan.faseNombre,
-        estructuraMineral: plan.estructuraMineralNombre,
-        nivel: plan.nivelNombre,
-      ));
-    }
-
-    for (final plan in planesProduccionCompletos) {
-      registerOption(_buildProduccionOption(plan));
+    for (final labor in laboresCatalogo) {
+      registerOption(
+        _ScoopFrontOption(
+          laborId: labor.laborId,
+          alaId: labor.alaId ?? 0,
+          tipoLabor: labor.tipoLaborNombre,
+          labor: labor.nombreLabor,
+          ala: labor.alaNombre,
+          mina: labor.minaNombre,
+          zona: labor.zonaNombre,
+          area: labor.areaNombre,
+          fase: labor.faseNombre,
+          estructuraMineral: labor.estructuraMineralNombre,
+          nivel: labor.nivelNombre,
+        ),
+      );
     }
 
     if (!usarFrentePlanificado) {
@@ -328,16 +310,26 @@ class _DialogoFormularioPerforacionState
   }
 
   Future<void> _guardarDatos() async {
-    final plannedFront = usarFrentePlanificado ? _resolveSelectedPlannedFront() : null;
-    final manualFront = usarFrentePlanificado ? null : _resolveManualFrontSelection();
+    final plannedFront = usarFrentePlanificado
+        ? _resolveSelectedPlannedFront()
+        : null;
+    final manualFront = usarFrentePlanificado
+        ? null
+        : _resolveManualFrontSelection();
 
     if (usarFrentePlanificado && plannedFront == null) {
-      _mostrarSnackbar('Debe seleccionar una opción válida en Labor Plan', Colors.orange);
+      _mostrarSnackbar(
+        'Debe seleccionar una opción válida en Labor Plan',
+        Colors.orange,
+      );
       return;
     }
 
     if (!usarFrentePlanificado && manualFront == null) {
-      _mostrarSnackbar('Debe seleccionar una opción válida en Otro Frente', Colors.orange);
+      _mostrarSnackbar(
+        'Debe seleccionar una opción válida en Otro Frente',
+        Colors.orange,
+      );
       return;
     }
 
@@ -436,80 +428,89 @@ class _DialogoFormularioPerforacionState
   }
 
   Widget _buildSeccionLabor() {
-    final selectedManual = _resolveManualFrontSelection() ?? selectedManualFront;
-    final selectedPlanned = _resolveSelectedPlannedFront() ?? plannedFrontSeleccionado;
+    final selectedManual =
+        _resolveManualFrontSelection() ?? selectedManualFront;
+    final selectedPlanned =
+        _resolveSelectedPlannedFront() ?? plannedFrontSeleccionado;
     final hasTipoLaborSeleccionado =
-        tipoLaborSeleccionado != null && tipoLaborSeleccionado!.trim().isNotEmpty;
+        tipoLaborSeleccionado != null &&
+        tipoLaborSeleccionado!.trim().isNotEmpty;
     final hasLaborSeleccionada =
         laborSeleccionada != null && laborSeleccionada!.trim().isNotEmpty;
 
-    final plannedTipos = planesProduccionCompletos
-        .map((plan) => plan.tipoLaborNombre)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final plannedLabores = planesProduccionCompletos
-        .where(
-          (plan) =>
-              tipoLaborSeleccionado == null ||
-              tipoLaborSeleccionado!.isEmpty ||
-              plan.tipoLaborNombre == tipoLaborSeleccionado,
-        )
-        .map((plan) => plan.laborNombre)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final plannedAlas = planesProduccionCompletos
-        .where(
-          (plan) =>
-              (tipoLaborSeleccionado == null ||
+    final plannedTipos =
+        planesProduccionCompletos
+            .map((plan) => plan.tipoLaborNombre)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final plannedLabores =
+        planesProduccionCompletos
+            .where(
+              (plan) =>
+                  tipoLaborSeleccionado == null ||
                   tipoLaborSeleccionado!.isEmpty ||
-                  plan.tipoLaborNombre == tipoLaborSeleccionado) &&
-              (laborSeleccionada == null ||
-                  laborSeleccionada!.isEmpty ||
-                  plan.laborNombre == laborSeleccionada),
-        )
-        .map((plan) => plan.alaNombre)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+                  plan.tipoLaborNombre == tipoLaborSeleccionado,
+            )
+            .map((plan) => plan.laborNombre)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final plannedAlas =
+        planesProduccionCompletos
+            .where(
+              (plan) =>
+                  (tipoLaborSeleccionado == null ||
+                      tipoLaborSeleccionado!.isEmpty ||
+                      plan.tipoLaborNombre == tipoLaborSeleccionado) &&
+                  (laborSeleccionada == null ||
+                      laborSeleccionada!.isEmpty ||
+                      plan.laborNombre == laborSeleccionada),
+            )
+            .map((plan) => plan.alaNombre)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
-    final manualTipos = _manualFrontMap.values
-        .map((option) => option.tipoLabor)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final manualLabores = _manualFrontMap.values
-        .where(
-          (option) =>
-              tipoLaborSeleccionado == null ||
-              tipoLaborSeleccionado!.isEmpty ||
-              option.tipoLabor == tipoLaborSeleccionado,
-        )
-        .map((option) => option.labor)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final manualAlas = _manualFrontMap.values
-        .where(
-          (option) =>
-              (tipoLaborSeleccionado == null ||
+    final manualTipos =
+        _manualFrontMap.values
+            .map((option) => option.tipoLabor)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final manualLabores =
+        _manualFrontMap.values
+            .where(
+              (option) =>
+                  tipoLaborSeleccionado == null ||
                   tipoLaborSeleccionado!.isEmpty ||
-                  option.tipoLabor == tipoLaborSeleccionado) &&
-              (laborSeleccionada == null ||
-                  laborSeleccionada!.isEmpty ||
-                  option.labor == laborSeleccionada),
-        )
-        .map((option) => option.ala)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+                  option.tipoLabor == tipoLaborSeleccionado,
+            )
+            .map((option) => option.labor)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final manualAlas =
+        _manualFrontMap.values
+            .where(
+              (option) =>
+                  (tipoLaborSeleccionado == null ||
+                      tipoLaborSeleccionado!.isEmpty ||
+                      option.tipoLabor == tipoLaborSeleccionado) &&
+                  (laborSeleccionada == null ||
+                      laborSeleccionada!.isEmpty ||
+                      option.labor == laborSeleccionada),
+            )
+            .map((option) => option.ala)
+            .where((value) => value.trim().isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     return Container(
       padding: const EdgeInsets.all(12),
