@@ -78,6 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
           print("Conexión a internet: $isOnline");
           if (isOnline) {
             token = await UserService().fetchToken(dni, pass);
+            await ApiService().saveToken(token);
           } else {
             token = "offline";
           }

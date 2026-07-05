@@ -61,4 +61,8 @@ class ApiConfig {
       '$operacionesV2Base/empernador';
   static const String operacionScalaminEndpoint = '$operacionesV2Base/scalamin';
   static const String operacionScissorEndpoint = '$operacionesV2Base/scissor';
+
+  static const String pdfEndpoint = '/pdf-operacion';
+  static const String pdfDownloadAllEndpoint =
+      '/documentos-pdf/download-all';
 }

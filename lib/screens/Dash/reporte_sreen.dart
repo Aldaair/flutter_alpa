@@ -36,6 +36,7 @@ import 'package:i_miner/screens/Operaciones/Acarreo/Dumper/widgets/dialogo_formu
 import 'package:i_miner/screens/Operaciones/Carguio/Scoop/widgets/dialogo_formulario_perforacion.dart'
     as cs;
 
+import 'package:i_miner/screens/Operaciones/pdf/pdf_folder_screen.dart';
 import 'package:i_miner/shared/widgets/registro_operacion_dialog.dart';
 import 'package:i_miner/services/get%20nube/actualizacion_service.dart';
 import 'package:provider/provider.dart';
@@ -628,19 +629,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ReportButton(
           title: module['title']!,
           imagePath: module['image']!,
-          backgroundColor: navbarColor, // MISMO COLOR PARA TODAS
+          backgroundColor: navbarColor,
           onPressed: () async {
-            // Acción según el módulo
             await _handleModulePress(module['title']!);
           },
         ),
       );
     }
 
+    buttons.add(
+      ReportButton(
+        title: 'PDF',
+        imagePath: 'assets/images/pdf-logo.png',
+        backgroundColor: navbarColor,
+        onPressed: () async {
+          await _handleModulePress('PDF');
+        },
+      ),
+    );
+
     return buttons;
   }
 
   Future<void> _handleModulePress(String title) async {
+    if (title == 'PDF') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const PdfFolderScreen()),
+      );
+      return;
+    }
+
     if (title == 'SERVICIOS\nAUXILIARES') {
       Navigator.push(
         context,

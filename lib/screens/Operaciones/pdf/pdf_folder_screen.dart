@@ -1,8 +1,7 @@
-// screens/pdf_folder_screen.dart
 import 'package:flutter/material.dart';
 import 'package:i_miner/models/pdf_model.dart';
 import 'package:i_miner/screens/Operaciones/pdf/pdf_detail_screen.dart';
-import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/services/pdf_sync_service.dart';
 
 class PdfFolderScreen extends StatefulWidget {
   const PdfFolderScreen({super.key});
@@ -12,38 +11,52 @@ class PdfFolderScreen extends StatefulWidget {
 }
 
 class _PdfFolderScreenState extends State<PdfFolderScreen> {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
-  List<PdfModel> _allPdfs = [];
-  Map<String, List<PdfModel>> _groupedPdfs = {};
+  final PdfSyncService _syncService = PdfSyncService();
+  List<PdfCategory> _categories = [];
   bool _isLoading = true;
+  bool _isSyncing = false;
 
   @override
   void initState() {
     super.initState();
-    _loadPdfs();
+    _loadCategories();
   }
 
-  Future<void> _loadPdfs() async {
+  Future<void> _loadCategories() async {
     setState(() => _isLoading = true);
-
     try {
-      final pdfsData = await _dbHelper.getAllPdfs();
-      _allPdfs = pdfsData.map((data) => PdfModel.fromMap(data)).toList();
-      _groupPdfsByProceso();
+      _categories = await _syncService.getCategories();
     } catch (e) {
-      print('Error cargando PDFs: $e');
+      print('Error cargando PDFs locales: $e');
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  void _groupPdfsByProceso() {
-    _groupedPdfs = {};
-    for (var pdf in _allPdfs) {
-      if (!_groupedPdfs.containsKey(pdf.proceso)) {
-        _groupedPdfs[pdf.proceso] = [];
+  Future<void> _syncPdfs() async {
+    setState(() => _isSyncing = true);
+    try {
+      await _syncService.syncAll();
+      await _loadCategories();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDFs sincronizados correctamente'),
+            backgroundColor: Color(0xFF1B5E6B),
+          ),
+        );
       }
-      _groupedPdfs[pdf.proceso]!.add(pdf);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al sincronizar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
     }
   }
 
@@ -51,17 +64,38 @@ class _PdfFolderScreenState extends State<PdfFolderScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('📄 PDFs por Proceso'),
+        title: const Text('PDFs'),
         backgroundColor: const Color(0xFF1B5E6B),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadPdfs),
+          if (_isSyncing)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.sync),
+              onPressed: _syncPdfs,
+              tooltip: 'Sincronizar PDFs',
+            ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadCategories,
+          ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _groupedPdfs.isEmpty
+          : _categories.isEmpty
           ? _buildEmptyState()
           : _buildFolderList(),
     );
@@ -75,13 +109,30 @@ class _PdfFolderScreenState extends State<PdfFolderScreen> {
           Icon(Icons.folder_open, size: 80, color: Colors.grey[300]),
           const SizedBox(height: 16),
           Text(
-            'No hay PDFs disponibles',
+            'No hay PDFs descargados',
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),
           Text(
-            'Los PDFs aparecerán aquí cuando se registren',
+            'Presiona el icono de sincronizar para descargar',
             style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _isSyncing ? null : _syncPdfs,
+            icon: _isSyncing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.sync),
+            label: Text(_isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1B5E6B),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
           ),
         ],
       ),
@@ -89,20 +140,17 @@ class _PdfFolderScreenState extends State<PdfFolderScreen> {
   }
 
   Widget _buildFolderList() {
-    final sortedKeys = _groupedPdfs.keys.toList()..sort();
-
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: sortedKeys.length,
+      itemCount: _categories.length,
       itemBuilder: (context, index) {
-        final proceso = sortedKeys[index];
-        final pdfs = _groupedPdfs[proceso]!;
-        return _buildFolderCard(proceso, pdfs);
+        final cat = _categories[index];
+        return _buildFolderCard(cat);
       },
     );
   }
 
-  Widget _buildFolderCard(String proceso, List<PdfModel> pdfs) {
+  Widget _buildFolderCard(PdfCategory cat) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -116,7 +164,7 @@ class _PdfFolderScreenState extends State<PdfFolderScreen> {
             context,
             MaterialPageRoute(
               builder: (context) =>
-                  PdfDetailScreen(proceso: proceso, pdfs: pdfs),
+                  PdfDetailScreen(categoria: cat.name, pdfs: cat.files),
             ),
           );
         },
@@ -128,7 +176,7 @@ class _PdfFolderScreenState extends State<PdfFolderScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1B5E6B).withOpacity(0.08),
+                  color: const Color(0xFF1B5E6B).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -143,7 +191,7 @@ class _PdfFolderScreenState extends State<PdfFolderScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      proceso,
+                      cat.name,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -152,7 +200,7 @@ class _PdfFolderScreenState extends State<PdfFolderScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${pdfs.length} ${pdfs.length == 1 ? 'PDF' : 'PDFs'}',
+                      '${cat.files.length} ${cat.files.length == 1 ? 'PDF' : 'PDFs'}',
                       style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                     ),
                   ],
@@ -168,7 +216,7 @@ class _PdfFolderScreenState extends State<PdfFolderScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  pdfs.length.toString(),
+                  cat.files.length.toString(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
