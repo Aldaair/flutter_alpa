@@ -17,7 +17,6 @@ import 'package:i_miner/services/get%20nube/llamadas/api_service_mallas.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_pernos.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_services_Equipo.dart';
 import 'package:i_miner/config/data/database_helper.dart';
-import 'package:i_miner/services/pdf_service.dart';
 import 'package:i_miner/services/user_service.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_zona.dart';
 import 'package:i_miner/services/get%20nube/llamadas/api_service_periodos.dart';
@@ -82,42 +81,7 @@ class ActualizacionService {
       "Usuarios": fetchUsuarios,
       "Categorías Estados": fetchCategoriasEstados,
       'Periodos': fetchPeriodos,
-      "PDFs": () => fetchPdfsDelMes(),
     };
-  }
-
-  Future<void> fetchPdfsDelMes() async {
-    final apiService = PdfService();
-
-    const meses = [
-      'ENERO',
-      'FEBRERO',
-      'MARZO',
-      'ABRIL',
-      'MAYO',
-      'JUNIO',
-      'JULIO',
-      'AGOSTO',
-      'SEPTIEMBRE',
-      'OCTUBRE',
-      'NOVIEMBRE',
-      'DICIEMBRE',
-    ];
-
-    final mesActual = meses[DateTime.now().month - 1];
-
-    try {
-      final pdfs = await apiService.fetchPdfsPorMes(token, mesActual);
-
-      print('✅ PDFs del mes $mesActual guardados en SQLite:');
-
-      for (var pdf in pdfs) {
-        print('PDF: ${pdf.proceso} | ${pdf.urlPdf}');
-      }
-    } catch (e) {
-      print('❌ Error al actualizar PDFs: $e');
-      throw e;
-    }
   }
 
   // Método principal para ejecutar la actualización

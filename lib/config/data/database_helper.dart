@@ -39,7 +39,7 @@ class DatabaseHelper {
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
-  static const int _currentDbVersion = 31;
+  static const int _currentDbVersion = 32;
 
   DatabaseHelper._internal() {
     // Inicialización única para evitar múltiples llamadas
@@ -1538,17 +1538,6 @@ CREATE TABLE origen_destino(
     )
   ''');
 
-    await db.execute('''
-    CREATE TABLE IF NOT EXISTS pdfs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      proceso TEXT NOT NULL,
-      mes TEXT NOT NULL,
-      url_pdf TEXT NOT NULL,
-      labor TEXT,
-      createdAt TEXT,
-      updatedAt TEXT
-    )
-  ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -2374,20 +2363,8 @@ CREATE TABLE UsuarioEquipo (
       await _recreateOperationTables(db);
     }
 
-    if (oldVersion < 31) {
-      if (!await _tablaExiste(db, 'pdfs')) {
-        await db.execute('''
-          CREATE TABLE IF NOT EXISTS pdfs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            proceso TEXT NOT NULL,
-            mes TEXT NOT NULL,
-            url_pdf TEXT NOT NULL,
-            labor TEXT,
-            createdAt TEXT,
-            updatedAt TEXT
-          )
-        ''');
-      }
+    if (oldVersion < 32) {
+      await db.execute('DROP TABLE IF EXISTS pdfs');
     }
   }
 
