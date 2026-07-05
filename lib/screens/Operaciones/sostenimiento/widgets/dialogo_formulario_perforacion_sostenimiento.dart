@@ -89,8 +89,6 @@ class _DialogoFormularioEmpernadorState
   List<String> opcionesLabor = [];
   final Map<String, _LaborOption> _laborOptionMap = {};
   _LaborOption? _selectedOption;
-  int laborFieldResetKey = 0;
-  int alaFieldResetKey = 0;
 
   String? sistematicoPuntualSeleccionado;
 
@@ -326,6 +324,9 @@ class _DialogoFormularioEmpernadorState
   // -------------------- SECCIÓN LABOR --------------------
 
   Widget _buildSeccionLabor() {
+    final selected = _selectedOption;
+    final selectedLabel = _buildSelectionLabel();
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -358,132 +359,37 @@ class _DialogoFormularioEmpernadorState
             ],
           ),
           const SizedBox(height: 8),
-          _buildThreeAutocompleteRow(
-            first: _buildSearchableAutocompleteField(
-              label: 'Tipo Labor',
-              hintText: 'Buscar tipo labor...',
-              options: _uniqueSorted(
-                _laborOptionMap.values.map((o) => o.tipoLabor),
-              ),
-              selectedValue: tipoLaborSeleccionado,
-              onChanged: (value) {
-                setState(() {
-                  tipoLaborSeleccionado = value;
-                  laborSeleccionada = null;
-                  alaSeleccionado = null;
-                  laborIdSeleccionado = null;
-                  _selectedOption = null;
-                  laborFieldResetKey++;
-                  alaFieldResetKey++;
-                });
-              },
-              onSelected: (value) {
-                setState(() {
-                  tipoLaborSeleccionado = value;
-                  laborSeleccionada = null;
-                  alaSeleccionado = null;
-                  laborIdSeleccionado = null;
-                  _selectedOption = null;
-                  laborFieldResetKey++;
-                  alaFieldResetKey++;
-                });
-              },
-            ),
-            second: _buildSearchableAutocompleteField(
-              label: 'Labor',
-              hintText: 'Buscar labor...',
-              options: _uniqueSorted(
-                _laborOptionMap.values
-                    .where(
-                      (o) =>
-                          tipoLaborSeleccionado == null ||
-                          tipoLaborSeleccionado!.isEmpty ||
-                          o.tipoLabor == tipoLaborSeleccionado,
-                    )
-                    .map((o) => o.laborNombre),
-              ),
-              selectedValue: laborSeleccionada,
-              enabled:
-                  tipoLaborSeleccionado != null &&
-                  tipoLaborSeleccionado!.trim().isNotEmpty,
-              resetKey: laborFieldResetKey,
-              onChanged: (value) {
-                setState(() {
-                  laborSeleccionada = value;
-                  alaSeleccionado = null;
-                  laborIdSeleccionado = null;
-                  _selectedOption = null;
-                  alaFieldResetKey++;
-                });
-              },
-              onSelected: (value) {
-                setState(() {
-                  laborSeleccionada = value;
-                  alaSeleccionado = null;
-                  laborIdSeleccionado = null;
-                  _selectedOption = null;
-                  alaFieldResetKey++;
-                });
-              },
-            ),
-            third: _buildSearchableAutocompleteField(
-              label: 'Ala',
-              hintText: 'Buscar ala...',
-              options: _uniqueSorted(
-                _laborOptionMap.values
-                    .where(
-                      (o) =>
-                          (tipoLaborSeleccionado == null ||
-                              tipoLaborSeleccionado!.isEmpty ||
-                              o.tipoLabor == tipoLaborSeleccionado) &&
-                          (laborSeleccionada == null ||
-                              laborSeleccionada!.isEmpty ||
-                              o.laborNombre == laborSeleccionada),
-                    )
-                    .map((o) => o.ala),
-              ),
-              selectedValue: alaSeleccionado,
-              enabled:
-                  laborSeleccionada != null &&
-                  laborSeleccionada!.trim().isNotEmpty,
-              resetKey: alaFieldResetKey,
-              onChanged: (value) {
-                setState(() {
-                  alaSeleccionado = value;
-                  laborIdSeleccionado = null;
-                  _selectedOption = null;
-                });
-              },
-              onSelected: (value) {
-                setState(() {
-                  alaSeleccionado = value;
-                });
-                final label = _buildSelectionLabel();
-                final option = label == null ? null : _laborOptionMap[label];
-                if (option != null) {
-                  _aplicarLaborOption(option);
-                }
-              },
-            ),
+          _buildSearchableAutocompleteField(
+            label: 'Frente de Trabajo',
+            hintText: 'Buscar por tipo labor, labor o ala...',
+            options: opcionesLabor,
+            selectedValue: selectedLabel,
+            onChanged: (_) {},
+            onSelected: (value) {
+              final option = _laborOptionMap[value];
+              if (option != null) {
+                _aplicarLaborOption(option);
+              }
+            },
           ),
           if (opcionesLabor.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
                 'No hay labores disponibles en el catálogo',
-                style: TextStyle(fontSize: 11, color: Colors.red.shade400),
+                style: TextStyle(fontSize: 12, color: Colors.red.shade400),
               ),
             ),
-          if (_selectedOption != null) ...[
+          if (selected != null) ...[
             const SizedBox(height: 8),
             Text(
-              '${_selectedOption!.mina} / ${_selectedOption!.zona} / '
-              '${_selectedOption!.area} / ${_selectedOption!.fase}',
+              '${selected.mina} / ${selected.zona} / '
+              '${selected.area} / ${selected.fase}',
               style: const TextStyle(fontSize: 12),
             ),
             Text(
-              '${_selectedOption!.estructuraMineral} / ${_selectedOption!.nivel} / '
-              '${_selectedOption!.tipoLabor}',
+              '${selected.estructuraMineral} / ${selected.nivel} / '
+              '${selected.tipoLabor}',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
@@ -532,14 +438,17 @@ class _DialogoFormularioEmpernadorState
           focusNode: focusNode,
           enabled: isFieldEnabled,
           onChanged: isFieldEnabled ? onChanged : null,
+          style: const TextStyle(fontSize: 12),
           decoration: InputDecoration(
             labelText: label,
+            labelStyle: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             hintText: hintText,
-            prefixIcon: const Icon(Icons.search),
+            hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+            prefixIcon: const Icon(Icons.search, size: 16),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
+              horizontal: 8,
+              vertical: 8,
             ),
             isDense: true,
           ),
@@ -576,22 +485,6 @@ class _DialogoFormularioEmpernadorState
           ),
         );
       },
-    );
-  }
-
-  Widget _buildThreeAutocompleteRow({
-    required Widget first,
-    required Widget second,
-    required Widget third,
-  }) {
-    return Row(
-      children: [
-        Expanded(child: first),
-        const SizedBox(width: 8),
-        Expanded(child: second),
-        const SizedBox(width: 8),
-        Expanded(child: third),
-      ],
     );
   }
 
@@ -786,6 +679,7 @@ class _DialogoFormularioEmpernadorState
             controller: observacionesController,
             enabled: isEditable,
             maxLines: 3,
+            style: const TextStyle(fontSize: 12),
             decoration: InputDecoration(
               hintText: 'Escriba observaciones adicionales...',
               border: OutlineInputBorder(
@@ -826,7 +720,7 @@ class _DialogoFormularioEmpernadorState
             : null,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+          labelStyle: TextStyle(fontSize: 12, color: Colors.grey.shade600),
           prefixIcon: Icon(icon, size: 14, color: widget.primaryColor),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -869,7 +763,7 @@ class _DialogoFormularioEmpernadorState
                 child: Text(
                   label,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ),
             ],
@@ -1011,12 +905,4 @@ class _DialogoFormularioEmpernadorState
     );
   }
 
-  List<String> _uniqueSorted(Iterable<String> values) {
-    final unique = values
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList();
-    unique.sort();
-    return unique;
-  }
 }

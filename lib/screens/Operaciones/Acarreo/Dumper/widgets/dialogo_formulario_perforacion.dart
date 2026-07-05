@@ -74,8 +74,7 @@ class _DialogoFormularioPerforacionState
   String? ubicacionDestinoSeleccionado;
   int? ubicacionDestinoId;
 
-  int laborFieldResetKey = 0;
-  int alaFieldResetKey = 0;
+
 
   final Map<String, _DumperFrontOption> _frontOptionMap = {};
   _DumperFrontOption? selectedFrontOption;
@@ -302,44 +301,8 @@ class _DialogoFormularioPerforacionState
 
   Widget _buildSeccionUbicacionInicio() {
     final selected = _resolveSelectedFront() ?? selectedFrontOption;
-    final hasTipoLaborSeleccionado =
-        tipoLaborSeleccionado != null && tipoLaborSeleccionado!.trim().isNotEmpty;
-    final hasLaborSeleccionada =
-        laborInicioSeleccionado != null && laborInicioSeleccionado!.trim().isNotEmpty;
-
-    final tipos = _frontOptionMap.values
-        .map((option) => option.tipoLabor)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final labores = _frontOptionMap.values
-        .where(
-          (option) =>
-              tipoLaborSeleccionado == null ||
-              tipoLaborSeleccionado!.isEmpty ||
-              option.tipoLabor == tipoLaborSeleccionado,
-        )
-        .map((option) => option.labor)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final alas = _frontOptionMap.values
-        .where(
-          (option) =>
-              (tipoLaborSeleccionado == null ||
-                  tipoLaborSeleccionado!.isEmpty ||
-                  option.tipoLabor == tipoLaborSeleccionado) &&
-              (laborInicioSeleccionado == null ||
-                  laborInicioSeleccionado!.isEmpty ||
-                  option.labor == laborInicioSeleccionado),
-        )
-        .map((option) => option.ala)
-        .where((value) => value.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final options =
+        _frontOptionMap.keys.toList()..sort();
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -377,85 +340,18 @@ class _DialogoFormularioPerforacionState
             ],
           ),
           const SizedBox(height: 8),
-          _buildThreeAutocompleteRow(
-            first: _buildSearchableAutocompleteField(
-              label: 'Tipo Labor',
-              hintText: 'Buscar tipo labor...',
-              options: tipos,
-              selectedValue: tipoLaborSeleccionado,
-              onChanged: (value) {
-                setState(() {
-                  tipoLaborSeleccionado = value;
-                  laborInicioSeleccionado = null;
-                  alaSeleccionado = null;
-                  laborInicioId = null;
-                  selectedFrontOption = null;
-                  laborFieldResetKey++;
-                  alaFieldResetKey++;
-                });
-              },
-              onSelected: (value) {
-                setState(() {
-                  tipoLaborSeleccionado = value;
-                  laborInicioSeleccionado = null;
-                  alaSeleccionado = null;
-                  laborInicioId = null;
-                  selectedFrontOption = null;
-                  laborFieldResetKey++;
-                  alaFieldResetKey++;
-                });
-              },
-            ),
-            second: _buildSearchableAutocompleteField(
-              label: 'Labor',
-              hintText: 'Buscar labor...',
-              options: labores,
-              selectedValue: laborInicioSeleccionado,
-              enabled: hasTipoLaborSeleccionado,
-              resetKey: laborFieldResetKey,
-              onChanged: (value) {
-                setState(() {
-                  laborInicioSeleccionado = value;
-                  alaSeleccionado = null;
-                  laborInicioId = null;
-                  selectedFrontOption = null;
-                  alaFieldResetKey++;
-                });
-              },
-              onSelected: (value) {
-                setState(() {
-                  laborInicioSeleccionado = value;
-                  alaSeleccionado = null;
-                  laborInicioId = null;
-                  selectedFrontOption = null;
-                  alaFieldResetKey++;
-                });
-              },
-            ),
-            third: _buildSearchableAutocompleteField(
-              label: 'Ala',
-              hintText: 'Buscar ala...',
-              options: alas,
-              selectedValue: alaSeleccionado,
-              enabled: hasLaborSeleccionada,
-              resetKey: alaFieldResetKey,
-              onChanged: (value) {
-                setState(() {
-                  alaSeleccionado = value;
-                  laborInicioId = null;
-                  selectedFrontOption = null;
-                });
-              },
-              onSelected: (value) {
-                setState(() {
-                  alaSeleccionado = value;
-                });
-                final option = _resolveSelectedFront();
-                if (option != null) {
-                  _aplicarFrontOption(option);
-                }
-              },
-            ),
+          _buildSearchableAutocompleteField(
+            label: 'Frente de Trabajo',
+            hintText: 'Buscar por tipo labor, labor o ala...',
+            options: options,
+            selectedValue: _buildSelectionLabelFromState(),
+            onChanged: (_) {},
+            onSelected: (value) {
+              final option = _frontOptionMap[value];
+              if (option != null) {
+                _aplicarFrontOption(option);
+              }
+            },
           ),
           if (_frontOptionMap.isEmpty)
             Padding(
@@ -728,22 +624,6 @@ class _DialogoFormularioPerforacionState
           ),
         );
       },
-    );
-  }
-
-  Widget _buildThreeAutocompleteRow({
-    required Widget first,
-    required Widget second,
-    required Widget third,
-  }) {
-    return Row(
-      children: [
-        Expanded(child: first),
-        const SizedBox(width: 8),
-        Expanded(child: second),
-        const SizedBox(width: 8),
-        Expanded(child: third),
-      ],
     );
   }
 

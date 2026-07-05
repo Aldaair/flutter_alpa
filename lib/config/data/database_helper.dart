@@ -13,6 +13,7 @@ import 'package:i_miner/models/DimAla.dart';
 import 'package:i_miner/models/DimLabor.dart';
 import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
+import 'package:i_miner/models/pdf_model.dart';
 import 'package:i_miner/models/plan_metraje_tl.dart';
 import 'package:i_miner/models/plan_avance_th.dart';
 import 'package:i_miner/models/plan_produccion.dart';
@@ -8315,5 +8316,52 @@ CREATE TABLE $tableName (
       where: 'id IN ($idPlaceholders)',
       whereArgs: ids,
     );
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPdfs() async {
+    final db = await database;
+    return await db.query('pdfs');
+  }
+
+  Future<PdfModel?> getPdfByProceso({
+    required String proceso,
+    String? tipoLabor,
+    String? labor,
+    String? ala,
+  }) async {
+    final db = await database;
+
+    String query = '''
+      SELECT * FROM pdfs 
+      WHERE proceso = ? 
+    ''';
+
+    List<String> params = [proceso];
+
+    // Construir filtros dinámicamente
+    if (labor != null && labor.isNotEmpty) {
+      query += ' AND labor LIKE ?';
+      params.add('%$labor%');
+    }
+
+    // Si tienes campos separados para tipoLabor y ala en tu tabla
+    if (tipoLabor != null && tipoLabor.isNotEmpty) {
+      query += ' AND labor LIKE ?';
+      params.add('%$tipoLabor%');
+    }
+
+    if (ala != null && ala.isNotEmpty) {
+      query += ' AND labor LIKE ?';
+      params.add('%$ala%');
+    }
+
+    query += ' LIMIT 1';
+
+    final List<Map<String, dynamic>> result = await db.rawQuery(query, params);
+
+    if (result.isNotEmpty) {
+      return PdfModel.fromMap(result.first);
+    }
+    return null;
   }
 }
