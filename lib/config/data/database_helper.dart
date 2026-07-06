@@ -2999,6 +2999,20 @@ CREATE TABLE $tableName (
     return null;
   }
 
+  Future<void> updateEquipoUltimosHorometros(
+    int equipoId,
+    Map<String, dynamic> horometros,
+  ) async {
+    final db = await sharedCatalogDatabase;
+    final now = jsonEncode(horometros);
+    await db.update(
+      'Equipo',
+      {'ultimos_horometros': now},
+      where: 'id = ?',
+      whereArgs: [equipoId],
+    );
+  }
+
   Future<List<Guardia>> getGuardias() async {
     final db = await sharedCatalogDatabase;
 
@@ -3263,9 +3277,9 @@ CREATE TABLE $tableName (
     final db = await database;
 
     Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
+      'electrico': {'inicio': 0, 'final': 0, 'op': true},
+      'percusion': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     if (horometrosBase != null && horometrosBase.isNotEmpty) {
@@ -3695,9 +3709,9 @@ CREATE TABLE $tableName (
     if (result.isEmpty) {
       // Si no hay datos, devolver estructura por defecto
       return {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'electrico': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
 
@@ -3710,9 +3724,9 @@ CREATE TABLE $tableName (
       print('Error decodificando horómetros: $e');
       // Si hay error, devolver estructura por defecto
       return {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'electrico': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
   }
@@ -4146,9 +4160,9 @@ CREATE TABLE $tableName (
 
     // 🔥 estructura base segura
     Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
+      'electrico': {'inicio': 0, 'final': 0, 'op': true},
+      'percusion': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     // 🔥 aplicar valores de nube si existen
@@ -4378,9 +4392,9 @@ CREATE TABLE $tableName (
     if (result.isEmpty) {
       // Si no hay datos, devolver estructura por defecto
       return {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'electrico': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
 
@@ -4393,9 +4407,9 @@ CREATE TABLE $tableName (
       print('Error decodificando horómetros: $e');
       // Si hay error, devolver estructura por defecto
       return {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'electrico': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
   }
@@ -4581,10 +4595,10 @@ CREATE TABLE $tableName (
 
     // 🔥 estructura base (incluye "empernador")
     Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'empernador': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
+      'electrico': {'inicio': 0, 'final': 0, 'op': true},
+      'percusion': {'inicio': 0, 'final': 0, 'op': true},
+      'empernador': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     // 🔥 aplicar valores de nube
@@ -4812,10 +4826,10 @@ CREATE TABLE $tableName (
     if (result.isEmpty) {
       // Si no hay datos, devolver estructura por defecto
       return {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'empernador': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'electrico': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
+        'empernador': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
 
@@ -4828,10 +4842,10 @@ CREATE TABLE $tableName (
       print('Error decodificando horómetros: $e');
       // Si hay error, devolver estructura por defecto
       return {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'empernador': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'electrico': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
+        'empernador': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
   }
@@ -5019,7 +5033,7 @@ CREATE TABLE $tableName (
 
     /// 🔥 estructura base (solo uno)
     Map<String, dynamic> horometrosJson = {
-      'horometro': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'horometro': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     /// 🔥 aplicar valor de nube (solo uno)
@@ -5252,7 +5266,7 @@ CREATE TABLE $tableName (
 
     if (result.isEmpty) {
       return {
-        'horometro': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'horometro': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
 
@@ -5264,7 +5278,7 @@ CREATE TABLE $tableName (
       // Si el JSON está vacío
       if (horometros.isEmpty) {
         return {
-          'horometro': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+          'horometro': {'inicio': 0, 'final': 0, 'op': true},
         };
       }
 
@@ -5273,7 +5287,7 @@ CREATE TABLE $tableName (
       print('Error decodificando horómetros: $e');
 
       return {
-        'horometro': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'horometro': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
   }
@@ -5552,7 +5566,7 @@ CREATE TABLE $tableName (
 
     /// 🔥 estructura base
     Map<String, dynamic> horometrosJson = {
-      'horometro': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'horometro': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     /// 🔥 aplicar valor de nube
@@ -5788,7 +5802,7 @@ CREATE TABLE $tableName (
 
     if (result.isEmpty) {
       return {
-        'horometro': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'horometro': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
 
@@ -5800,7 +5814,7 @@ CREATE TABLE $tableName (
       // Si el JSON está vacío
       if (horometros.isEmpty) {
         return {
-          'horometro': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+          'horometro': {'inicio': 0, 'final': 0, 'op': true},
         };
       }
 
@@ -5809,7 +5823,7 @@ CREATE TABLE $tableName (
       print('Error decodificando horómetros: $e');
 
       return {
-        'horometro': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'horometro': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
   }
@@ -6112,8 +6126,8 @@ CREATE TABLE $tableName (
 
     /// 🔥 estructura base
     Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
+      'percusion': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     /// 🔥 aplicar valores de nube
@@ -6342,8 +6356,8 @@ CREATE TABLE $tableName (
 
     if (result.isEmpty) {
       return {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
 
@@ -6354,8 +6368,8 @@ CREATE TABLE $tableName (
 
       if (horometros.isEmpty) {
         return {
-          'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-          'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+          'diesel': {'inicio': 0, 'final': 0, 'op': true},
+          'percusion': {'inicio': 0, 'final': 0, 'op': true},
         };
       }
 
@@ -6364,8 +6378,8 @@ CREATE TABLE $tableName (
       print('Error decodificando horómetros: $e');
 
       return {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
   }
@@ -6549,8 +6563,8 @@ CREATE TABLE $tableName (
     final db = await database;
 
     Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
+      'percusion': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     if (horometrosBase != null && horometrosBase.isNotEmpty) {
@@ -6775,8 +6789,8 @@ CREATE TABLE $tableName (
 
     if (result.isEmpty) {
       return {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
 
@@ -6787,8 +6801,8 @@ CREATE TABLE $tableName (
 
       if (horometros.isEmpty) {
         return {
-          'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-          'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+          'diesel': {'inicio': 0, 'final': 0, 'op': true},
+          'percusion': {'inicio': 0, 'final': 0, 'op': true},
         };
       }
 
@@ -6797,8 +6811,8 @@ CREATE TABLE $tableName (
       print('Error decodificando horómetros: $e');
 
       return {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
       };
     }
   }
@@ -6977,7 +6991,7 @@ CREATE TABLE $tableName (
     final db = await database;
 
     Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     if (horometrosBase != null && horometrosBase.isNotEmpty) {
@@ -7201,9 +7215,8 @@ CREATE TABLE $tableName (
         'inicio': 0,
         'final': 0,
         'op': true,
-        'inop': false,
       },
-      'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     if (result.isEmpty) {
@@ -7405,10 +7418,9 @@ CREATE TABLE $tableName (
         'inicio': 0,
         'final': 0,
         'op': true,
-        'inop': false,
       },
-      'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'electrico': {'inicio': 0, 'final': 0, 'op': true},
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     /// 🔥 aplicar valores de nube
@@ -7643,10 +7655,9 @@ CREATE TABLE $tableName (
         'inicio': 0,
         'final': 0,
         'op': true,
-        'inop': false,
       },
-      'electrico': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
-      'diesel': {'inicio': 0, 'final': 0, 'op': true, 'inop': false},
+      'electrico': {'inicio': 0, 'final': 0, 'op': true},
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
     };
 
     if (result.isEmpty) {

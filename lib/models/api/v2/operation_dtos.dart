@@ -492,6 +492,7 @@ class OperacionUpsertRequest {
   final int? operadorId;
   final int? jefeGuardiaId;
   final int? equipoId;
+  final int? registradorId;
   final String? estado;
   final int? envio;
   final int? revisado;
@@ -511,6 +512,7 @@ class OperacionUpsertRequest {
     this.operadorId,
     this.jefeGuardiaId,
     this.equipoId,
+    this.registradorId,
     this.estado,
     this.envio,
     this.revisado,
@@ -531,6 +533,7 @@ class OperacionUpsertRequest {
     if (operadorId != null) 'operador_id': operadorId,
     if (jefeGuardiaId != null) 'jefe_guardia_id': jefeGuardiaId,
     if (equipoId != null) 'equipo_id': equipoId,
+    if (registradorId != null) 'registrador_id': registradorId,
     if (estado != null) 'estado': estado,
     if (envio != null) 'envio': envio,
     if (revisado != null) 'revisado': revisado,
@@ -560,6 +563,7 @@ class OperacionTalLargoUpsertRequest extends OperacionUpsertRequest {
     super.operadorId,
     super.jefeGuardiaId,
     super.equipoId,
+    super.registradorId,
     super.estado,
     super.envio,
     super.revisado,
@@ -593,6 +597,7 @@ class OperacionTalHorizontalUpsertRequest extends OperacionUpsertRequest {
     super.operadorId,
     super.jefeGuardiaId,
     super.equipoId,
+    super.registradorId,
     super.estado,
     super.envio,
     super.revisado,
@@ -626,6 +631,7 @@ class OperacionCarguioUpsertRequest extends OperacionUpsertRequest {
     super.operadorId,
     super.jefeGuardiaId,
     super.equipoId,
+    super.registradorId,
     super.estado,
     super.envio,
     super.revisado,
@@ -659,6 +665,7 @@ class OperacionAcarreoUpsertRequest extends OperacionUpsertRequest {
     super.operadorId,
     super.jefeGuardiaId,
     super.equipoId,
+    super.registradorId,
     super.estado,
     super.envio,
     super.revisado,
@@ -692,6 +699,7 @@ class OperacionEmpernadorUpsertRequest extends OperacionUpsertRequest {
     super.operadorId,
     super.jefeGuardiaId,
     super.equipoId,
+    super.registradorId,
     super.estado,
     super.envio,
     super.revisado,
@@ -725,6 +733,7 @@ class OperacionScalaminUpsertRequest extends OperacionUpsertRequest {
     super.operadorId,
     super.jefeGuardiaId,
     super.equipoId,
+    super.registradorId,
     super.estado,
     super.envio,
     super.revisado,
@@ -758,6 +767,7 @@ class OperacionScissorUpsertRequest extends OperacionUpsertRequest {
     super.operadorId,
     super.jefeGuardiaId,
     super.equipoId,
+    super.registradorId,
     super.estado,
     super.envio,
     super.revisado,

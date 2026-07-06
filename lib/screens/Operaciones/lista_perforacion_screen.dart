@@ -728,29 +728,46 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
   Future<bool> _updateHorometrosDispatch(
     int operacionId,
     Map<String, dynamic> horometros,
-  ) {
+  ) async {
+    bool ok;
     switch (_n) {
       case 'TalLargo':
-        return _db.updateHorometros(operacionId, horometros);
+        ok = await _db.updateHorometros(operacionId, horometros);
+        break;
       case 'TalHorizontal':
-        return _db.updateHorometrosHorizontal(operacionId, horometros);
+        ok = await _db.updateHorometrosHorizontal(operacionId, horometros);
+        break;
       case 'Dumper':
-        return _db.updateHorometrosDumper(operacionId, horometros);
+        ok = await _db.updateHorometrosDumper(operacionId, horometros);
+        break;
       case 'Carguio':
-        return _db.updateHorometrosCarguio(operacionId, horometros);
+        ok = await _db.updateHorometrosCarguio(operacionId, horometros);
+        break;
       case 'Scissor':
-        return _db.updateHorometrosScissor(operacionId, horometros);
+        ok = await _db.updateHorometrosScissor(operacionId, horometros);
+        break;
       case 'Anfochanger':
-        return _db.updateHorometrosAnfochanger(operacionId, horometros);
+        ok = await _db.updateHorometrosAnfochanger(operacionId, horometros);
+        break;
       case 'Empernador':
-        return _db.updateHorometrosEmpernador(operacionId, horometros);
+        ok = await _db.updateHorometrosEmpernador(operacionId, horometros);
+        break;
       case 'RompeBaco':
-        return _db.updateHorometrosRompeBaco(operacionId, horometros);
+        ok = await _db.updateHorometrosRompeBaco(operacionId, horometros);
+        break;
       case 'Scalamin':
-        return _db.updateHorometrosScalamin(operacionId, horometros);
+        ok = await _db.updateHorometrosScalamin(operacionId, horometros);
+        break;
       default:
         throw Exception('Unknown operacionNombreDb for horometros: $_n');
     }
+    if (ok && operacionActual != null) {
+      final equipoId = operacionActual!['equipo_id'] as int?;
+      if (equipoId != null) {
+        await _db.updateEquipoUltimosHorometros(equipoId, horometros);
+      }
+    }
+    return ok;
   }
 
   Future<List<Map<String, dynamic>>> _getChecklistData(int operacionId) {
@@ -1969,6 +1986,9 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
               .toList()
         : <HorometroDef>[];
 
+    final equipoUltimos =
+        await _db.getEquipoUltimosHorometros(equipoId);
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1979,6 +1999,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           primaryColor: primaryColor,
           horometroDefs: horometroDefs,
           onSave: _updateHorometrosDispatch,
+          equipoUltimosHorometros: equipoUltimos,
         );
       },
     );

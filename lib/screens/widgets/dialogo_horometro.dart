@@ -7,7 +7,8 @@ class HorometroDef {
   const HorometroDef({required this.key, required this.nombre});
 
   factory HorometroDef.fromRawNombre(String rawNombre) {
-    return HorometroDef(key: rawNombre, nombre: _toDisplayName(rawNombre));
+    final key = rawNombre.toLowerCase();
+    return HorometroDef(key: key, nombre: _toDisplayName(key));
   }
 
   static String _toDisplayName(String nombre) {
@@ -45,9 +46,7 @@ class DialogoHorometro extends StatefulWidget {
   final String? headerSubtitle;
   final double col0Width;
   final bool enableResponsive;
-  final bool showFinalEqualWarning;
-  final bool useZeroForInop;
-  final bool useNameInError;
+  final Map<String, dynamic>? equipoUltimosHorometros;
 
   const DialogoHorometro({
     super.key,
@@ -61,9 +60,7 @@ class DialogoHorometro extends StatefulWidget {
     this.headerSubtitle,
     this.col0Width = 150,
     this.enableResponsive = false,
-    this.showFinalEqualWarning = true,
-    this.useZeroForInop = false,
-    this.useNameInError = false,
+    this.equipoUltimosHorometros,
   });
 
   @override
@@ -72,6 +69,7 @@ class DialogoHorometro extends StatefulWidget {
 
 class _DialogoHorometroState extends State<DialogoHorometro> {
   late List<Map<String, dynamic>> horometros;
+  late List<bool> opValues;
   bool isLoading = true;
   bool isEditable = false;
   Map<int, String> erroresValidacion = {};
@@ -92,14 +90,30 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
       horometros = List.generate(widget.horometroDefs.length, (i) {
         final def = widget.horometroDefs[i];
         final raw = widget.horometrosData[def.key] ?? {};
+        final equipoRaw =
+            widget.equipoUltimosHorometros?[def.key] ?? {};
+        final dbInicio = raw['inicio'];
+        final eqInicio = equipoRaw['inicio'];
+        final inicial = (dbInicio is num && dbInicio > 0)
+            ? dbInicio
+            : ((eqInicio is num) ? eqInicio : 0);
+        final dbFinal = raw['final'];
+        final eqFinal = equipoRaw['final'];
+        final finalVal = (dbFinal is num && dbFinal > 0)
+            ? dbFinal
+            : ((eqFinal is num) ? eqFinal : 0);
         return {
           'id': i + 1,
           'nombre': def.nombre,
-          'inicial': raw['inicio'] ?? 0,
-          'final': raw['final'] ?? 0,
-          'EstaOP': raw['op'] == true ? 1 : 0,
-          'EstaINOP': raw['inop'] == true ? 1 : 0,
+          'inicial': inicial,
+          'final': finalVal,
         };
+      });
+
+      opValues = List.generate(widget.horometroDefs.length, (i) {
+        final def = widget.horometroDefs[i];
+        final raw = widget.horometrosData[def.key] ?? {};
+        return raw['op'] != false;
       });
 
       _inicializarControladores();
@@ -139,41 +153,21 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
   }
 
   String? _validarHorometro(Map<String, dynamic> horometro, int index) {
-    final inicial = horometro['inicial'] ?? 0;
-    final finalHoro = horometro['final'] ?? 0;
-    final estaOP = horometro['EstaOP'] == 1;
-    final estaINOP = horometro['EstaINOP'] == 1;
+    if (index >= opValues.length || !opValues[index]) return null;
 
-    if (estaINOP) {
-      if (widget.useZeroForInop) {
-        if (inicial != 0 && inicial != null) {
-          return 'INOP: El valor inicial debe ser 0';
-        }
-        if (finalHoro != 0 && finalHoro != null) {
-          return 'INOP: El valor final debe ser 0';
-        }
-      } else {
-        if (inicial != 0) {
-          return 'INOP: El valor inicial debe estar vacío o 0';
-        }
-        if (finalHoro != 0) {
-          return 'INOP: El valor final debe estar vacío o 0';
-        }
-      }
+    final inicial = horometro['inicial'];
+    final finalHoro = horometro['final'];
+
+    if (inicial == null || (inicial is num && inicial == 0)) {
+      return 'Debe tener valor inicial';
     }
 
-    if (estaOP) {
-      if (inicial == null) {
-        return 'OP: Debe tener valor inicial';
-      }
+    if (finalHoro == null || (finalHoro is num && finalHoro == 0)) {
+      return 'Debe tener valor final';
     }
 
-    if (estaOP && estaINOP) {
-      return 'No puede seleccionar OP e INOP';
-    }
-
-    if (!estaOP && !estaINOP) {
-      return 'Seleccione OP o INOP';
+    if (finalHoro is num && inicial is num && finalHoro <= inicial) {
+      return 'Final debe ser mayor a Inicial';
     }
 
     return null;
@@ -196,21 +190,10 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
     _validarTodos();
 
     if (_hayErrores()) {
-      String mensajeError;
-      if (widget.useNameInError) {
-        mensajeError = 'Errores en: ';
-        erroresValidacion.forEach((index, error) {
-          mensajeError += '${horometros[index]['nombre']}, ';
-        });
-      } else {
-        mensajeError = 'Errores en filas: ';
-        erroresValidacion.forEach((index, error) {
-          mensajeError += '${index + 1}, ';
-        });
-      }
-      mensajeError = mensajeError.substring(0, mensajeError.length - 2);
-
-      _mostrarSnackbar(mensajeError, Colors.red);
+      final nombres = erroresValidacion.entries
+          .map((e) => horometros[e.key]['nombre'].toString())
+          .join(', ');
+      _mostrarSnackbar('Errores en: $nombres', Colors.red);
       return;
     }
 
@@ -219,8 +202,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
       horometrosToSave[widget.horometroDefs[i].key] = {
         'inicio': horometros[i]['inicial'] ?? 0,
         'final': horometros[i]['final'] ?? 0,
-        'op': horometros[i]['EstaOP'] == 1,
-        'inop': horometros[i]['EstaINOP'] == 1,
+        'op': opValues[i],
       };
     }
 
@@ -245,37 +227,6 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
     );
   }
 
-  void _handleOPChange(int index, bool value) {
-    setState(() {
-      horometros[index]['EstaOP'] = value ? 1 : 0;
-      if (value) {
-        horometros[index]['EstaINOP'] = 0;
-      }
-    });
-    _validarTodos();
-  }
-
-  void _handleINOPChange(int index, bool value) {
-    setState(() {
-      horometros[index]['EstaINOP'] = value ? 1 : 0;
-      if (value) {
-        horometros[index]['EstaOP'] = 0;
-        if (widget.useZeroForInop) {
-          horometros[index]['inicial'] = 0;
-          horometros[index]['final'] = 0;
-          inicialControllers[index].text = '0';
-          finalControllers[index].text = '0';
-        } else {
-          horometros[index]['inicial'] = null;
-          horometros[index]['final'] = null;
-          inicialControllers[index].text = '';
-          finalControllers[index].text = '';
-        }
-      }
-    });
-    _validarTodos();
-  }
-
   void _handleInicialChange(int index, String value) {
     horometros[index]['inicial'] = _parseDouble(value);
     _validarTodos();
@@ -283,6 +234,11 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
 
   void _handleFinalChange(int index, String value) {
     horometros[index]['final'] = _parseDouble(value);
+    _validarTodos();
+  }
+
+  void _handleOpToggle(int index, bool value) {
+    opValues[index] = value;
     _validarTodos();
   }
 
@@ -523,20 +479,18 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
         ),
         columnWidths: {
           0: FixedColumnWidth(widget.col0Width),
-          1: FixedColumnWidth(90),
+          1: FixedColumnWidth(70),
           2: FixedColumnWidth(90),
-          3: FixedColumnWidth(50),
-          4: FixedColumnWidth(50),
+          3: FixedColumnWidth(90),
         },
         children: [
           TableRow(
             decoration: BoxDecoration(color: Colors.grey.shade50),
             children: [
               _buildHeaderCell('Nombre'),
+              _buildHeaderCell('OP'),
               _buildHeaderCell('Inicial'),
               _buildHeaderCell('Final'),
-              _buildHeaderCell('OP'),
-              _buildHeaderCell('INOP'),
             ],
           ),
           for (int i = 0; i < horometros.length; i++)
@@ -544,14 +498,17 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
               decoration: BoxDecoration(
                 color: erroresValidacion.containsKey(i)
                     ? Colors.red.withValues(alpha: 0.05)
-                    : null,
+                    : (!opValues[i]
+                        ? Colors.grey.withValues(alpha: 0.08)
+                        : null),
               ),
               children: [
                 _buildCell(horometros[i]['nombre'], isBold: true),
+                _buildOpCell(i),
                 _buildEditableCell(
                   index: i,
                   controller: inicialControllers[i],
-                  isEditable: isEditable && horometros[i]['EstaOP'] == 1,
+                  isEditable: isEditable && opValues[i],
                   onChanged: (value) => _handleInicialChange(i, value),
                   error: erroresValidacion.containsKey(i)
                       ? erroresValidacion[i]
@@ -560,21 +517,11 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                 _buildEditableCell(
                   index: i,
                   controller: finalControllers[i],
-                  isEditable: isEditable && horometros[i]['EstaOP'] == 1,
+                  isEditable: isEditable && opValues[i],
                   onChanged: (value) => _handleFinalChange(i, value),
                   error: erroresValidacion.containsKey(i)
                       ? erroresValidacion[i]
                       : null,
-                ),
-                _buildCheckboxCell(
-                  value: horometros[i]['EstaOP'] == 1,
-                  isEditable: isEditable,
-                  onChanged: (value) => _handleOPChange(i, value),
-                ),
-                _buildCheckboxCell(
-                  value: horometros[i]['EstaINOP'] == 1,
-                  isEditable: isEditable,
-                  onChanged: (value) => _handleINOPChange(i, value),
                 ),
               ],
             ),
@@ -611,6 +558,25 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
     );
   }
 
+  Widget _buildOpCell(int index) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      alignment: Alignment.center,
+      child: Checkbox(
+        value: opValues[index],
+        onChanged: isEditable
+            ? (v) {
+                setState(() {
+                  _handleOpToggle(index, v ?? true);
+                });
+              }
+            : null,
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+
   Widget _buildEditableCell({
     required int index,
     required TextEditingController controller,
@@ -618,17 +584,6 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
     required Function(String) onChanged,
     String? error,
   }) {
-    bool isFinalEqual = false;
-    if (widget.showFinalEqualWarning &&
-        !isEditable &&
-        horometros[index]['EstaOP'] == 1) {
-      final inicial = horometros[index]['inicial'];
-      final finalHoro = horometros[index]['final'];
-      if (inicial != null && finalHoro != null && finalHoro == inicial) {
-        isFinalEqual = true;
-      }
-    }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Column(
@@ -640,10 +595,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
             enabled: isEditable,
             onChanged: onChanged,
             keyboardType: TextInputType.number,
-            style: TextStyle(
-              fontSize: 12,
-              color: isFinalEqual ? Colors.orange.shade700 : null,
-            ),
+            style: const TextStyle(fontSize: 12),
             decoration: InputDecoration(
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(
@@ -655,9 +607,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                 borderSide: BorderSide(
                   color: error != null
                       ? Colors.red
-                      : (isFinalEqual
-                            ? Colors.orange.shade300
-                            : Colors.grey.shade300),
+                      : Colors.grey.shade300,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
@@ -665,9 +615,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                 borderSide: BorderSide(
                   color: error != null
                       ? Colors.red
-                      : (isFinalEqual
-                            ? Colors.orange.shade300
-                            : Colors.grey.shade300),
+                      : Colors.grey.shade300,
                 ),
               ),
               focusedBorder: OutlineInputBorder(
@@ -675,7 +623,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                 borderSide: BorderSide(
                   color: error != null
                       ? Colors.red
-                      : (isFinalEqual ? Colors.orange : widget.primaryColor),
+                      : widget.primaryColor,
                 ),
               ),
               disabledBorder: OutlineInputBorder(
@@ -685,15 +633,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
               filled: !isEditable,
               fillColor: error != null
                   ? Colors.red.withValues(alpha: 0.05)
-                  : (isFinalEqual
-                        ? Colors.orange.withValues(alpha: 0.05)
-                        : (isEditable ? Colors.white : Colors.grey.shade50)),
-              hintText: !isEditable ? 'INOP - Bloqueado' : null,
-              hintStyle: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 11,
-                fontStyle: FontStyle.italic,
-              ),
+                  : (isEditable ? Colors.white : Colors.grey.shade50),
             ),
           ),
           if (error != null)
@@ -707,42 +647,8 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-            )
-          else if (isFinalEqual)
-            Padding(
-              padding: const EdgeInsets.only(top: 2, left: 4),
-              child: Text(
-                '⚠️ Final igual a inicial',
-                style: TextStyle(
-                  color: Colors.orange.shade700,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
             ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCheckboxCell({
-    required bool value,
-    required bool isEditable,
-    required Function(bool) onChanged,
-  }) {
-    return Center(
-      child: Transform.scale(
-        scale: 0.8,
-        child: Checkbox(
-          value: value,
-          onChanged: isEditable
-              ? (bool? newValue) {
-                  if (newValue != null) onChanged(newValue);
-                }
-              : null,
-          activeColor: widget.primaryColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-        ),
       ),
     );
   }
@@ -799,6 +705,38 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                         ),
                       ),
                     ),
+                    if (!opValues[index])
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        margin: const EdgeInsets.only(right: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade400,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'NOP',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    if (isEditable)
+                      Checkbox(
+                        value: opValues[index],
+                        onChanged: (v) {
+                          setState(() {
+                            _handleOpToggle(index, v ?? true);
+                          });
+                        },
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                      ),
                     if (hasError)
                       const Icon(
                         Icons.error_outline,
@@ -815,7 +753,7 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                     _buildCardField(
                       label: 'Horómetro Inicial',
                       controller: inicialControllers[index],
-                      isEditable: isEditable && horometro['EstaOP'] == 1,
+                      isEditable: isEditable && opValues[index],
                       onChanged: (v) => _handleInicialChange(index, v),
                       error: hasError ? erroresValidacion[index] : null,
                     ),
@@ -823,27 +761,9 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
                     _buildCardField(
                       label: 'Horómetro Final',
                       controller: finalControllers[index],
-                      isEditable: isEditable && horometro['EstaOP'] == 1,
+                      isEditable: isEditable && opValues[index],
                       onChanged: (v) => _handleFinalChange(index, v),
                       error: null,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        _buildCardCheckbox(
-                          label: 'OP',
-                          value: horometro['EstaOP'] == 1,
-                          onChanged: (v) => _handleOPChange(index, v),
-                          isEditable: isEditable,
-                        ),
-                        const SizedBox(width: 20),
-                        _buildCardCheckbox(
-                          label: 'INOP',
-                          value: horometro['EstaINOP'] == 1,
-                          onChanged: (v) => _handleINOPChange(index, v),
-                          isEditable: isEditable,
-                        ),
-                      ],
                     ),
                   ],
                 ),
@@ -913,58 +833,11 @@ class _DialogoHorometroState extends State<DialogoHorometro> {
             ),
             filled: !isEditable,
             fillColor: !isEditable ? Colors.grey.shade50 : null,
-            hintText: !isEditable ? 'Bloqueado' : null,
-            hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 12),
             errorText: error,
             errorStyle: const TextStyle(fontSize: 10),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildCardCheckbox({
-    required String label,
-    required bool value,
-    required bool isEditable,
-    required Function(bool) onChanged,
-  }) {
-    return Expanded(
-      child: InkWell(
-        onTap: isEditable ? () => onChanged(!value) : null,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: value
-                ? widget.primaryColor.withValues(alpha: 0.1)
-                : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: value ? widget.primaryColor : Colors.grey.shade300,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                value ? Icons.check_circle : Icons.circle_outlined,
-                size: 18,
-                color: value ? widget.primaryColor : Colors.grey.shade600,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: value ? widget.primaryColor : Colors.grey.shade700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
