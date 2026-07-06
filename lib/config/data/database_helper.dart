@@ -35,7 +35,7 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 36;
+  static const int _sharedCatalogDbVersion = 37;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
@@ -186,7 +186,8 @@ CREATE TABLE Equipo (
   anioFabricacion INTEGER,
   fechaIngreso TEXT,
   capacidadYd3 REAL,
-  capacidadM3 REAL
+  capacidadM3 REAL,
+  ultimos_horometros TEXT
 )
 ''');
 
@@ -1232,6 +1233,14 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
 
     if (oldVersion < 36) {
       await db.execute('DROP TABLE IF EXISTS usuario_equipos');
+    }
+
+    if (oldVersion < 37) {
+      if (!await _columnaExiste(db, 'Equipo', 'ultimos_horometros')) {
+        await db.execute(
+          'ALTER TABLE Equipo ADD COLUMN ultimos_horometros TEXT',
+        );
+      }
     }
   }
 
@@ -2966,6 +2975,28 @@ CREATE TABLE $tableName (
     final db = await sharedCatalogDatabase;
     final List<Map<String, dynamic>> maps = await db.query('Equipo');
     return List.generate(maps.length, (i) => Equipo.fromJson(maps[i]));
+  }
+
+  Future<Map<String, dynamic>?> getEquipoUltimosHorometros(
+    int equipoId,
+  ) async {
+    final db = await sharedCatalogDatabase;
+    final maps = await db.query(
+      'Equipo',
+      columns: ['ultimos_horometros'],
+      where: 'id = ?',
+      whereArgs: [equipoId],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    final raw = maps.first['ultimos_horometros'];
+    if (raw == null) return null;
+    try {
+      if (raw is Map) return Map<String, dynamic>.from(raw);
+      final decoded = jsonDecode(raw.toString());
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+    return null;
   }
 
   Future<List<Guardia>> getGuardias() async {

@@ -49,7 +49,6 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Cargos',
       'Usuarios',
       'Categorías Estados',
-      'PDFs',
     ],
   };
 

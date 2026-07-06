@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Equipo {
   int? id;
   int? procesoId;
@@ -8,9 +10,11 @@ class Equipo {
   String modelo;
   String serie;
   int anioFabricacion;
-  String fechaIngreso; // Se usa String para manejar formato ISO
+  String fechaIngreso;
   double? capacidadYd3;
   double? capacidadM3;
+  List<Map<String, dynamic>>? horometros;
+  Map<String, dynamic>? ultimosHorometros;
 
   Equipo({
     this.id,
@@ -25,9 +29,10 @@ class Equipo {
     required this.fechaIngreso,
     this.capacidadYd3,
     this.capacidadM3,
+    this.horometros,
+    this.ultimosHorometros,
   });
 
-  // Convertir de JSON a Objeto
   factory Equipo.fromJson(Map<String, dynamic> json) {
     return Equipo(
       id: _asInt(json['id']),
@@ -42,10 +47,17 @@ class Equipo {
       fechaIngreso: json['fechaIngreso']?.toString() ?? '',
       capacidadYd3: _asDouble(json['capacidadYd3']),
       capacidadM3: _asDouble(json['capacidadM3']),
+      horometros: json['horometros'] != null
+          ? List<Map<String, dynamic>>.from(json['horometros'])
+          : null,
+      ultimosHorometros: json['ultimos_horometros'] != null
+          ? (json['ultimos_horometros'] is Map
+              ? Map<String, dynamic>.from(json['ultimos_horometros'])
+              : _tryDecodeJson(json['ultimos_horometros'].toString()))
+          : null,
     );
   }
 
-  // Convertir de Objeto a Map (para BD local)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -60,6 +72,9 @@ class Equipo {
       'fechaIngreso': fechaIngreso,
       'capacidadYd3': capacidadYd3,
       'capacidadM3': capacidadM3,
+      'ultimos_horometros': ultimosHorometros != null
+          ? jsonEncode(ultimosHorometros)
+          : null,
     };
   }
 
@@ -93,27 +108,23 @@ class Equipo {
     return buffer.toString().toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
   }
 
+  static Map<String, dynamic>? _tryDecodeJson(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+    return null;
+  }
+
   static int? _asInt(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-
-    if (value is int) {
-      return value;
-    }
-
+    if (value == null) return null;
+    if (value is int) return value;
     return int.tryParse(value.toString());
   }
 
   static double? _asDouble(dynamic value) {
-    if (value == null) {
-      return null;
-    }
-
-    if (value is num) {
-      return value.toDouble();
-    }
-
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
     return double.tryParse(value.toString());
   }
 }

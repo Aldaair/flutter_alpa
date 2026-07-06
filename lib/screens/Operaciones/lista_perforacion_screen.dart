@@ -430,10 +430,25 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     }
   }
 
+  Future<List<Map<String, dynamic>>?> _buildHorometrosBase(
+    int? equipoId,
+  ) async {
+    if (equipoId == null) return null;
+    final ultimos = await _db.getEquipoUltimosHorometros(equipoId);
+    if (ultimos == null || ultimos.isEmpty) return null;
+    return ultimos.entries.map((e) {
+      final values = Map<String, dynamic>.from(e.value);
+      values['tipo_horometro'] = e.key;
+      return values;
+    }).toList();
+  }
+
   Future<void> _insertOperacionDb(
     Map<String, dynamic> data,
     List<Map<String, dynamic>> checkListJson,
   ) async {
+    final horometrosBase = await _buildHorometrosBase(data['equipo_id'] as int?);
+
     switch (_n) {
       case 'TalLargo':
         await _db.insertOperacionTalLargo(
@@ -452,6 +467,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                   as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
+          horometrosBase: horometrosBase,
         );
       case 'TalHorizontal':
         await _db.insertOperacionTalHorizontal(
@@ -473,6 +489,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                   as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
+          horometrosBase: horometrosBase,
         );
       case 'Dumper':
         await _db.insertOperacionDumper(
@@ -495,6 +512,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                   as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
+          horometrosBase: horometrosBase,
         );
       case 'Carguio':
         await _db.insertOperacionCarguio(
@@ -517,6 +535,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                   as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
+          horometrosBase: horometrosBase,
         );
       case 'Empernador':
         await _db.insertOperacionEmpernador(
@@ -538,6 +557,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                   as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
+          horometrosBase: horometrosBase,
         );
       case 'RompeBaco':
         await _db.insertOperacionRompeBaco(
@@ -557,6 +577,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                   as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
+          horometrosBase: horometrosBase,
         );
       case 'Scalamin':
         await _db.insertOperacionScalamin(
@@ -576,6 +597,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                   as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
+          horometrosBase: horometrosBase,
         );
       case 'Scissor':
         await _db.insertOperacionScissor(
@@ -595,6 +617,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                   as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
+          horometrosBase: horometrosBase,
         );
       case 'Anfochanger':
         await _db.insertOperacionAnfochanger(
@@ -614,6 +637,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                   as int?,
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
+          horometrosBase: horometrosBase,
         );
       default:
         throw Exception('Unknown operacionNombreDb for insert: $_n');
