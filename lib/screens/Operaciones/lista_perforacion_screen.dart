@@ -333,6 +333,22 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     return h * 60 + m;
   }
 
+  /// Resta 90 minutos a un string "HH:mm" manejando wrap-around overnight.
+  String _restar90Minutos(String horario) {
+    final totalMin = _parseHorario(horario) ?? 0;
+    final result = (totalMin - 90 + 1440) % 1440;
+    return '${(result ~/ 60).toString().padLeft(2, '0')}:${(result % 60).toString().padLeft(2, '0')}';
+  }
+
+  /// Resuelve el [DimTurno] activo desde [_turnosCatalogo] usando [selectedTurno].
+  DimTurno? _obtenerTurnoActual() {
+    final key = _normalizarClave(selectedTurno ?? '');
+    for (final t in _turnosCatalogo) {
+      if (_normalizarClave(t.nombre) == key) return t;
+    }
+    return null;
+  }
+
   // ======== DB DISPATCH METHODS ========
 
   Future<List<Map<String, dynamic>>> _fetchOperacionesDb(
@@ -2042,18 +2058,52 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
               return;
             }
 
-            String horaReservaInicio = (selectedTurno == 'DÍA')
-                ? '17:30'
-                : '05:30';
+            // Resolver horario_fin del turno desde dim_turno
+            final turno = _obtenerTurnoActual();
+            final horarioFin = turno?.horarioFin ??
+                (selectedTurno == 'DÍA' ? '19:00' : '07:00');
+            final horaCorte = _restar90Minutos(horarioFin);
 
-            bool actualizado = await _updateHoraFinalDispatch(
-              operacionActual!['id'],
-              ultimoEstado['id'],
-              horaReservaInicio,
-            );
+            // Determinar hora de inicio de la RESERVA
+            // Si el último estado ya tiene hora_final (ej: se seteo explícitamente
+            // desde la UI), se respeta. Si no, se auto-asigna el corte.
+            final ultimoHoraFinal = ultimoEstado['hora_final']?.toString();
+            final tieneHoraFinal = ultimoHoraFinal != null &&
+                ultimoHoraFinal.isNotEmpty;
 
-            if (!actualizado) {
-              throw Exception('No se pudo actualizar la hora final');
+            String horaReservaInicio;
+            if (tieneHoraFinal) {
+              // Ya tiene hora_final del operador o del flujo de creación
+              final ultFinMin = _parseHorario(ultimoHoraFinal);
+              final horFinMin = _parseHorario(horarioFin);
+              if (ultFinMin != null && horFinMin != null &&
+                  ultFinMin >= horFinMin) {
+                // El último registro ya cubre toda la jornada → cerrar sin RESERVA
+                await DatabaseHelper().cerrarOperacion(
+                  operacionActual!['id'],
+                  tableName: _tableName,
+                );
+                if (mounted) Navigator.pop(parentContext);
+                _mostrarSnackBar(
+                  'Registro cerrado exitosamente.',
+                  Colors.green,
+                );
+                await _fetchOperacionData();
+                return;
+              }
+              // No cubre toda la jornada → RESERVA desde su hora_final
+              horaReservaInicio = ultimoHoraFinal;
+            } else {
+              // Sin hora_final → auto-asignar corte y crear RESERVA
+              horaReservaInicio = horaCorte;
+              final actualizado = await _updateHoraFinalDispatch(
+                operacionActual!['id'],
+                ultimoEstado['id'],
+                horaReservaInicio,
+              );
+              if (!actualizado) {
+                throw Exception('No se pudo actualizar la hora final');
+              }
             }
 
             List<Map<String, dynamic>> todosLosEstados = await DatabaseHelper()
@@ -2066,15 +2116,11 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
                 ? (todosLosEstados.last['numero'] as int) + 1
                 : 1;
 
-            String horaReservaFinal = (selectedTurno == 'DÍA')
-                ? '19:00'
-                : '07:00';
-
             await DatabaseHelper().createReservaEstado(
               operacionActual!['id'],
               newNumber,
               horaReservaInicio,
-              horaReservaFinal,
+              horarioFin,
               tableName: _tableName,
             );
 

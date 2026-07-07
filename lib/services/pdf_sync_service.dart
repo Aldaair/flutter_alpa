@@ -53,12 +53,12 @@ class PdfSyncService {
 
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}${ApiConfig.pdfDownloadAllEndpoint}',
-    ).replace(queryParameters: {
-      if (categoria != null) 'categoria': categoria,
-    });
+    ).replace(queryParameters: {'categoria': ?categoria});
 
     print('📡 PDF sync URL: $uri');
-    print('🔑 Token: ${token.length > 10 ? "${token.substring(0, 10)}..." : "invalido"}');
+    print(
+      '🔑 Token: ${token.length > 10 ? "${token.substring(0, 10)}..." : "invalido"}',
+    );
 
     final response = await http.get(
       uri,
@@ -66,7 +66,9 @@ class PdfSyncService {
     );
 
     print('📥 PDF sync status: ${response.statusCode}');
-    print('📥 PDF sync body: ${response.body.length > 200 ? "${response.body.substring(0, 200)}..." : response.body}');
+    print(
+      '📥 PDF sync body: ${response.body.length > 200 ? "${response.body.substring(0, 200)}..." : response.body}',
+    );
 
     if (response.statusCode == 401) {
       throw Exception(
@@ -82,6 +84,11 @@ class PdfSyncService {
     final archive = ZipDecoder().decodeBytes(bytes);
 
     final rootPath = await _pdfRootPath;
+    final rootDir = Directory(rootPath);
+    if (await rootDir.exists()) {
+      await rootDir.delete(recursive: true);
+    }
+    await rootDir.create();
 
     for (final entry in archive) {
       if (entry.isFile) {

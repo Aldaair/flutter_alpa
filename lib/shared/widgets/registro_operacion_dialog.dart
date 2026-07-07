@@ -163,7 +163,9 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
     final fin = _parseHorario(turnoCatalogo?.horarioFin);
     if (inicio != null && fin != null) {
       final List<String> times = [];
-      final adjustedFin = fin > inicio ? fin : fin + (24 * 60);
+      // Restricción temporal: solo hasta 1.5h antes del horario_fin
+      final corte = fin - 90;
+      final adjustedFin = corte > inicio ? corte : corte + (24 * 60);
       for (int current = inicio; current <= adjustedFin; current += 5) {
         times.add(_formatMinutes(current));
       }
@@ -283,10 +285,12 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
       if (inicio != null && fin != null) {
         final timeMinutes = _parseHorario(time);
         if (timeMinutes == null) return false;
+        // Restricción temporal: solo hasta 1.5h antes del horario_fin
+        final corte = fin - 90;
         if (inicio <= fin) {
-          return timeMinutes >= inicio && timeMinutes <= fin;
+          return timeMinutes >= inicio && timeMinutes <= corte;
         }
-        return timeMinutes >= inicio || timeMinutes <= fin;
+        return timeMinutes >= inicio || timeMinutes <= corte;
       }
 
       final hour = int.parse(time.split(':')[0]);
