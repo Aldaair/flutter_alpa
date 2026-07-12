@@ -94,6 +94,9 @@ class _DialogoFormularioPerforacionState
 
     try {
       final dbHelper = DatabaseHelper();
+      print('Cargando datos de scoop desde la base de datos...');
+      print(widget.procesoId);
+
       final results = await Future.wait([
         dbHelper.getLabores(),
         dbHelper.getDestinosByProcesoId(widget.procesoId),
@@ -142,8 +145,6 @@ class _DialogoFormularioPerforacionState
     observacionesController.text =
         widget.datosIniciales!['observaciones']?.toString() ?? '';
   }
-
-
 
   void _rebuildManualFrontMap() {
     _manualFrontMap.clear();
@@ -313,8 +314,7 @@ class _DialogoFormularioPerforacionState
 
   Widget _buildSeccionLabor() {
     final selected = _resolveManualFrontSelection() ?? selectedManualFront;
-    final options =
-        _manualFrontMap.keys.toList()..sort();
+    final options = _manualFrontMap.keys.toList()..sort();
 
     return Container(
       padding: const EdgeInsets.all(12),

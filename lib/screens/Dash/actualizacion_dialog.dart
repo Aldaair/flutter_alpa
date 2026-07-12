@@ -22,7 +22,6 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Plan TL',
       'Plan TH',
       'Plan CARGUIO y ACARREO',
-      'Toneladas',
     ],
     'Sistema': [
       'Estados',

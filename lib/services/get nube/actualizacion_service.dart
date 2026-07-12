@@ -94,14 +94,34 @@ class ActualizacionService {
     _mostrarDialogoProgreso('Iniciando actualización...');
 
     try {
-      int total = opcionesSeleccionadas.values.where((v) => v).length;
+      final opcionesPendientes = opcionesSeleccionadas.entries
+          .where((entry) => entry.value)
+          .map((entry) => entry.key)
+          .toList();
+      final opcionesNoSoportadas = opcionesPendientes
+          .where((opcion) => !_requests.containsKey(opcion))
+          .toList();
+      final opcionesAEjecutar = opcionesPendientes
+          .where((opcion) => _requests.containsKey(opcion))
+          .toList();
+
+      final total = opcionesAEjecutar.length;
       int completadas = 0;
       bool huboError = false;
       List<String> errores = [];
 
+      if (opcionesNoSoportadas.isNotEmpty) {
+        huboError = true;
+        errores.addAll(
+          opcionesNoSoportadas.map(
+            (opcion) => '$opcion: no tiene una actualización configurada',
+          ),
+        );
+      }
+
       // Ejecutar cada opción seleccionada
       for (var entry in _requests.entries) {
-        if (opcionesSeleccionadas[entry.key] == true) {
+        if (opcionesAEjecutar.contains(entry.key)) {
           // Actualizar mensaje de progreso
           _actualizarDialogoProgreso(
             'Actualizando ${entry.key}...',
