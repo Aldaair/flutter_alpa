@@ -4,8 +4,8 @@ import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/DimLabor.dart';
 
 class _LaborOption {
-  final int laborId;
-  final int alaId;
+  final int? laborId;
+  final int? alaId;
   final String laborNombre;
   final String tipoLabor;
   final String nivel;
@@ -30,7 +30,13 @@ class _LaborOption {
     this.estructuraMineral = '',
   });
 
-  String get displayLabel => '$tipoLabor - $laborNombre - $ala';
+  String get displayLabel {
+    final base = '$tipoLabor - $laborNombre';
+    if (ala.trim().isEmpty) {
+      return base;
+    }
+    return '$base - $ala';
+  }
 
   String get searchText =>
       '$laborNombre $nivel $tipoLabor $ala $mina $zona $area $fase $estructuraMineral';
@@ -61,6 +67,8 @@ class DialogoFormularioEmpernador extends StatefulWidget {
 
 class _DialogoFormularioEmpernadorState
     extends State<DialogoFormularioEmpernador> {
+  static const String _sinLaborLabel = 'SIN LABOR';
+
   bool isEditable = false;
   bool isLoading = false;
 
@@ -89,6 +97,7 @@ class _DialogoFormularioEmpernadorState
   List<String> opcionesLabor = [];
   final Map<String, _LaborOption> _laborOptionMap = {};
   _LaborOption? _selectedOption;
+  String? _selectedLaborLabel;
 
   String? sistematicoPuntualSeleccionado;
 
@@ -118,11 +127,20 @@ class _DialogoFormularioEmpernadorState
       final labores = results[2] as List<DimLabor>;
 
       final opciones = <_LaborOption>[];
+      opciones.add(
+        const _LaborOption(
+          laborId: null,
+          alaId: null,
+          laborNombre: '',
+          tipoLabor: '',
+          nivel: '',
+        ),
+      );
       for (final labor in labores) {
         opciones.add(
           _LaborOption(
             laborId: labor.laborId,
-            alaId: labor.alaId ?? 0,
+            alaId: labor.alaId,
             laborNombre: labor.nombreLabor,
             tipoLabor: labor.tipoLaborNombre,
             nivel: labor.nivelNombre,
@@ -140,6 +158,8 @@ class _DialogoFormularioEmpernadorState
 
       if (!mounted) return;
       setState(() {
+        opcionesLabor = [];
+        _laborOptionMap.clear();
         pernosCompletos = pernos;
         tiposPerno =
             pernos
@@ -158,8 +178,9 @@ class _DialogoFormularioEmpernadorState
               ..sort();
 
         for (final opt in opciones) {
-          opcionesLabor.add(opt.displayLabel);
-          _laborOptionMap[opt.displayLabel] = opt;
+          final label = opt.laborId == null ? _sinLaborLabel : opt.displayLabel;
+          opcionesLabor.add(label);
+          _laborOptionMap[label] = opt;
         }
       });
 
@@ -201,6 +222,19 @@ class _DialogoFormularioEmpernadorState
       tipoLaborSeleccionado = option.tipoLabor;
       nivelSeleccionado = option.nivel;
       alaSeleccionado = option.ala;
+      _selectedLaborLabel = option.laborId == null ? _sinLaborLabel : option.displayLabel;
+    });
+  }
+
+  void _clearLaborSelection() {
+    setState(() {
+      _selectedOption = null;
+      _selectedLaborLabel = null;
+      laborSeleccionada = null;
+      laborIdSeleccionado = null;
+      tipoLaborSeleccionado = null;
+      nivelSeleccionado = null;
+      alaSeleccionado = null;
     });
   }
 
@@ -227,6 +261,14 @@ class _DialogoFormularioEmpernadorState
     laborIdSeleccionado = widget.datosIniciales!['labor_id'] as int?;
     laborSeleccionada = widget.datosIniciales!['labor']?.toString();
     alaSeleccionado = widget.datosIniciales!['ala']?.toString();
+    tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor']?.toString();
+    nivelSeleccionado = widget.datosIniciales!['nivel']?.toString();
+
+    if (widget.datosIniciales!.containsKey('labor_id') &&
+        widget.datosIniciales!['labor_id'] == null &&
+        (widget.datosIniciales!['labor']?.toString().isEmpty ?? true)) {
+      _selectedLaborLabel = _sinLaborLabel;
+    }
 
     tipoPernoSeleccionado = widget.datosIniciales!['tipo_pernos'];
     longitudPernoSeleccionada = widget.datosIniciales!['log_pernos'];
@@ -241,12 +283,23 @@ class _DialogoFormularioEmpernadorState
   }
 
   Future<void> _guardarDatos() async {
+    if (_selectedLaborLabel == null || !_laborOptionMap.containsKey(_selectedLaborLabel)) {
+      _mostrarSnackbar(
+        'Debe seleccionar un frente de trabajo válido',
+        Colors.orange,
+      );
+      return;
+    }
+
+    final selectedOption = _laborOptionMap[_selectedLaborLabel!];
+
     Map<String, dynamic> datosFormulario = {
-      'labor_id': laborIdSeleccionado,
-      'labor': laborSeleccionada ?? '',
-      'tipo_labor': tipoLaborSeleccionado ?? '',
-      'ala': alaSeleccionado ?? '',
-      'nivel': nivelSeleccionado ?? '',
+      'labor_id': selectedOption?.laborId,
+      'labor': selectedOption?.laborNombre ?? '',
+      'tipo_labor': selectedOption?.tipoLabor ?? '',
+      'ala': selectedOption?.ala ?? '',
+      'ala_id': selectedOption?.alaId,
+      'nivel': selectedOption?.nivel ?? '',
       'tipo_pernos': tipoPernoSeleccionado ?? '',
       'log_pernos': longitudPernoSeleccionada ?? '',
       'n_pernos_instalados': nPernosInstaladosController.text,
@@ -325,7 +378,9 @@ class _DialogoFormularioEmpernadorState
 
   Widget _buildSeccionLabor() {
     final selected = _selectedOption;
-    final selectedLabel = _buildSelectionLabel();
+    final selectedDetails = selected?.laborId != null ? selected : null;
+    final selectedLabel = _selectedLaborLabel ?? _buildSelectionLabel();
+    final isSinLaborSelected = selectedLabel == _sinLaborLabel;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -364,7 +419,11 @@ class _DialogoFormularioEmpernadorState
             hintText: 'Buscar por tipo labor, labor o ala...',
             options: opcionesLabor,
             selectedValue: selectedLabel,
-            onChanged: (_) {},
+            onChanged: (value) {
+              if (value != (_selectedLaborLabel ?? _buildSelectionLabel())) {
+                _clearLaborSelection();
+              }
+            },
             onSelected: (value) {
               final option = _laborOptionMap[value];
               if (option != null) {
@@ -380,17 +439,23 @@ class _DialogoFormularioEmpernadorState
                 style: TextStyle(fontSize: 12, color: Colors.red.shade400),
               ),
             ),
-          if (selected != null) ...[
+          if (selectedDetails != null) ...[
             const SizedBox(height: 8),
             Text(
-              '${selected.mina} / ${selected.zona} / '
-              '${selected.area} / ${selected.fase}',
+              '${selectedDetails.mina} / ${selectedDetails.zona} / '
+              '${selectedDetails.area} / ${selectedDetails.fase}',
               style: const TextStyle(fontSize: 12),
             ),
             Text(
-              '${selected.estructuraMineral} / ${selected.nivel} / '
-              '${selected.tipoLabor}',
+              '${selectedDetails.estructuraMineral} / ${selectedDetails.nivel} / '
+              '${selectedDetails.tipoLabor}',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ] else if (isSinLaborSelected) ...[
+            const SizedBox(height: 8),
+            const Text(
+              _sinLaborLabel,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
         ],
@@ -401,11 +466,14 @@ class _DialogoFormularioEmpernadorState
   String? _buildSelectionLabel() {
     final tipoLabor = tipoLaborSeleccionado?.trim();
     final labor = laborSeleccionada?.trim();
-    final ala = alaSeleccionado?.trim();
     if (tipoLabor == null || tipoLabor.isEmpty) return null;
     if (labor == null || labor.isEmpty) return null;
-    if (ala == null || ala.isEmpty) return null;
-    return '$tipoLabor - $labor - $ala';
+    final base = '$tipoLabor - $labor';
+    final ala = alaSeleccionado?.trim() ?? '';
+    if (ala.isEmpty) {
+      return base;
+    }
+    return '$base - $ala';
   }
 
   Widget _buildSearchableAutocompleteField({

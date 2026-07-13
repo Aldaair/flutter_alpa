@@ -279,15 +279,21 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
   Future<void> _loadMasterOperators() async {
     final dbHelper = DatabaseHelper();
     final operators = await dbHelper.getKnownOperators();
-    final currentOperatorId = await _resolveCurrentOperatorId(dbHelper);
 
     if (!mounted) return;
 
     setState(() {
       masterOperators = operators;
-      selectedOperatorId =
-          currentOperatorId ??
-          (operators.isNotEmpty ? operators.first['id'] as int? : null);
+      selectedOperatorId = null;
+    });
+  }
+
+  void _clearOperacionState() {
+    setState(() {
+      operaciones = [];
+      operacionActual = null;
+      operacionId = null;
+      operacionesTabla = [];
     });
   }
 
@@ -899,6 +905,11 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       return;
     }
 
+    if (_isMaster && selectedOperatorId == null) {
+      _clearOperacionState();
+      return;
+    }
+
     final turnoId = _resolverTurnoId(selectedTurno);
     if (turnoId == null) {
       print("No se pudo resolver turno_id para $selectedTurno");
@@ -909,15 +920,11 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     List<Map<String, dynamic>> data;
 
     if (_isMaster) {
-      if (selectedOperatorId != null) {
-        data = await _fetchOperacionesDb(
-          turnoId,
-          fechaActual,
-          operadorId: selectedOperatorId,
-        );
-      } else {
-        data = await _fetchOperacionesDb(turnoId, fechaActual);
-      }
+      data = await _fetchOperacionesDb(
+        turnoId,
+        fechaActual,
+        operadorId: selectedOperatorId,
+      );
     } else {
       final operadorId = await _resolveCurrentOperatorId(dbHelper);
       data = await _fetchOperacionesDb(

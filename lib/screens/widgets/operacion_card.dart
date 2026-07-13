@@ -1154,6 +1154,11 @@ class _OperacionCardState extends State<OperacionCard> {
       return;
     }
 
+    if (widget.canSelectOperators && widget.selectedOperatorId == null) {
+      _showSnackbar('Seleccione un operador antes de crear la operación', Colors.orange);
+      return;
+    }
+
     if (widget.config.mostrarModelo && selectedModelo == null) {
       _showSnackbar('Seleccione el modelo', Colors.orange);
       return;
@@ -1205,11 +1210,15 @@ class _OperacionCardState extends State<OperacionCard> {
       tiposJsonString = jsonEncode(tiposMap);
     }
 
+    final targetOperatorId = widget.canSelectOperators
+        ? widget.selectedOperatorId
+        : operadorId;
+
     Map<String, dynamic> data = {
       'equipo_id': equipoId,
       'turno_id': turnoId,
       'actor_operador_id': operadorId,
-      'operador_id': widget.selectedOperatorId ?? operadorId,
+      'operador_id': targetOperatorId,
       'registrador_id': registradorUsuarioId,
       'jefe_guardia_id': jefeGuardiaId,
       'fecha': widget.fechaActual,

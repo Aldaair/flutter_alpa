@@ -43,8 +43,8 @@ class _DumperFrontOption {
     required this.nivel,
   });
 
-  final int laborId;
-  final int alaId;
+  final int? laborId;
+  final int? alaId;
   final String tipoLabor;
   final String labor;
   final String ala;
@@ -58,6 +58,8 @@ class _DumperFrontOption {
 
 class _DialogoFormularioPerforacionState
     extends State<DialogoFormularioPerforacion> {
+  static const String _sinLaborLabel = 'SIN LABOR';
+
   bool isEditable = false;
   bool isLoading = true;
   bool isSmallScreen = false;
@@ -78,6 +80,7 @@ class _DialogoFormularioPerforacionState
 
   final Map<String, _DumperFrontOption> _frontOptionMap = {};
   _DumperFrontOption? selectedFrontOption;
+  String? selectedFrontLabel;
 
   List<Map<String, dynamic>> destinosDisponibles = [];
   List<String> opcionesDestino = [];
@@ -131,6 +134,11 @@ class _DialogoFormularioPerforacionState
     tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor']?.toString();
     alaSeleccionado = widget.datosIniciales!['ala']?.toString();
     nivelSeleccionado = widget.datosIniciales!['nivel']?.toString();
+    if (widget.datosIniciales!.containsKey('labor_id') &&
+        widget.datosIniciales!['labor_id'] == null &&
+        (widget.datosIniciales!['labor']?.toString().isEmpty ?? true)) {
+      selectedFrontLabel = _sinLaborLabel;
+    }
     ubicacionDestinoSeleccionado =
         widget.datosIniciales!['ubicacion_destino']?.toString();
     ubicacionDestinoId = widget.datosIniciales!['ubicacion_destino_id'] as int?;
@@ -141,11 +149,23 @@ class _DialogoFormularioPerforacionState
 
   void _rebuildFrontOptions() {
     _frontOptionMap.clear();
+    _frontOptionMap[_sinLaborLabel] = const _DumperFrontOption(
+      laborId: null,
+      alaId: null,
+      tipoLabor: '',
+      labor: '',
+      ala: '',
+      mina: '',
+      zona: '',
+      area: '',
+      fase: '',
+      estructuraMineral: '',
+      nivel: '',
+    );
 
     void registerOption(_DumperFrontOption option) {
       if (option.tipoLabor.trim().isEmpty ||
-          option.labor.trim().isEmpty ||
-          option.ala.trim().isEmpty) {
+          option.labor.trim().isEmpty) {
         return;
       }
       final label = _buildSelectionLabel(option.tipoLabor, option.labor, option.ala);
@@ -155,7 +175,7 @@ class _DialogoFormularioPerforacionState
     for (final labor in laboresCatalogo) {
       registerOption(_DumperFrontOption(
         laborId: labor.laborId,
-        alaId: labor.alaId ?? 0,
+        alaId: labor.alaId,
         tipoLabor: labor.tipoLaborNombre,
         labor: labor.nombreLabor,
         ala: labor.alaNombre,
@@ -170,7 +190,7 @@ class _DialogoFormularioPerforacionState
   }
 
   void _preseleccionarInicio() {
-    final label = _buildSelectionLabelFromState();
+    final label = selectedFrontLabel ?? _buildSelectionLabelFromState();
     if (label == null) return;
     final option = _frontOptionMap[label];
     if (option != null) {
@@ -178,24 +198,39 @@ class _DialogoFormularioPerforacionState
     }
   }
 
-  String _buildSelectionLabel(String tipoLabor, String labor, String ala) {
-    return '${tipoLabor.trim()} - ${labor.trim()} - ${ala.trim()}';
+  String _buildSelectionLabel(String tipoLabor, String labor, [String? ala]) {
+    final base = '${tipoLabor.trim()} - ${labor.trim()}';
+    final normalizedAla = ala?.trim() ?? '';
+    if (normalizedAla.isEmpty) {
+      return base;
+    }
+    return '$base - $normalizedAla';
   }
 
   String? _buildSelectionLabelFromState() {
     final tipoLabor = tipoLaborSeleccionado?.trim();
     final labor = laborInicioSeleccionado?.trim();
-    final ala = alaSeleccionado?.trim();
     if (tipoLabor == null || tipoLabor.isEmpty) return null;
     if (labor == null || labor.isEmpty) return null;
-    if (ala == null || ala.isEmpty) return null;
-    return _buildSelectionLabel(tipoLabor, labor, ala);
+    return _buildSelectionLabel(tipoLabor, labor, alaSeleccionado);
   }
 
   _DumperFrontOption? _resolveSelectedFront() {
-    final label = _buildSelectionLabelFromState();
+    final label = selectedFrontLabel ?? _buildSelectionLabelFromState();
     if (label == null) return null;
     return _frontOptionMap[label];
+  }
+
+  void _clearFrontSelection() {
+    setState(() {
+      selectedFrontOption = null;
+      selectedFrontLabel = null;
+      tipoLaborSeleccionado = null;
+      laborInicioSeleccionado = null;
+      alaSeleccionado = null;
+      nivelSeleccionado = null;
+      laborInicioId = null;
+    });
   }
 
   void _aplicarFrontOption(_DumperFrontOption option) {
@@ -206,6 +241,9 @@ class _DialogoFormularioPerforacionState
       nivelSeleccionado = option.nivel;
       laborInicioId = option.laborId;
       selectedFrontOption = option;
+      selectedFrontLabel = option.laborId == null
+          ? _sinLaborLabel
+          : _buildSelectionLabel(option.tipoLabor, option.labor, option.ala);
     });
   }
 
@@ -221,6 +259,7 @@ class _DialogoFormularioPerforacionState
       'labor': selected.labor,
       'tipo_labor': selected.tipoLabor,
       'ala': selected.ala,
+      'ala_id': selected.alaId,
       'nivel': selected.nivel,
       'ubicacion_destino_id': ubicacionDestinoId ?? 0,
       'ubicacion_destino': ubicacionDestinoSeleccionado ?? '',
@@ -301,6 +340,8 @@ class _DialogoFormularioPerforacionState
 
   Widget _buildSeccionUbicacionInicio() {
     final selected = _resolveSelectedFront() ?? selectedFrontOption;
+    final selectedDetails = selected?.laborId != null ? selected : null;
+    final isSinLaborSelected = selectedFrontLabel == _sinLaborLabel;
     final options =
         _frontOptionMap.keys.toList()..sort();
 
@@ -344,8 +385,12 @@ class _DialogoFormularioPerforacionState
             label: 'Frente de Trabajo',
             hintText: 'Buscar por tipo labor, labor o ala...',
             options: options,
-            selectedValue: _buildSelectionLabelFromState(),
-            onChanged: (_) {},
+            selectedValue: selectedFrontLabel ?? _buildSelectionLabelFromState(),
+            onChanged: (value) {
+              if (value != (selectedFrontLabel ?? _buildSelectionLabelFromState())) {
+                _clearFrontSelection();
+              }
+            },
             onSelected: (value) {
               final option = _frontOptionMap[value];
               if (option != null) {
@@ -361,15 +406,21 @@ class _DialogoFormularioPerforacionState
                 style: TextStyle(fontSize: 11, color: Colors.red.shade400),
               ),
             ),
-          if (selected != null) ...[
+          if (selectedDetails != null) ...[
             const SizedBox(height: 8),
             Text(
-              '${selected.mina} / ${selected.zona} / ${selected.area} / ${selected.fase}',
+              '${selectedDetails.mina} / ${selectedDetails.zona} / ${selectedDetails.area} / ${selectedDetails.fase}',
               style: const TextStyle(fontSize: 12),
             ),
             Text(
-              '${selected.estructuraMineral} / ${selected.nivel} / ${selected.tipoLabor} / ${selected.labor}${selected.ala.isNotEmpty ? ' / Ala ${selected.ala}' : ''}',
+              '${selectedDetails.estructuraMineral} / ${selectedDetails.nivel} / ${selectedDetails.tipoLabor} / ${selectedDetails.labor}${selectedDetails.ala.isNotEmpty ? ' / Ala ${selectedDetails.ala}' : ''}',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ] else if (isSinLaborSelected) ...[
+            const SizedBox(height: 8),
+            const Text(
+              _sinLaborLabel,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
         ],
