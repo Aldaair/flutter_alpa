@@ -3082,63 +3082,6 @@ CREATE TABLE $tableName (
     return DimPeriodo.fromJson(maps.first);
   }
 
-  Future<List<DimMina>> getMinas() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query('minas', orderBy: 'nombre ASC');
-    return List.generate(maps.length, (i) => DimMina.fromJson(maps[i]));
-  }
-
-  Future<List<DimZona>> getDimZonas() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query('zona', orderBy: 'nombre ASC');
-    return List.generate(maps.length, (i) => DimZona.fromJson(maps[i]));
-  }
-
-  Future<List<DimArea>> getAreas() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query('area', orderBy: 'nombre ASC');
-    return List.generate(maps.length, (i) => DimArea.fromJson(maps[i]));
-  }
-
-  Future<List<DimFase>> getFases() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query('fase', orderBy: 'nombre ASC');
-    return List.generate(maps.length, (i) => DimFase.fromJson(maps[i]));
-  }
-
-  Future<List<DimTipoLabor>> getTiposLabor() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query('tipo_labor', orderBy: 'nombre ASC');
-    return List.generate(maps.length, (i) => DimTipoLabor.fromJson(maps[i]));
-  }
-
-  Future<List<DimEstructuraMineral>> getEstructurasMinerales() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query('estructura_mineral', orderBy: 'nombre ASC');
-    return List.generate(
-      maps.length,
-      (i) => DimEstructuraMineral.fromJson(maps[i]),
-    );
-  }
-
-  Future<List<DimNivel>> getNiveles() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query('nivel', orderBy: 'nombre ASC');
-    return List.generate(maps.length, (i) => DimNivel.fromJson(maps[i]));
-  }
-
-  Future<List<DimAla>> getAlas() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query('ala', orderBy: 'orden ASC, nombre ASC');
-    return List.generate(maps.length, (i) => DimAla.fromJson(maps[i]));
-  }
-
-  Future<List<DimLabor>> getLabores() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query('labores', orderBy: 'nombre_labor ASC');
-    return List.generate(maps.length, (i) => DimLabor.fromJson(maps[i]));
-  }
-
   Future<List<DimTurno>> getDimTurnos() async {
     final db = await sharedCatalogDatabase;
     final maps = await db.query('dim_turno', orderBy: 'nombre ASC');
@@ -3239,18 +3182,6 @@ CREATE TABLE $tableName (
       where: 'proceso = ?',
       whereArgs: [proceso],
     );
-  }
-
-  Future<List<Map<String, dynamic>>> getPernos() async {
-    final db = await sharedCatalogDatabase;
-
-    return await db.query('pernos');
-  }
-
-  Future<List<Map<String, dynamic>>> getMallas() async {
-    final db = await sharedCatalogDatabase;
-
-    return await db.query('mallas');
   }
 
   //OPERACION TALADRO LARGO  INICIO --------------------------------------------------------------------------------------------------------------
