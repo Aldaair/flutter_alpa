@@ -2,15 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:i_miner/models/Accesorio.dart';
 import 'package:i_miner/models/DimPeriodo.dart';
-import 'package:i_miner/models/DimMina.dart';
-import 'package:i_miner/models/DimZona.dart';
-import 'package:i_miner/models/DimArea.dart';
-import 'package:i_miner/models/DimFase.dart';
-import 'package:i_miner/models/DimTipoLabor.dart';
-import 'package:i_miner/models/DimEstructuraMineral.dart';
-import 'package:i_miner/models/DimNivel.dart';
-import 'package:i_miner/models/DimAla.dart';
-import 'package:i_miner/models/DimLabor.dart';
 import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
 import 'package:i_miner/models/plan_metraje_tl.dart';
@@ -41,9 +32,10 @@ class DatabaseHelper {
   static bool _isInitialized = false;
   static const int _currentDbVersion = 32;
 
-  final OperationRepository _operationRepo = OperationRepository(databaseHelper: this);
+  late final OperationRepository _operationRepo;
 
   DatabaseHelper._internal() {
+    _operationRepo = OperationRepository(databaseHelper: this);
     // Inicialización única para evitar múltiples llamadas
     if (!_isInitialized) {
       _initializeDatabaseFactory();
@@ -1548,7 +1540,6 @@ CREATE TABLE origen_destino(
       idnube INTEGER
     )
   ''');
-
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -2573,21 +2564,6 @@ CREATE TABLE $tableName (
     return updateData;
   }
 
-  Future<List<Map<String, dynamic>>> _getNormalizedOperationRows(
-    String tableName, {
-    String? where,
-    List<dynamic>? whereArgs,
-  }) async {
-    final db = await database;
-    final rows = await db.query(
-      tableName,
-      where: where,
-      whereArgs: whereArgs,
-      orderBy: 'id DESC',
-    );
-    return _normalizeOperationRows(rows);
-  }
-
   static const _sharedTables = {
     'Equipo',
     'tipo_horometro',
@@ -2829,9 +2805,7 @@ CREATE TABLE $tableName (
     return List.generate(maps.length, (i) => Equipo.fromJson(maps[i]));
   }
 
-  Future<Map<String, dynamic>?> getEquipoUltimosHorometros(
-    int equipoId,
-  ) async {
+  Future<Map<String, dynamic>?> getEquipoUltimosHorometros(int equipoId) async {
     final db = await sharedCatalogDatabase;
     final maps = await db.query(
       'Equipo',
@@ -3569,11 +3543,12 @@ CREATE TABLE $tableName (
     int estadoId, {
     String tableName = 'Operacion_tal_largo',
   }) async {
-    return _operationRepo.getOperacionByEstadoId(
-      operacionId,
-      estadoId,
-      tableName: tableName,
-    ) ?? <String, dynamic>{};
+    return (await _operationRepo.getOperacionByEstadoId(
+              operacionId,
+              estadoId,
+              tableName: tableName,
+            )) ??
+            <String, dynamic>{};
   }
 
   // Actualizar los datos de perforación de un estado específico
@@ -3595,10 +3570,7 @@ CREATE TABLE $tableName (
     int operacionId, {
     String tableName = 'Operacion_tal_largo',
   }) async {
-    return _operationRepo.cerrarOperacion(
-      operacionId,
-      tableName: tableName,
-    );
+    return _operationRepo.cerrarOperacion(operacionId, tableName: tableName);
   }
 
   Future<Map<String, dynamic>?> createReservaEstado(
@@ -5356,11 +5328,7 @@ CREATE TABLE $tableName (
 
     /// 🔥 estructura base
     Map<String, dynamic> horometrosJson = {
-      'horometro_principal': {
-        'inicio': 0,
-        'final': 0,
-        'op': true,
-      },
+      'horometro_principal': {'inicio': 0, 'final': 0, 'op': true},
       'electrico': {'inicio': 0, 'final': 0, 'op': true},
       'diesel': {'inicio': 0, 'final': 0, 'op': true},
     };
@@ -5544,237 +5512,6 @@ CREATE TABLE $tableName (
       operacionId,
       horometros,
       tableName: 'Operacion_anfochanger',
-    );
-  }
-
-  //ENVIOS A LA NUBE---------------------------------------------------------------------
-  //TAL-LARGO
-  Future<int> actualizarEnvio(int id) async {
-    final db = await database;
-    return await db.update(
-      'Operacion_tal_largo',
-      {'enviado': 1},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> actualizarIdNubeOpseracion(int idOperacion, int idNube) async {
-    final db = await database;
-    return await db.update(
-      'Operacion_tal_largo',
-      {'idNube': idNube},
-      where: 'id = ?',
-      whereArgs: [idOperacion],
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getOperacionesTaladroLargo() async {
-    return _getNormalizedOperationRows('Operacion_tal_largo');
-  }
-
-  Future<List<Map<String, dynamic>>> getOperacionesNoEnviadasLargo() async {
-    return _getNormalizedOperationRows(
-      'Operacion_tal_largo',
-      where: 'enviado = ? AND cerrado = ?',
-      whereArgs: [0, 1],
-    );
-  }
-
-  //TAL-HORIZONTAL
-  Future<List<Map<String, dynamic>>> getOperacionesTaladroHorizontal() async {
-    return _getNormalizedOperationRows('Operacion_tal_horizontal');
-  }
-
-  Future<List<Map<String, dynamic>>>
-  getOperacionesTaladroHorizontalNoEnviadas() async {
-    return _getNormalizedOperationRows(
-      'Operacion_tal_horizontal',
-      where: 'enviado = ? AND cerrado = ?',
-      whereArgs: [0, 1],
-    );
-  }
-
-  Future<int> actualizarEnvioHorizontal(int id) async {
-    final db = await database;
-
-    return await db.update(
-      'Operacion_tal_horizontal',
-      {'enviado': 1},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  //EMPERNADOR
-  Future<List<Map<String, dynamic>>> getOperacionesTaladroEmpernador() async {
-    return _getNormalizedOperationRows('Operacion_empernador');
-  }
-
-  Future<List<Map<String, dynamic>>>
-  getOperacionesEmpernadorNoEnviadas() async {
-    return _getNormalizedOperationRows(
-      'Operacion_empernador',
-      where: 'enviado = ? AND cerrado = ?',
-      whereArgs: [0, 1],
-    );
-  }
-
-  Future<int> actualizarEnvioEmpernador(int id) async {
-    final db = await database;
-
-    return await db.update(
-      'Operacion_empernador',
-      {'enviado': 1},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  //CARGUIO
-  Future<List<Map<String, dynamic>>> getOperacionesTaladroCarguio() async {
-    return _getNormalizedOperationRows('Operacion_carguio');
-  }
-
-  Future<List<Map<String, dynamic>>> getOperacionesCarguioNoEnviadas() async {
-    return _getNormalizedOperationRows(
-      'Operacion_carguio',
-      where: 'enviado = ? AND cerrado = ?',
-      whereArgs: [0, 1],
-    );
-  }
-
-  Future<int> actualizarEnvioCarguio(int id) async {
-    final db = await database;
-
-    return await db.update(
-      'Operacion_carguio',
-      {'enviado': 1},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  //Dumper-------------------------------------------------
-
-  Future<List<Map<String, dynamic>>> getOperacionesTaladroDumper() async {
-    return _getNormalizedOperationRows('Operacion_Dumper');
-  }
-
-  Future<List<Map<String, dynamic>>> getOperacionesDumperNoEnviadas() async {
-    return _getNormalizedOperationRows(
-      'Operacion_Dumper',
-      where: 'enviado = ? AND cerrado = ?',
-      whereArgs: [0, 1],
-    );
-  }
-
-  Future<int> actualizarEnvioDumper(int id) async {
-    final db = await database;
-
-    return await db.update(
-      'Operacion_Dumper',
-      {'enviado': 1},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  //ROMPE BANCOS
-  Future<List<Map<String, dynamic>>> getOperacionesTaladroRompeBaco() async {
-    return _getNormalizedOperationRows('Operacion_rompebanco');
-  }
-
-  Future<List<Map<String, dynamic>>>
-  getOperacionesRompeBancosNoEnviadas() async {
-    return _getNormalizedOperationRows(
-      'Operacion_rompebanco',
-      where: 'enviado = ? AND cerrado = ?',
-      whereArgs: [0, 1],
-    );
-  }
-
-  Future<int> actualizarEnvioRompeBancos(int id) async {
-    final db = await database;
-
-    return await db.update(
-      'Operacion_rompebanco',
-      {'enviado': 1},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  //SCALAMIN
-  Future<List<Map<String, dynamic>>> getOperacionesTaladroScalamin() async {
-    return _getNormalizedOperationRows('Operacion_Scalamin');
-  }
-
-  Future<List<Map<String, dynamic>>> getOperacionesScalaminNoEnviadas() async {
-    return _getNormalizedOperationRows(
-      'Operacion_Scalamin',
-      where: 'enviado = ? AND cerrado = ?',
-      whereArgs: [0, 1],
-    );
-  }
-
-  Future<int> actualizarEnvioScalamin(int id) async {
-    final db = await database;
-
-    return await db.update(
-      'Operacion_Scalamin',
-      {'enviado': 1},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  //ANFOCHANGER
-  Future<List<Map<String, dynamic>>> getOperacionesTaladroAnfoChanger() async {
-    return _getNormalizedOperationRows('Operacion_anfochanger');
-  }
-
-  Future<List<Map<String, dynamic>>>
-  getOperacionesAnfoChangerNoEnviadas() async {
-    return _getNormalizedOperationRows(
-      'Operacion_anfochanger',
-      where: 'enviado = ? AND cerrado = ?',
-      whereArgs: [0, 1],
-    );
-  }
-
-  Future<int> actualizarEnvioRAnfoChanger(int id) async {
-    final db = await database;
-
-    return await db.update(
-      'Operacion_anfochanger',
-      {'enviado': 1},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  //scissor
-  Future<List<Map<String, dynamic>>> getOperacionesTaladroscissor() async {
-    return _getNormalizedOperationRows('Operacion_scissor');
-  }
-
-  Future<List<Map<String, dynamic>>> getOperacionesScissorNoEnviadas() async {
-    return _getNormalizedOperationRows(
-      'Operacion_scissor',
-      where: 'enviado = ? AND cerrado = ?',
-      whereArgs: [0, 1],
-    );
-  }
-
-  Future<int> actualizarEnvioscissor(int id) async {
-    final db = await database;
-
-    return await db.update(
-      'Operacion_scissor',
-      {'enviado': 1},
-      where: 'id = ?',
-      whereArgs: [id],
     );
   }
 
@@ -6017,23 +5754,6 @@ CREATE TABLE $tableName (
     );
   }
 
-  Future<int> actualizarEnvioDatos_trabajo_exploraciones(int id) async {
-    final db = await database;
-
-    // Mapa de los datos que quieres actualizar
-    Map<String, dynamic> data = {
-      'envio': 1, // Actualiza el campo envio a 1
-    };
-
-    // Llamada a la función update
-    return await db.update(
-      'Datos_trabajo_exploraciones', // El nombre de la tabla
-      data, // Los datos a actualizar
-      where: 'id = ?', // Condición para seleccionar la fila
-      whereArgs: [id], // El valor de id para seleccionar la fila específica
-    );
-  }
-
   //NUBE
   Future<Map<String, dynamic>?> obtenerMedicionHorizontalPorId(int id) async {
     final Database db = await database;
@@ -6075,5 +5795,4 @@ CREATE TABLE $tableName (
       whereArgs: ids,
     );
   }
-
 }

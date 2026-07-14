@@ -561,7 +561,6 @@ class ActualizacionService {
       await UserService().syncOfflineProfileSnapshot(
         dni: dni,
         token: token,
-        databaseHelper: DatabaseHelper(),
       );
       print('✅ Offline authorization snapshot refreshed');
     } catch (e) {

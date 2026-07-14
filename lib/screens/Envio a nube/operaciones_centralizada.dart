@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/sync_repository.dart';
 import 'package:i_miner/screens/Envio%20a%20nube/Mediciones/horizontal/detalle_mediciones_screen.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/detalle_envio_screen.dart';
 import 'package:i_miner/services/envio%20nube/exportar_service.dart';
@@ -22,20 +23,24 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
   ); // Fondo claro profesional
 
   late final DatabaseHelper _db;
+  late final SyncRepository _syncRepo;
   late final Map<String, Widget Function(BuildContext)> _pantallas;
 
   @override
   void initState() {
     super.initState();
     _db = DatabaseHelper();
+    _syncRepo = SyncRepository();
     _pantallas = {
       "PERFORACIÓN TALADROS LARGOS": (context) => DetalleEnvioScreen(
         tipoOperacion: "PERFORACIÓN TALADROS LARGOS",
         endpointTipo: "tal_largo",
-        fetchOperaciones: () => _db.getOperacionesTaladroLargo(),
+        fetchOperaciones: () =>
+            _syncRepo.getAllOperations('Operacion_tal_largo'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalLargoFisico(id).then((v) => v > 0),
-        marcarComoEnviado: (id) => _db.actualizarEnvio(id),
+        marcarComoEnviado: (id) =>
+            _syncRepo.markAsSent('Operacion_tal_largo', id),
         prepararDatosExportar: (ids, data) => ExportarService(
           _db,
         ).prepararDatosParaExportar('tal_largo', ids, data),
@@ -45,10 +50,12 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "PERFORACIÓN HORIZONTAL": (context) => DetalleEnvioScreen(
         tipoOperacion: "PERFORACIÓN HORIZONTAL",
         endpointTipo: "tal_horizontal",
-        fetchOperaciones: () => _db.getOperacionesTaladroHorizontal(),
+        fetchOperaciones: () =>
+            _syncRepo.getAllOperations('Operacion_tal_horizontal'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalHorizontalFisico(id).then((v) => v > 0),
-        marcarComoEnviado: (id) => _db.actualizarEnvioHorizontal(id),
+        marcarComoEnviado: (id) =>
+            _syncRepo.markAsSent('Operacion_tal_horizontal', id),
         prepararDatosExportar: (ids, data) => ExportarService(
           _db,
         ).prepararDatosParaExportar('tal_horizontal', ids, data),
@@ -58,10 +65,12 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "SOSTENIMIENTO": (context) => DetalleEnvioScreen(
         tipoOperacion: "SOSTENIMIENTO",
         endpointTipo: "empernador",
-        fetchOperaciones: () => _db.getOperacionesTaladroEmpernador(),
+        fetchOperaciones: () =>
+            _syncRepo.getAllOperations('Operacion_empernador'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalEmpernadorFisico(id).then((v) => v > 0),
-        marcarComoEnviado: (id) => _db.actualizarEnvioEmpernador(id),
+        marcarComoEnviado: (id) =>
+            _syncRepo.markAsSent('Operacion_empernador', id),
         prepararDatosExportar: (ids, data) => ExportarService(
           _db,
         ).prepararDatosParaExportar('empernador', ids, data),
@@ -71,10 +80,12 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "ROMPEBANCO": (context) => DetalleEnvioScreen(
         tipoOperacion: "ROMPEBANCO",
         endpointTipo: "rompebanco",
-        fetchOperaciones: () => _db.getOperacionesTaladroRompeBaco(),
+        fetchOperaciones: () =>
+            _syncRepo.getAllOperations('Operacion_rompebanco'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalRompeBacoFisico(id).then((v) => v > 0),
-        marcarComoEnviado: (id) => _db.actualizarEnvioRompeBancos(id),
+        marcarComoEnviado: (id) =>
+            _syncRepo.markAsSent('Operacion_rompebanco', id),
         prepararDatosExportar: (ids, data) => ExportarService(
           _db,
         ).prepararDatosParaExportar('rompebanco', ids, data),
@@ -84,10 +95,12 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "CARGUÍO": (context) => DetalleEnvioScreen(
         tipoOperacion: "CARGUÍO",
         endpointTipo: "carguio",
-        fetchOperaciones: () => _db.getOperacionesTaladroCarguio(),
+        fetchOperaciones: () =>
+            _syncRepo.getAllOperations('Operacion_carguio'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalCarguioFisico(id).then((v) => v > 0),
-        marcarComoEnviado: (id) => _db.actualizarEnvioCarguio(id),
+        marcarComoEnviado: (id) =>
+            _syncRepo.markAsSent('Operacion_carguio', id),
         prepararDatosExportar: (ids, data) => ExportarService(
           _db,
         ).prepararDatosParaExportar('carguio', ids, data),
@@ -97,10 +110,12 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "ACARREO": (context) => DetalleEnvioScreen(
         tipoOperacion: "ACARREO",
         endpointTipo: "acarreo",
-        fetchOperaciones: () => _db.getOperacionesTaladroDumper(),
+        fetchOperaciones: () =>
+            _syncRepo.getAllOperations('Operacion_Dumper'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalDumperFisico(id).then((v) => v > 0),
-        marcarComoEnviado: (id) => _db.actualizarEnvioDumper(id),
+        marcarComoEnviado: (id) =>
+            _syncRepo.markAsSent('Operacion_Dumper', id),
         prepararDatosExportar: (ids, data) => ExportarService(
           _db,
         ).prepararDatosParaExportar('acarreo', ids, data),
@@ -110,10 +125,12 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "ANFOCHANGER": (context) => DetalleEnvioScreen(
         tipoOperacion: "ANFOCHANGER",
         endpointTipo: "anfochanger",
-        fetchOperaciones: () => _db.getOperacionesTaladroAnfoChanger(),
+        fetchOperaciones: () =>
+            _syncRepo.getAllOperations('Operacion_anfochanger'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalAnfochangerFisico(id).then((v) => v > 0),
-        marcarComoEnviado: (id) => _db.actualizarEnvioRAnfoChanger(id),
+        marcarComoEnviado: (id) =>
+            _syncRepo.markAsSent('Operacion_anfochanger', id),
         prepararDatosExportar: (ids, data) => ExportarService(
           _db,
         ).prepararDatosParaExportar('anfochanger', ids, data),
@@ -123,10 +140,12 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "SCISSOR": (context) => DetalleEnvioScreen(
         tipoOperacion: "SCISSOR",
         endpointTipo: "scissor",
-        fetchOperaciones: () => _db.getOperacionesTaladroscissor(),
+        fetchOperaciones: () =>
+            _syncRepo.getAllOperations('Operacion_scissor'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalScissorFisico(id).then((v) => v > 0),
-        marcarComoEnviado: (id) => _db.actualizarEnvioscissor(id),
+        marcarComoEnviado: (id) =>
+            _syncRepo.markAsSent('Operacion_scissor', id),
         prepararDatosExportar: (ids, data) => ExportarService(
           _db,
         ).prepararDatosParaExportar('scissor', ids, data),
@@ -136,10 +155,12 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "SCALAMIN": (context) => DetalleEnvioScreen(
         tipoOperacion: "SCALAMIN",
         endpointTipo: "scalamin",
-        fetchOperaciones: () => _db.getOperacionesTaladroScalamin(),
+        fetchOperaciones: () =>
+            _syncRepo.getAllOperations('Operacion_Scalamin'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalScalaminFisico(id).then((v) => v > 0),
-        marcarComoEnviado: (id) => _db.actualizarEnvioScalamin(id),
+        marcarComoEnviado: (id) =>
+            _syncRepo.markAsSent('Operacion_Scalamin', id),
         prepararDatosExportar: (ids, data) => ExportarService(
           _db,
         ).prepararDatosParaExportar('scalamin', ids, data),

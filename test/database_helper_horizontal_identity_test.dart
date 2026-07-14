@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/config/data/horizontal_catalog_repository.dart';
+import 'package:i_miner/config/data/sync_repository.dart';
 import 'package:i_miner/models/Equipo.dart';
 import 'package:i_miner/models/JefeGuardia.dart';
 import 'package:i_miner/models/Seccion.dart';
@@ -98,42 +99,46 @@ void main() {
     },
   );
 
-  test('returns only syncable api v2 horizontal rows pending export', () async {
+  test('returns unsent closed rows via SyncRepository', () async {
     final dbPath = p.join(tempDir.path, 'pending_rows.db');
     DatabaseHelper.setDatabasePathOverride(dbPath);
     await dbHelper.setCurrentUserDni('11111111');
     final db = await dbHelper.database;
 
+    // All 3 rows match enviado=0 AND cerrado=1
     await db.insert('Operacion_tal_horizontal', {
       'fecha': '2026-06-17',
       'turno': 'Dia',
       'estado': 'cerrado',
+      'cerrado': 1,
       'envio': 0,
-      'identity_version': 2,
-      'syncable': 1,
     });
     await db.insert('Operacion_tal_horizontal', {
       'fecha': '2026-06-17',
       'turno': 'Dia',
       'estado': 'cerrado',
+      'cerrado': 1,
       'envio': 0,
-      'identity_version': 2,
-      'syncable': 0,
     });
+    // Row with enviado=1 should NOT be returned
     await db.insert('Operacion_tal_horizontal', {
       'fecha': '2026-06-17',
       'turno': 'Dia',
       'estado': 'cerrado',
-      'envio': 0,
-      'identity_version': 0,
-      'syncable': 1,
+      'cerrado': 1,
+      'envio': 1,
     });
 
-    final pending = await dbHelper.getOperacionesTaladroHorizontalNoEnviadas();
+    final syncRepo = SyncRepository(databaseHelper: dbHelper);
+    final pending = await syncRepo.getUnsentOperations(
+      'Operacion_tal_horizontal',
+    );
 
-    expect(pending, hasLength(1));
-    expect(pending.first['identity_version'], 2);
-    expect(pending.first['syncable'], 1);
+    expect(pending, hasLength(2));
+    for (final row in pending) {
+      expect(row['envio'], 0);
+      expect(row['estado'], 'cerrado');
+    }
   });
 
   test(

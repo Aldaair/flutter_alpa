@@ -1,4 +1,5 @@
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/sync_repository.dart';
 import 'package:i_miner/services/envio%20nube/exportar_service.dart';
 import 'package:i_miner/services/envio%20nube/operaciones_service.dart';
 
@@ -7,67 +8,33 @@ class SyncService {
   factory SyncService() => _instance;
   SyncService._internal();
 
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final SyncRepository _syncRepo = SyncRepository();
   final OperacionesService _api = OperacionesService();
-  late final ExportarService _export = ExportarService(_dbHelper);
+  late final ExportarService _export = ExportarService(DatabaseHelper());
+
+  /// Maps endpoint type table name.
+  static const _processTables = {
+    'tal_largo': 'Operacion_tal_largo',
+    'tal_horizontal': 'Operacion_tal_horizontal',
+    'empernador': 'Operacion_empernador',
+    'scissor': 'Operacion_scissor',
+    'anfochanger': 'Operacion_anfochanger',
+    'rompebanco': 'Operacion_rompebanco',
+    'carguio': 'Operacion_carguio',
+    'dumper': 'Operacion_Dumper',
+    'scalamin': 'Operacion_Scalamin',
+  };
 
   Future<void> syncData() async {
     print("🚀 Iniciando sincronización...");
 
     try {
-      await _syncProceso(
-        tipo: 'tal_largo',
-        getData: _dbHelper.getOperacionesNoEnviadasLargo,
-        marcar: _dbHelper.actualizarEnvio,
-      );
-
-      await _syncProceso(
-        tipo: 'tal_horizontal',
-        getData: _dbHelper.getOperacionesTaladroHorizontalNoEnviadas,
-        marcar: _dbHelper.actualizarEnvioHorizontal,
-      );
-
-      await _syncProceso(
-        tipo: 'empernador',
-        getData: _dbHelper.getOperacionesEmpernadorNoEnviadas,
-        marcar: _dbHelper.actualizarEnvioEmpernador,
-      );
-
-      await _syncProceso(
-        tipo: 'scissor',
-        getData: _dbHelper.getOperacionesScissorNoEnviadas,
-        marcar: _dbHelper.actualizarEnvioscissor,
-      );
-
-      await _syncProceso(
-        tipo: 'anfochanger',
-        getData: _dbHelper.getOperacionesAnfoChangerNoEnviadas,
-        marcar: _dbHelper.actualizarEnvioRAnfoChanger,
-      );
-
-      await _syncProceso(
-        tipo: 'rompebanco',
-        getData: _dbHelper.getOperacionesRompeBancosNoEnviadas,
-        marcar: _dbHelper.actualizarEnvioRompeBancos,
-      );
-
-      await _syncProceso(
-        tipo: 'carguio',
-        getData: _dbHelper.getOperacionesCarguioNoEnviadas,
-        marcar: _dbHelper.actualizarEnvioCarguio,
-      );
-
-      await _syncProceso(
-        tipo: 'dumper',
-        getData: _dbHelper.getOperacionesDumperNoEnviadas,
-        marcar: _dbHelper.actualizarEnvioDumper,
-      );
-
-      await _syncProceso(
-        tipo: 'scalamin',
-        getData: _dbHelper.getOperacionesScalaminNoEnviadas,
-        marcar: _dbHelper.actualizarEnvioScalamin,
-      );
+      for (final entry in _processTables.entries) {
+        await _syncProceso(
+          tipo: entry.key,
+          tableName: entry.value,
+        );
+      }
 
       print("✅ Sincronización completa");
     } catch (e) {
@@ -77,27 +44,22 @@ class SyncService {
 
   Future<void> _syncProceso({
     required String tipo,
-    required Future<List<Map<String, dynamic>>> Function() getData,
-    required Future<void> Function(int) marcar,
+    required String tableName,
   }) async {
     print("📦 Sincronizando: $tipo");
 
-    final data = await getData();
-    final pendientes = data.where((e) {
-      final enviado = e['enviado'] ?? e['envio'] ?? 0;
-      return enviado == 0;
-    }).toList();
+    final data = await _syncRepo.getUnsentOperations(tableName);
 
-    if (pendientes.isEmpty) {
+    if (data.isEmpty) {
       print("✔️ $tipo sin pendientes");
       return;
     }
 
-    final ids = pendientes.map<int>((e) => e['id'] as int).toSet();
+    final ids = data.map<int>((e) => e['id'] as int).toSet();
     final jsonData = await _export.prepararDatosParaExportar(
       tipo,
       ids,
-      pendientes,
+      data,
     );
 
     if (jsonData.isEmpty) {
@@ -115,7 +77,7 @@ class SyncService {
 
     if (success) {
       for (var item in jsonData) {
-        await marcar(item['local_id']);
+        await _syncRepo.markAsSent(tableName, item['local_id']);
       }
       print("✅ $tipo sincronizado (${jsonData.length})");
     } else {
