@@ -116,7 +116,7 @@ class MisLaboresService {
       return const {};
     }
 
-    final user = await _databaseHelper.getUserByDni(currentUserDni);
+    final user = await _authorizationRepository.getUserByDni(currentUserDni);
     return {
       'dni': currentUserDni,
       'operador_id': user?['id'],

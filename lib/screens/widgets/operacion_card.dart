@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/offline_authorization_repository.dart';
 import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/models/Equipo.dart';
 import 'package:i_miner/models/tipo_horometro.dart';
@@ -173,8 +174,8 @@ class _OperacionCardState extends State<OperacionCard> {
     if (widget.dniUsuario == null) return;
 
     try {
-      final dbHelper = DatabaseHelper();
-      final usuario = await dbHelper.getUserByDni(widget.dniUsuario!);
+      final authRepo = OfflineAuthorizationRepository();
+      final usuario = await authRepo.getUserByDni(widget.dniUsuario!);
 
       if (usuario != null) {
         setState(() {

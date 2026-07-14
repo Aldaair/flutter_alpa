@@ -63,6 +63,5 @@ class ApiConfig {
   static const String operacionScissorEndpoint = '$operacionesV2Base/scissor';
 
   static const String pdfEndpoint = '/pdf-operacion';
-  static const String pdfDownloadAllEndpoint =
-      '/documentos-pdf/download-all';
+  static const String pdfDownloadAllEndpoint = '/documentos-pdf/download-all';
 }

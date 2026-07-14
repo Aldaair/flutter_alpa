@@ -1,3 +1,4 @@
+import 'package:bcrypt/bcrypt.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -143,5 +144,85 @@ class OfflineAuthorizationRepository {
     }
 
     return false;
+  }
+
+  /// Attempt offline login by checking password hash against usuario_directorio.
+  Future<bool> loginOffline(String dni, String password) async {
+    try {
+      final db = await _sharedDb;
+      final rows = await db.query(
+        'usuario_directorio',
+        columns: ['password', 'nombres', 'apellidos', 'rol', 'id'],
+        where: 'codigo_dni = ?',
+        whereArgs: [dni],
+        limit: 1,
+      );
+
+      if (rows.isNotEmpty) {
+        final hash = rows.first['password'] as String?;
+        if (hash != null && hash.isNotEmpty) {
+          if (BCrypt.checkpw(password, hash)) {
+            // Set the current user DNI so the database helper scope is active
+            await _databaseHelper.setCurrentUserDni(dni);
+            return true;
+          }
+        }
+        return false;
+      }
+    } catch (_) {}
+
+    return false;
+  }
+
+  /// Get user record from usuario_directorio by DNI.
+  Future<Map<String, dynamic>?> getUserByDni(String dni) async {
+    final db = await _sharedDb;
+    final List<Map<String, dynamic>> result = await db.query(
+      'usuario_directorio',
+      where: 'codigo_dni = ?',
+      whereArgs: [dni],
+    );
+
+    if (result.isNotEmpty) {
+      final user = Map<String, dynamic>.from(result.first);
+      user['id'] = user['id'] ?? user['codigo_dni'];
+      user['createdAt'] = user['createdAt'] ?? user['updated_at'];
+      user['updatedAt'] = user['updated_at'];
+      user['password'] = user['password'] ?? '';
+      return user;
+    }
+    return null;
+  }
+
+  /// Check if the user has one of the allowed cargo names.
+  Future<bool> userHasCargo(String dni, List<String> cargosPermitidos) async {
+    final user = await getUserByDni(dni);
+    if (user == null) return false;
+    final cargoId = user['cargo_id'];
+    if (cargoId == null) return false;
+    final db = await _sharedDb;
+    final result = await db.query(
+      'cargos',
+      columns: ['nombre'],
+      where: 'cargo_id = ?',
+      whereArgs: [cargoId],
+      limit: 1,
+    );
+    if (result.isEmpty) return false;
+    final nombre =
+        (result.first['nombre'] as String?)?.trim().toUpperCase() ?? '';
+    return cargosPermitidos.any((c) => c.toUpperCase() == nombre);
+  }
+
+  /// Get all known operators from usuario_directorio.
+  Future<List<Map<String, dynamic>>> getKnownOperators() async {
+    final db = await _sharedDb;
+    final users = await db.query('usuario_directorio');
+    return users.asMap().entries.map((entry) {
+      final u = Map<String, dynamic>.from(entry.value);
+      u['id'] = u['id'] ?? entry.key + 1;
+      u['nombre_completo'] = '${u['nombres']} ${u['apellidos']}';
+      return u;
+    }).toList();
   }
 }

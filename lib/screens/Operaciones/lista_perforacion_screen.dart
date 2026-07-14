@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/offline_authorization_repository.dart';
 import 'package:i_miner/models/DimTurno.dart';
 import 'package:i_miner/screens/widgets/dialogo_checklist.dart';
 import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
@@ -216,7 +217,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     _turnosCatalogo = await _db.getDimTurnos();
     selectedTurno = _resolverTurnoActual();
     if (widget.dniUsuario != null) {
-      final puedeSeleccionar = await _db.userHasCargo(widget.dniUsuario!, [
+      final puedeSeleccionar = await OfflineAuthorizationRepository()
+          .userHasCargo(widget.dniUsuario!, [
         'JEFE DE GUARDIA',
         'SUPERVISOR',
       ]);
@@ -268,17 +270,18 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     return buffer.toString().toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
   }
 
-  Future<int?> _resolveCurrentOperatorId(DatabaseHelper dbHelper) async {
+  Future<int?> _resolveCurrentOperatorId() async {
     if (widget.dniUsuario == null) {
       return null;
     }
-    final usuario = await dbHelper.getUserByDni(widget.dniUsuario!);
+    final usuario = await OfflineAuthorizationRepository()
+        .getUserByDni(widget.dniUsuario!);
     return usuario?['id'] as int?;
   }
 
   Future<void> _loadMasterOperators() async {
-    final dbHelper = DatabaseHelper();
-    final operators = await dbHelper.getKnownOperators();
+    final operators = await OfflineAuthorizationRepository()
+        .getKnownOperators();
 
     if (!mounted) return;
 
@@ -926,7 +929,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         operadorId: selectedOperatorId,
       );
     } else {
-      final operadorId = await _resolveCurrentOperatorId(dbHelper);
+      final operadorId = await _resolveCurrentOperatorId();
       data = await _fetchOperacionesDb(
         turnoId,
         fechaActual,

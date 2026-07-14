@@ -1,12 +1,13 @@
 // lib/services/user_service.dart
 import 'package:i_miner/config/api/api_config.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/offline_authorization_repository.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class UserService {
   Future<bool> login(String codigoDni, String password) async {
-    return await DatabaseHelper().loginOffline(codigoDni, password);
+    return await OfflineAuthorizationRepository().loginOffline(codigoDni, password);
   }
 
   Future<String> fetchToken(String codigoDni, String password) async {
@@ -27,12 +28,12 @@ class UserService {
   Future<Map<String, dynamic>> syncOfflineProfileSnapshot({
     required String dni,
     String? token,
-    DatabaseHelper? databaseHelper,
   }) async {
-    final dbHelper = databaseHelper ?? DatabaseHelper();
+    final authRepo = OfflineAuthorizationRepository();
+    final dbHelper = DatabaseHelper();
     await dbHelper.setCurrentUserDni(dni);
 
-    final user = await dbHelper.getUserByDni(dni);
+    final user = await authRepo.getUserByDni(dni);
     if (user == null) {
       throw Exception('Usuario no encontrado en base de datos local');
     }

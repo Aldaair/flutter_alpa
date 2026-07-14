@@ -245,7 +245,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _cargarNombreUsuario() async {
     try {
       final dbHelper = DatabaseHelper();
-      final usuario = await dbHelper.getUserByDni(widget.dni);
+      final authRepo = OfflineAuthorizationRepository();
+      final usuario = await authRepo.getUserByDni(widget.dni);
       final catalogProcessIds = await _cargarCatalogoProcesos(dbHelper);
       print('Usuario cargado: $usuario');
       if (usuario != null) {
