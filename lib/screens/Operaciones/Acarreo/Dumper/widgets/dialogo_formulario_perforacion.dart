@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/shared_catalog_repository.dart';
 import 'package:i_miner/models/DimLabor.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
@@ -81,6 +82,8 @@ class _DialogoFormularioPerforacionState
   final Map<String, _DumperFrontOption> _frontOptionMap = {};
   _DumperFrontOption? selectedFrontOption;
   String? selectedFrontLabel;
+  final SharedCatalogRepository _sharedCatalogRepository =
+      SharedCatalogRepository();
 
   List<Map<String, dynamic>> destinosDisponibles = [];
   List<String> opcionesDestino = [];
@@ -100,7 +103,7 @@ class _DialogoFormularioPerforacionState
     try {
       final db = DatabaseHelper();
       final results = await Future.wait([
-        db.getLabores(),
+        _sharedCatalogRepository.getLabores(),
         db.getDestinosByProcesoId(widget.procesoId),
       ]);
 

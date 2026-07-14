@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/shared_catalog_repository.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:i_miner/models/DimMina.dart';
 import 'package:i_miner/models/DimZona.dart';
@@ -134,6 +135,8 @@ class _DialogoFormularioPerforacionState
 
   // Maps para RawAutocomplete
   final Map<String, _ManualFrontOption> _manualFrontMap = {};
+  final SharedCatalogRepository _sharedCatalogRepository =
+      SharedCatalogRepository();
 
   @override
   void initState() {
@@ -159,17 +162,16 @@ class _DialogoFormularioPerforacionState
 
   Future<void> _cargarCatalogos() async {
     try {
-      final dbHelper = DatabaseHelper();
       final results = await Future.wait([
-        dbHelper.getMinas(),
-        dbHelper.getDimZonas(),
-        dbHelper.getAreas(),
-        dbHelper.getFases(),
-        dbHelper.getTiposLabor(),
-        dbHelper.getEstructurasMinerales(),
-        dbHelper.getNiveles(),
-        dbHelper.getAlas(),
-        dbHelper.getLabores(),
+        _sharedCatalogRepository.getMinas(),
+        _sharedCatalogRepository.getZonas(),
+        _sharedCatalogRepository.getAreas(),
+        _sharedCatalogRepository.getFases(),
+        _sharedCatalogRepository.getTiposLabor(),
+        _sharedCatalogRepository.getEstructurasMinerales(),
+        _sharedCatalogRepository.getNiveles(),
+        _sharedCatalogRepository.getAlas(),
+        _sharedCatalogRepository.getLabores(),
       ]);
 
       setState(() {

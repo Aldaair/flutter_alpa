@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/shared_catalog_repository.dart';
 import 'package:i_miner/models/DimLabor.dart';
+import 'package:i_miner/models/malla.dart';
+import 'package:i_miner/models/perno.dart';
 
 class _LaborOption {
   final int? laborId;
@@ -77,7 +79,10 @@ class _DialogoFormularioEmpernadorState
   final TextEditingController mt52MallaController = TextEditingController();
   final TextEditingController observacionesController = TextEditingController();
 
-  List<Map<String, dynamic>> pernosCompletos = [];
+  final SharedCatalogRepository _sharedCatalogRepository =
+      SharedCatalogRepository();
+
+  List<Perno> pernosCompletos = [];
   List<String> tiposPerno = [];
   List<String> longitudesPerno = [];
 
@@ -115,15 +120,14 @@ class _DialogoFormularioEmpernadorState
     setState(() => isLoading = true);
 
     try {
-      final dbHelper = DatabaseHelper();
       final results = await Future.wait([
-        dbHelper.getPernos(),
-        dbHelper.getMallas(),
-        dbHelper.getLabores(),
+        _sharedCatalogRepository.getPernos(),
+        _sharedCatalogRepository.getMallas(),
+        _sharedCatalogRepository.getLabores(),
       ]);
 
-      final pernos = results[0] as List<Map<String, dynamic>>;
-      final mallas = results[1] as List<Map<String, dynamic>>;
+      final pernos = results[0] as List<Perno>;
+      final mallas = results[1] as List<Malla>;
       final labores = results[2] as List<DimLabor>;
 
       final opciones = <_LaborOption>[];
@@ -163,7 +167,7 @@ class _DialogoFormularioEmpernadorState
         pernosCompletos = pernos;
         tiposPerno =
             pernos
-                .map((e) => e['tipo_perno']?.toString() ?? '')
+                .map((e) => e.tipoPerno.trim())
                 .where((n) => n.isNotEmpty)
                 .toSet()
                 .toList()
@@ -171,7 +175,7 @@ class _DialogoFormularioEmpernadorState
 
         opcionesMalla =
             mallas
-                .map((e) => e['tipo_malla']?.toString() ?? '')
+                .map((e) => e.tipoMalla.trim())
                 .where((n) => n.isNotEmpty)
                 .toSet()
                 .toList()
@@ -245,8 +249,8 @@ class _DialogoFormularioEmpernadorState
 
       final filtrados =
           pernosCompletos
-              .where((e) => e['tipo_perno'] == tipo)
-              .map((e) => e['longitud'].toString())
+              .where((e) => e.tipoPerno == tipo)
+              .map((e) => e.longitud.toString())
               .toSet()
               .toList()
             ..sort((a, b) => double.parse(a).compareTo(double.parse(b)));

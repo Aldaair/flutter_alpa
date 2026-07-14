@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/shared_catalog_repository.dart';
 import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:i_miner/models/DimLabor.dart';
 
@@ -99,6 +100,8 @@ class _DialogoFormularioPerforacionState
   String? selectedManualFrontLabel;
 
   final Map<String, _HorizontalFrontOption> _manualFrontMap = {};
+  final SharedCatalogRepository _sharedCatalogRepository =
+      SharedCatalogRepository();
 
   @override
   void initState() {
@@ -130,8 +133,7 @@ class _DialogoFormularioPerforacionState
 
   Future<void> _cargarLabores() async {
     try {
-      final dbHelper = DatabaseHelper();
-      final data = await dbHelper.getLabores();
+      final data = await _sharedCatalogRepository.getLabores();
       if (!mounted) return;
       setState(() {
         laboresCatalogo = data;

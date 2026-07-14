@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/config/data/shared_catalog_repository.dart';
 import 'package:i_miner/models/DimLabor.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
@@ -83,6 +84,8 @@ class _DialogoFormularioPerforacionState
   _ScoopFrontOption? selectedManualFront;
   String? selectedManualFrontLabel;
   final Map<String, _ScoopFrontOption> _manualFrontMap = {};
+  final SharedCatalogRepository _sharedCatalogRepository =
+      SharedCatalogRepository();
 
   @override
   void initState() {
@@ -101,7 +104,7 @@ class _DialogoFormularioPerforacionState
       print(widget.procesoId);
 
       final results = await Future.wait([
-        dbHelper.getLabores(),
+        _sharedCatalogRepository.getLabores(),
         dbHelper.getDestinosByProcesoId(widget.procesoId),
       ]);
 
