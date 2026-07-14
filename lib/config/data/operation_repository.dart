@@ -780,4 +780,627 @@ class OperationRepository {
       insertData['ala_id'] = alaId;
     }
   }
+
+  // ============================================================
+  // INSERT Helpers
+  // ============================================================
+
+  /// Build horometros JSON from defaults, applying base values if present.
+  Map<String, dynamic> _buildHorometrosJson(
+    Map<String, dynamic> defaultHorometros,
+    List<Map<String, dynamic>>? horometrosBase,
+  ) {
+    final result = Map<String, dynamic>.from(defaultHorometros);
+    if (horometrosBase != null && horometrosBase.isNotEmpty) {
+      for (var item in horometrosBase) {
+        final tipo = item['tipo_horometro'] as String?;
+        if (tipo == null) continue;
+        final finalValor = (item['final'] ?? 0).toDouble();
+        if (result.containsKey(tipo) && result[tipo] is Map) {
+          result[tipo] = {
+            ...Map<String, dynamic>.from(result[tipo] as Map),
+            'inicio': finalValor,
+          };
+        }
+      }
+    }
+    return result;
+  }
+
+  /// Build the common base insertData map with horometros, condiciones,
+  /// check_list, and control_llantas pre-filled.
+  Map<String, dynamic> _buildOperationInsertBase({
+    required String fecha,
+    required String turno,
+    required String operador,
+    required String jefeGuardia,
+    required String equipo,
+    required Map<String, dynamic> horometrosJson,
+    List<Map<String, dynamic>>? checkListJson,
+    String? nEquipo,
+    String? modeloEquipo,
+    String? capacidad,
+    String? tipoEquipo,
+  }) {
+    final condicionesEquipoJson = {
+      'op': false,
+      'noOp': false,
+      'lugar': '',
+      'descripcion': '',
+      'aceiteMotor': false,
+      'aceiteHidraulico': false,
+      'aceiteTransmision': false,
+      'combustible': '',
+      'horaLlenado': '',
+    };
+
+    final controlLlantasJson = defaultControlLlantas();
+    final checkListStr = jsonEncode(checkListJson ?? []);
+
+    return {
+      'fecha': fecha,
+      'turno': turno,
+      'operador': operador,
+      'jefe_guardia': jefeGuardia,
+      'equipo': equipo,
+      'n_equipo': nEquipo,
+      'modelo': modeloEquipo,
+      'capacidad': capacidad,
+      'tipo_equipo': tipoEquipo,
+      'horometros': jsonEncode(horometrosJson),
+      'condiciones_equipo': jsonEncode(condicionesEquipoJson),
+      'check_list': checkListStr,
+      'control_llantas': jsonEncode(controlLlantasJson),
+    };
+  }
+
+  // ============================================================
+  // Per-Process INSERT Methods
+  // ============================================================
+
+  Future<int> insertOperacionTalLargo(
+    String fecha, {
+    String? turno,
+    String? operador,
+    String? jefeGuardia,
+    String? equipo,
+    String? registradorNombre,
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    int? registradorUsuarioId,
+    int? laborId,
+    String? labor,
+  }) async {
+    final db = await _db;
+    final horometrosJson = _buildHorometrosJson(
+      defaultHorometros('TalLargo'),
+      horometrosBase,
+    );
+    final data = _buildOperationInsertBase(
+      fecha: fecha,
+      turno: turno ?? '',
+      operador: operador ?? '',
+      jefeGuardia: jefeGuardia ?? '',
+      equipo: equipo ?? '',
+      horometrosJson: horometrosJson,
+      checkListJson: checkListJson,
+    );
+    if (operadorId != null) data['operador_id'] = operadorId;
+    if (equipoId != null) data['equipo_id'] = equipoId;
+    if (jefeGuardiaId != null) data['jefe_guardia_id'] = jefeGuardiaId;
+    appendHybridOperationMetadata(
+      data,
+      turnoId: turnoId,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
+    return await db.insert('Operacion_tal_largo', data);
+  }
+
+  Future<int> insertOperacionTalHorizontal(
+    String fecha,
+    String turno,
+    String seccion,
+    String operador,
+    String jefeGuardia,
+    String equipo,
+    String nEquipo,
+    String modeloEquipo, {
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+  }) async {
+    final db = await _db;
+    final horometrosJson = _buildHorometrosJson(
+      defaultHorometros('TalLargo'),
+      horometrosBase,
+    );
+    final data = _buildOperationInsertBase(
+      fecha: fecha,
+      turno: turno,
+      operador: operador,
+      jefeGuardia: jefeGuardia,
+      equipo: equipo,
+      nEquipo: nEquipo,
+      modeloEquipo: modeloEquipo,
+      horometrosJson: horometrosJson,
+      checkListJson: checkListJson,
+    );
+    data['seccion'] = seccion;
+    if (operadorId != null) data['operador_id'] = operadorId;
+    if (equipoId != null) data['equipo_id'] = equipoId;
+    if (zonaId != null) data['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) data['jefe_guardia_id'] = jefeGuardiaId;
+    appendHybridOperationMetadata(
+      data,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
+    return await db.insert('Operacion_tal_horizontal', data);
+  }
+
+  Future<int> insertOperacionEmpernador(
+    String fecha,
+    String turno,
+    String seccion,
+    String operador,
+    String jefeGuardia,
+    String equipo,
+    String nEquipo,
+    String tipoEquipo, {
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+  }) async {
+    final db = await _db;
+    final horometrosJson = _buildHorometrosJson(
+      {
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+        'electrico': {'inicio': 0, 'final': 0, 'op': true},
+        'percusion': {'inicio': 0, 'final': 0, 'op': true},
+        'empernador': {'inicio': 0, 'final': 0, 'op': true},
+      },
+      horometrosBase,
+    );
+    final data = _buildOperationInsertBase(
+      fecha: fecha,
+      turno: turno,
+      operador: operador,
+      jefeGuardia: jefeGuardia,
+      equipo: equipo,
+      nEquipo: nEquipo,
+      tipoEquipo: tipoEquipo,
+      horometrosJson: horometrosJson,
+      checkListJson: checkListJson,
+    );
+    data['seccion'] = seccion;
+    if (operadorId != null) data['operador_id'] = operadorId;
+    if (equipoId != null) data['equipo_id'] = equipoId;
+    if (zonaId != null) data['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) data['jefe_guardia_id'] = jefeGuardiaId;
+    appendHybridOperationMetadata(
+      data,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
+    return await db.insert('Operacion_empernador', data);
+  }
+
+  Future<int> insertOperacionCarguio(
+    String fecha,
+    String turno,
+    String seccion,
+    String operador,
+    String jefeGuardia,
+    String equipo,
+    String nEquipo,
+    String capacidad,
+    String tipoEquipo, {
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? checkListTelemandoJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+  }) async {
+    final db = await _db;
+    final horometrosJson = _buildHorometrosJson(
+      {'horometro': {'inicio': 0, 'final': 0, 'op': true}},
+      horometrosBase,
+    );
+    final data = _buildOperationInsertBase(
+      fecha: fecha,
+      turno: turno,
+      operador: operador,
+      jefeGuardia: jefeGuardia,
+      equipo: equipo,
+      nEquipo: nEquipo,
+      capacidad: capacidad,
+      tipoEquipo: tipoEquipo,
+      horometrosJson: horometrosJson,
+      checkListJson: checkListJson,
+    );
+    data['seccion'] = seccion;
+    if (operadorId != null) data['operador_id'] = operadorId;
+    if (equipoId != null) data['equipo_id'] = equipoId;
+    if (zonaId != null) data['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) data['jefe_guardia_id'] = jefeGuardiaId;
+    const programaTrabajoJson = {
+      'n_cucharas_programado': 0,
+      'n_cucharas_realizado': 0,
+    };
+    data['programa_trabajo'] = jsonEncode(programaTrabajoJson);
+    data['check_list_telemando'] = jsonEncode(checkListTelemandoJson ?? []);
+    appendHybridOperationMetadata(
+      data,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
+    return await db.insert('Operacion_carguio', data);
+  }
+
+  Future<int> insertOperacionDumper(
+    String fecha,
+    String turno,
+    String seccion,
+    String operador,
+    String jefeGuardia,
+    String equipo,
+    String nEquipo,
+    String capacidad,
+    String tipoEquipo, {
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? checkListTelemandoJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+  }) async {
+    final db = await _db;
+    final horometrosJson = _buildHorometrosJson(
+      {'horometro': {'inicio': 0, 'final': 0, 'op': true}},
+      horometrosBase,
+    );
+    final data = _buildOperationInsertBase(
+      fecha: fecha,
+      turno: turno,
+      operador: operador,
+      jefeGuardia: jefeGuardia,
+      equipo: equipo,
+      nEquipo: nEquipo,
+      capacidad: capacidad,
+      tipoEquipo: tipoEquipo,
+      horometrosJson: horometrosJson,
+      checkListJson: checkListJson,
+    );
+    data['seccion'] = seccion;
+    if (operadorId != null) data['operador_id'] = operadorId;
+    if (equipoId != null) data['equipo_id'] = equipoId;
+    if (zonaId != null) data['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) data['jefe_guardia_id'] = jefeGuardiaId;
+    const programaTrabajoJson = {
+      'n_cucharas_programado': 0,
+      'n_cucharas_realizado': 0,
+    };
+    data['programa_trabajo'] = jsonEncode(programaTrabajoJson);
+    data['check_list_telemando'] = jsonEncode(checkListTelemandoJson ?? []);
+    appendHybridOperationMetadata(
+      data,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
+    return await db.insert('Operacion_Dumper', data);
+  }
+
+  Future<int> insertOperacionRompeBaco(
+    String fecha,
+    String turno,
+    String operador,
+    String jefeGuardia,
+    String equipo,
+    String nEquipo, {
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+  }) async {
+    final db = await _db;
+    final horometrosJson = _buildHorometrosJson(
+      {'diesel': {'inicio': 0, 'final': 0, 'op': true}, 'percusion': {'inicio': 0, 'final': 0, 'op': true}},
+      horometrosBase,
+    );
+    final data = _buildOperationInsertBase(
+      fecha: fecha,
+      turno: turno,
+      operador: operador,
+      jefeGuardia: jefeGuardia,
+      equipo: equipo,
+      nEquipo: nEquipo,
+      horometrosJson: horometrosJson,
+      checkListJson: checkListJson,
+    );
+    if (operadorId != null) data['operador_id'] = operadorId;
+    if (equipoId != null) data['equipo_id'] = equipoId;
+    if (zonaId != null) data['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) data['jefe_guardia_id'] = jefeGuardiaId;
+    appendHybridOperationMetadata(
+      data,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
+    return await db.insert('Operacion_rompe_baco', data);
+  }
+
+  Future<int> insertOperacionScalamin(
+    String fecha,
+    String turno,
+    String operador,
+    String jefeGuardia,
+    String equipo,
+    String nEquipo, {
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+  }) async {
+    final db = await _db;
+    final horometrosJson = _buildHorometrosJson(
+      {'diesel': {'inicio': 0, 'final': 0, 'op': true}, 'percusion': {'inicio': 0, 'final': 0, 'op': true}},
+      horometrosBase,
+    );
+    final data = _buildOperationInsertBase(
+      fecha: fecha,
+      turno: turno,
+      operador: operador,
+      jefeGuardia: jefeGuardia,
+      equipo: equipo,
+      nEquipo: nEquipo,
+      horometrosJson: horometrosJson,
+      checkListJson: checkListJson,
+    );
+    if (operadorId != null) data['operador_id'] = operadorId;
+    if (equipoId != null) data['equipo_id'] = equipoId;
+    if (zonaId != null) data['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) data['jefe_guardia_id'] = jefeGuardiaId;
+    appendHybridOperationMetadata(
+      data,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
+    return await db.insert('Operacion_scalamin', data);
+  }
+
+  Future<int> insertOperacionScissor(
+    String fecha,
+    String turno,
+    String operador,
+    String jefeGuardia,
+    String equipo,
+    String nEquipo, {
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+  }) async {
+    final db = await _db;
+    final horometrosJson = _buildHorometrosJson(
+      {'diesel': {'inicio': 0, 'final': 0, 'op': true}},
+      horometrosBase,
+    );
+    final data = _buildOperationInsertBase(
+      fecha: fecha,
+      turno: turno,
+      operador: operador,
+      jefeGuardia: jefeGuardia,
+      equipo: equipo,
+      nEquipo: nEquipo,
+      horometrosJson: horometrosJson,
+      checkListJson: checkListJson,
+    );
+    if (operadorId != null) data['operador_id'] = operadorId;
+    if (equipoId != null) data['equipo_id'] = equipoId;
+    if (zonaId != null) data['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) data['jefe_guardia_id'] = jefeGuardiaId;
+    appendHybridOperationMetadata(
+      data,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
+    return await db.insert('Operacion_scissor', data);
+  }
+
+  Future<int> insertOperacionAnfochanger(
+    String fecha,
+    String turno,
+    String operador,
+    String jefeGuardia,
+    String equipo,
+    String nEquipo, {
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+  }) async {
+    final db = await _db;
+    final horometrosJson = _buildHorometrosJson(
+      {
+        'horometro_principal': {'inicio': 0, 'final': 0, 'op': true},
+        'electrico': {'inicio': 0, 'final': 0, 'op': true},
+        'diesel': {'inicio': 0, 'final': 0, 'op': true},
+      },
+      horometrosBase,
+    );
+    final data = _buildOperationInsertBase(
+      fecha: fecha,
+      turno: turno,
+      operador: operador,
+      jefeGuardia: jefeGuardia,
+      equipo: equipo,
+      nEquipo: nEquipo,
+      horometrosJson: horometrosJson,
+      checkListJson: checkListJson,
+    );
+    if (operadorId != null) data['operador_id'] = operadorId;
+    if (equipoId != null) data['equipo_id'] = equipoId;
+    if (zonaId != null) data['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) data['jefe_guardia_id'] = jefeGuardiaId;
+    appendHybridOperationMetadata(
+      data,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
+    return await db.insert('Operacion_anfochanger', data);
+  }
+
+  // ============================================================
+  // Generic DELETE
+  // ============================================================
+
+  /// Delete an operation by id from the given table.
+  /// Returns the number of rows deleted.
+  Future<int> deleteOperation(String tableName, int id) async {
+    final db = await _db;
+    return await db.delete(
+      tableName,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 }

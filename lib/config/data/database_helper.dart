@@ -19,6 +19,7 @@ import 'package:i_miner/models/TipoPerforacion.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:i_miner/config/data/operation_repository.dart';
+import 'package:i_miner/config/data/shared_catalog_repository.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -33,9 +34,11 @@ class DatabaseHelper {
   static const int _currentDbVersion = 32;
 
   late final OperationRepository _operationRepo;
+  late final SharedCatalogRepository _sharedCatalogRepo;
 
   DatabaseHelper._internal() {
     _operationRepo = OperationRepository(databaseHelper: this);
+    _sharedCatalogRepo = SharedCatalogRepository(databaseHelper: this);
     // Inicialización única para evitar múltiples llamadas
     if (!_isInitialized) {
       _initializeDatabaseFactory();
@@ -2449,33 +2452,6 @@ CREATE TABLE $tableName (
     return result.any((col) => col['name'] == columna);
   }
 
-  void _appendHybridOperationMetadata(
-    Map<String, dynamic> insertData, {
-    int? turnoId,
-    String? frenteOrigen,
-    int? registradorId,
-    int? registradorUsuarioId,
-    String? registrador,
-    String? registradorNombre,
-    int? laborId,
-    String? labor,
-    String? ala,
-    int? alaId,
-  }) {
-    _operationRepo.appendHybridOperationMetadata(
-      insertData,
-      turnoId: turnoId,
-      frenteOrigen: frenteOrigen,
-      registradorId: registradorId,
-      registradorUsuarioId: registradorUsuarioId,
-      registrador: registrador,
-      registradorNombre: registradorNombre,
-      laborId: laborId,
-      labor: labor,
-      ala: ala,
-      alaId: alaId,
-    );
-  }
 
   Future<List<Map<String, dynamic>>> _queryAndHydrateOperations(
     String tableName,
@@ -2491,12 +2467,6 @@ CREATE TABLE $tableName (
       operadorId: operadorId,
       onlyActive: onlyActive,
     );
-  }
-
-  List<Map<String, dynamic>> _normalizeOperationRows(
-    List<Map<String, dynamic>> rows,
-  ) {
-    return _operationRepo.normalizeOperationRows(rows);
   }
 
   int? _asInt(dynamic value) {
@@ -2673,9 +2643,6 @@ CREATE TABLE $tableName (
     );
   }
 
-  Map<String, dynamic> _defaultControlLlantas() {
-    return _operationRepo.defaultControlLlantas();
-  }
 
   //CHECKLIST
   Future<List<Map<String, dynamic>>> getCheckListByProceso(
@@ -2777,237 +2744,108 @@ CREATE TABLE $tableName (
   //PARA TODOS LAS OPERACIONES------------------------------------------------------------
 
   Future<List<String>> getJefesGuardiaNombres() async {
-    final db = await sharedCatalogDatabase;
-
-    try {
-      final result = await db.query(
-        'jefe_guardias',
-        columns: ['nombres', 'apellidos'],
-        orderBy: 'apellidos ASC, nombres ASC',
-      );
-
-      final nombresCompletos = result.map((row) {
-        final nombres = row['nombres'] as String? ?? '';
-        final apellidos = row['apellidos'] as String? ?? '';
-        return '$nombres $apellidos'.trim();
-      }).toList();
-
-      return nombresCompletos;
-    } catch (e) {
-      print("Error al obtener nombres de jefes de guardia: $e");
-      return [];
-    }
+    return _sharedCatalogRepo.getJefesGuardiaNombres();
   }
 
   Future<List<Equipo>> getEquipos() async {
-    final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query('Equipo');
-    return List.generate(maps.length, (i) => Equipo.fromJson(maps[i]));
+    return _sharedCatalogRepo.getEquipos();
   }
 
   Future<Map<String, dynamic>?> getEquipoUltimosHorometros(int equipoId) async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query(
-      'Equipo',
-      columns: ['ultimos_horometros'],
-      where: 'id = ?',
-      whereArgs: [equipoId],
-      limit: 1,
-    );
-    if (maps.isEmpty) return null;
-    final raw = maps.first['ultimos_horometros'];
-    if (raw == null) return null;
-    try {
-      if (raw is Map) return Map<String, dynamic>.from(raw);
-      final decoded = jsonDecode(raw.toString());
-      if (decoded is Map) return Map<String, dynamic>.from(decoded);
-    } catch (_) {}
-    return null;
+    return _sharedCatalogRepo.getEquipoUltimosHorometros(equipoId);
   }
 
   Future<void> updateEquipoUltimosHorometros(
     int equipoId,
     Map<String, dynamic> horometros,
   ) async {
-    final db = await sharedCatalogDatabase;
-    final now = jsonEncode(horometros);
-    await db.update(
-      'Equipo',
-      {'ultimos_horometros': now},
-      where: 'id = ?',
-      whereArgs: [equipoId],
+    return _sharedCatalogRepo.updateEquipoUltimosHorometros(
+      equipoId,
+      horometros,
     );
   }
 
   Future<List<Guardia>> getGuardias() async {
-    final db = await sharedCatalogDatabase;
-
-    final List<Map<String, dynamic>> maps = await db.query('Guardia');
-
-    return List.generate(maps.length, (i) => Guardia.fromJson(maps[i]));
+    return _sharedCatalogRepo.getGuardias();
   }
 
   Future<List<Zona>> getZonasByProceso(String proceso) async {
-    final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'zona',
-      orderBy: 'nombre ASC',
-    );
-    return List.generate(maps.length, (i) => Zona.fromJson(maps[i]));
+    return _sharedCatalogRepo.getZonasByProceso(proceso);
   }
 
   Future<List<Zona>> getZonas() async {
-    final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query('zona');
-    return List.generate(maps.length, (i) => Zona.fromJson(maps[i]));
+    return _sharedCatalogRepo.getZonasAsZona();
   }
 
   Future<List<JefeGuardia>> getJefesGuardia() async {
-    final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'jefe_guardias',
-      orderBy: 'apellidos ASC, nombres ASC',
-    );
-    return List.generate(maps.length, (i) => JefeGuardia.fromJson(maps[i]));
+    return _sharedCatalogRepo.getJefesGuardia();
   }
 
   Future<List<DimPeriodo>> getPeriodos() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query(
-      'dim_periodo',
-      orderBy: 'anno DESC, numero DESC',
-    );
-    return List.generate(maps.length, (i) => DimPeriodo.fromJson(maps[i]));
+    return _sharedCatalogRepo.getPeriodos();
   }
 
   Future<DimPeriodo?> getPeriodoVigente({
     DateTime? forDate,
     String? tipo,
   }) async {
-    final db = await sharedCatalogDatabase;
-    final targetDate = (forDate ?? DateTime.now())
-        .toIso8601String()
-        .split('T')
-        .first;
-    final whereClause = StringBuffer('fecha_inicio <= ? AND fecha_fin >= ?');
-    final whereArgs = <Object>[targetDate, targetDate];
-
-    if (tipo != null && tipo.isNotEmpty) {
-      whereClause.write(' AND tipo = ?');
-      whereArgs.add(tipo);
-    }
-
-    final maps = await db.query(
-      'dim_periodo',
-      where: whereClause.toString(),
-      whereArgs: whereArgs,
-      orderBy: 'anno DESC, numero DESC',
-      limit: 1,
-    );
-    if (maps.isEmpty) return null;
-    return DimPeriodo.fromJson(maps.first);
+    return _sharedCatalogRepo.getPeriodoVigente(forDate: forDate, tipo: tipo);
   }
 
   Future<List<DimTurno>> getDimTurnos() async {
-    final db = await sharedCatalogDatabase;
-    final maps = await db.query('dim_turno', orderBy: 'nombre ASC');
-    return List.generate(maps.length, (i) => DimTurno.fromJson(maps[i]));
+    return _sharedCatalogRepo.getDimTurnos();
   }
 
   Future<List<Map<String, dynamic>>> getEstadosByProcesoAndCategoria(
     int procesoId,
     int categoriaId,
   ) async {
-    final db = await sharedCatalogDatabase;
-    return await db.query(
-      'estados',
-      where: 'proceso_id = ? AND categoria_id = ?',
-      whereArgs: [procesoId, categoriaId],
-      orderBy: 'codigo ASC',
+    return _sharedCatalogRepo.getEstadosByProcesoAndCategoria(
+      procesoId,
+      categoriaId,
     );
   }
 
   Future<List<Map<String, dynamic>>> getCategoriasEstados() async {
-    final db = await sharedCatalogDatabase;
-    return await db.query(
-      'categorias_estados',
-      where: 'activo = 1',
-      orderBy: 'nombre ASC',
-    );
+    return _sharedCatalogRepo.getCategoriasEstados();
   }
 
   Future<List<Map<String, dynamic>>> getProcesos() async {
-    final db = await sharedCatalogDatabase;
-    return await db.query('procesos', orderBy: 'nombre ASC');
+    return _sharedCatalogRepo.getProcesos();
   }
 
   Future<Map<String, dynamic>?> getProcesoById(int id) async {
-    final db = await sharedCatalogDatabase;
-    final rows = await db.query(
-      'procesos',
-      where: 'id = ?',
-      whereArgs: [id],
-      limit: 1,
-    );
-    return rows.isNotEmpty ? rows.first : null;
+    return _sharedCatalogRepo.getProcesoById(id);
   }
 
   Future<List<Map<String, dynamic>>> getDestinosByProcesoId(
     int procesoId,
   ) async {
-    final db = await sharedCatalogDatabase;
-    return await db.query(
-      'destinos',
-      where: 'proceso_id = ?',
-      whereArgs: [procesoId],
-      orderBy: 'nombre ASC',
-    );
+    return _sharedCatalogRepo.getDestinosByProcesoId(procesoId);
   }
 
   Future<List<TipoPerforacion>> getTiposPerforacionByProcesoId(
     int procesoId,
   ) async {
-    final db = await sharedCatalogDatabase;
-
-    final List<Map<String, dynamic>> maps = await db.query(
-      'tipo_perforaciones',
-      where: 'proceso_id = ?',
-      whereArgs: [procesoId],
-    );
-
-    return List.generate(maps.length, (i) => TipoPerforacion.fromJson(maps[i]));
+    return _sharedCatalogRepo.getTiposPerforacionByProcesoId(procesoId);
   }
 
   Future<List<PlanMetrajeTL>> getPlanesMetrajeTL() async {
-    final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query('PlanMetrajeTL');
-    return List.generate(maps.length, (i) => PlanMetrajeTL.fromJson(maps[i]));
+    return _sharedCatalogRepo.getPlanesMetrajeTL();
   }
 
   Future<List<PlanAvanceTH>> getPlanesAvanceTH() async {
-    final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'planes_metrajes_avances',
-    );
-    return List.generate(maps.length, (i) => PlanAvanceTH.fromJson(maps[i]));
+    return _sharedCatalogRepo.getPlanesAvanceTH();
   }
 
   Future<List<PlanProduccion>> getPlanesProduccion() async {
-    final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query('planes_produccion');
-    return List.generate(maps.length, (i) => PlanProduccion.fromJson(maps[i]));
+    return _sharedCatalogRepo.getPlanesProduccion();
   }
 
   Future<List<Map<String, dynamic>>> getLongitudBarrasPorProceso(
     String proceso,
   ) async {
-    final db = await sharedCatalogDatabase;
-
-    return await db.query(
-      'longitud_barras',
-      where: 'proceso = ?',
-      whereArgs: [proceso],
-    );
+    return _sharedCatalogRepo.getLongitudBarrasPorProceso(proceso);
   }
 
   //OPERACION TALADRO LARGO  INICIO --------------------------------------------------------------------------------------------------------------
@@ -3031,75 +2869,30 @@ CREATE TABLE $tableName (
     int? laborId,
     String? labor,
   }) async {
-    final db = await database;
-
-    Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true},
-      'electrico': {'inicio': 0, 'final': 0, 'op': true},
-      'percusion': {'inicio': 0, 'final': 0, 'op': true},
-    };
-
-    if (horometrosBase != null && horometrosBase.isNotEmpty) {
-      for (var item in horometrosBase) {
-        final tipo = item['tipo_horometro'];
-        final finalValor = (item['final'] ?? 0).toDouble();
-        if (horometrosJson.containsKey(tipo)) {
-          horometrosJson[tipo]['inicio'] = finalValor;
-        }
-      }
-    }
-
-    Map<String, dynamic> condicionesEquipoJson = {
-      'op': false,
-      'noOp': false,
-      'lugar': '',
-      'descripcion': '',
-      'aceiteMotor': false,
-      'aceiteHidraulico': false,
-      'aceiteTransmision': false,
-      'combustible': '',
-      'horaLlenado': '',
-    };
-
-    final controlLlantasJson = _defaultControlLlantas();
-
-    String checkListStr = jsonEncode(checkListJson ?? []);
-
-    final insertData = <String, dynamic>{
-      'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'horometros': jsonEncode(horometrosJson),
-      'condiciones_equipo': jsonEncode(condicionesEquipoJson),
-      'check_list': checkListStr,
-      'control_llantas': jsonEncode(controlLlantasJson),
-    };
-    if (operadorId != null) insertData['operador_id'] = operadorId;
-    if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    _appendHybridOperationMetadata(
-      insertData,
+    return _operationRepo.insertOperacionTalLargo(
+      fecha,
+      turno: turno,
+      operador: operador,
+      jefeGuardia: jefeGuardia,
+      equipo: equipo,
+      registradorNombre: registradorNombre,
+      checkListJson: checkListJson,
+      horometrosBase: horometrosBase,
+      actorOperadorId: actorOperadorId,
+      operadorId: operadorId,
+      equipoId: equipoId,
+      jefeGuardiaId: jefeGuardiaId,
+      identityVersion: identityVersion,
+      syncable: syncable,
       turnoId: turnoId,
       registradorUsuarioId: registradorUsuarioId,
-      registradorNombre: registradorNombre,
       laborId: laborId,
       labor: labor,
     );
-    return await db.insert('Operacion_tal_largo', insertData);
   }
 
   Future<int> eliminarOperacionTalLargoFisico(int id) async {
-    final db = await database;
-
-    final result = await db.delete(
-      'Operacion_tal_largo',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    return result; // devuelve el número de filas eliminadas
+    return _operationRepo.deleteOperation('Operacion_tal_largo', id);
   }
 
   Future<List<Map<String, dynamic>>> getOperacionTalLargoByTurnoAndFechaMaster(
@@ -3544,11 +3337,11 @@ CREATE TABLE $tableName (
     String tableName = 'Operacion_tal_largo',
   }) async {
     return (await _operationRepo.getOperacionByEstadoId(
-              operacionId,
-              estadoId,
-              tableName: tableName,
-            )) ??
-            <String, dynamic>{};
+          operacionId,
+          estadoId,
+          tableName: tableName,
+        )) ??
+        <String, dynamic>{};
   }
 
   // Actualizar los datos de perforación de un estado específico
@@ -3626,60 +3419,25 @@ CREATE TABLE $tableName (
     int? laborId,
     String? labor,
   }) async {
-    final db = await database;
-
-    // 🔥 estructura base segura
-    Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true},
-      'electrico': {'inicio': 0, 'final': 0, 'op': true},
-      'percusion': {'inicio': 0, 'final': 0, 'op': true},
-    };
-
-    // 🔥 aplicar valores de nube si existen
-    if (horometrosBase != null && horometrosBase.isNotEmpty) {
-      for (var item in horometrosBase) {
-        final tipo = item['tipo_horometro'];
-        final finalValor = (item['final'] ?? 0).toDouble();
-
-        if (horometrosJson.containsKey(tipo)) {
-          horometrosJson[tipo]['inicio'] = finalValor;
-        }
-      }
-    }
-
-    // 🔹 resto igual
-    Map<String, dynamic> condicionesEquipoJson = {
-      'op': false,
-      'noOp': false,
-      'lugar': '',
-      'descripcion': '',
-      'aceiteMotor': false,
-      'aceiteHidraulico': false,
-      'aceiteTransmision': false,
-      'combustible': '',
-      'horaLlenado': '',
-    };
-
-    final controlLlantasJson = _defaultControlLlantas();
-
-    String checkListStr = jsonEncode(checkListJson ?? []);
-
-    final insertData = <String, dynamic>{
-      'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'horometros': jsonEncode(horometrosJson),
-      'condiciones_equipo': jsonEncode(condicionesEquipoJson),
-      'check_list': checkListStr,
-      'control_llantas': jsonEncode(controlLlantasJson),
-    };
-    if (operadorId != null) insertData['operador_id'] = operadorId;
-    if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    _appendHybridOperationMetadata(
-      insertData,
+    return _operationRepo.insertOperacionTalHorizontal(
+      fecha,
+      turno,
+      seccion,
+      operador,
+      jefeGuardia,
+      equipo,
+      nEquipo,
+      modeloEquipo,
+      checkListJson: checkListJson,
+      horometrosBase: horometrosBase,
+      actorDni: actorDni,
+      actorOperadorId: actorOperadorId,
+      operadorId: operadorId,
+      equipoId: equipoId,
+      zonaId: zonaId,
+      jefeGuardiaId: jefeGuardiaId,
+      identityVersion: identityVersion,
+      syncable: syncable,
       turnoId: turnoId,
       frenteOrigen: frenteOrigen,
       registradorUsuarioId: registradorUsuarioId,
@@ -3687,7 +3445,6 @@ CREATE TABLE $tableName (
       laborId: laborId,
       labor: labor,
     );
-    return await db.insert('Operacion_tal_horizontal', insertData);
   }
 
   Future<List<Map<String, dynamic>>>
@@ -3717,15 +3474,7 @@ CREATE TABLE $tableName (
   }
 
   Future<int> eliminarOperacionTalHorizontalFisico(int id) async {
-    final db = await database;
-
-    final result = await db.delete(
-      'Operacion_tal_horizontal',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    return result;
+    return _operationRepo.deleteOperation('Operacion_tal_horizontal', id);
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdHorizontal(
@@ -3835,62 +3584,25 @@ CREATE TABLE $tableName (
     int? laborId,
     String? labor,
   }) async {
-    final db = await database;
-
-    // 🔥 estructura base (incluye "empernador")
-    Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true},
-      'electrico': {'inicio': 0, 'final': 0, 'op': true},
-      'percusion': {'inicio': 0, 'final': 0, 'op': true},
-      'empernador': {'inicio': 0, 'final': 0, 'op': true},
-    };
-
-    // 🔥 aplicar valores de nube
-    if (horometrosBase != null && horometrosBase.isNotEmpty) {
-      for (var item in horometrosBase) {
-        final tipo = item['tipo_horometro'];
-        final finalValor = (item['final'] ?? 0).toDouble();
-
-        // 🔥 importante: validar que exista en el JSON base
-        if (horometrosJson.containsKey(tipo)) {
-          horometrosJson[tipo]['inicio'] = finalValor;
-        }
-      }
-    }
-
-    // 🔹 resto igual
-    Map<String, dynamic> condicionesEquipoJson = {
-      'op': false,
-      'noOp': false,
-      'lugar': '',
-      'descripcion': '',
-      'aceiteMotor': false,
-      'aceiteHidraulico': false,
-      'aceiteTransmision': false,
-      'combustible': '',
-      'horaLlenado': '',
-    };
-
-    final controlLlantasJson = _defaultControlLlantas();
-
-    String checkListStr = jsonEncode(checkListJson ?? []);
-
-    final insertData = <String, dynamic>{
-      'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'horometros': jsonEncode(horometrosJson),
-      'condiciones_equipo': jsonEncode(condicionesEquipoJson),
-      'check_list': checkListStr,
-      'control_llantas': jsonEncode(controlLlantasJson),
-    };
-    if (operadorId != null) insertData['operador_id'] = operadorId;
-    if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    _appendHybridOperationMetadata(
-      insertData,
+    return _operationRepo.insertOperacionEmpernador(
+      fecha,
+      turno,
+      seccion,
+      operador,
+      jefeGuardia,
+      equipo,
+      nEquipo,
+      tipoEquipo,
+      checkListJson: checkListJson,
+      horometrosBase: horometrosBase,
+      actorDni: actorDni,
+      actorOperadorId: actorOperadorId,
+      operadorId: operadorId,
+      equipoId: equipoId,
+      zonaId: zonaId,
+      jefeGuardiaId: jefeGuardiaId,
+      identityVersion: identityVersion,
+      syncable: syncable,
       turnoId: turnoId,
       frenteOrigen: frenteOrigen,
       registradorUsuarioId: registradorUsuarioId,
@@ -3898,7 +3610,6 @@ CREATE TABLE $tableName (
       laborId: laborId,
       labor: labor,
     );
-    return await db.insert('Operacion_empernador', insertData);
   }
 
   Future<List<Map<String, dynamic>>>
@@ -3925,15 +3636,7 @@ CREATE TABLE $tableName (
   }
 
   Future<int> eliminarOperacionTalEmpernadorFisico(int id) async {
-    final db = await database;
-
-    final result = await db.delete(
-      'Operacion_empernador',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    return result;
+    return _operationRepo.deleteOperation('Operacion_empernador', id);
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdEmpernador(
@@ -4051,67 +3754,27 @@ CREATE TABLE $tableName (
     int? laborId,
     String? labor,
   }) async {
-    final db = await database;
-
-    /// 🔥 estructura base (solo uno)
-    Map<String, dynamic> horometrosJson = {
-      'horometro': {'inicio': 0, 'final': 0, 'op': true},
-    };
-
-    /// 🔥 aplicar valor de nube (solo uno)
-    if (horometrosBase != null && horometrosBase.isNotEmpty) {
-      final item = horometrosBase.first;
-      final finalValor = (item['final'] ?? 0).toDouble();
-
-      horometrosJson['horometro']['inicio'] = finalValor;
-    }
-
-    /// Condiciones equipo
-    Map<String, dynamic> condicionesEquipoJson = {
-      'op': false,
-      'noOp': false,
-      'lugar': '',
-      'descripcion': '',
-      'aceiteMotor': false,
-      'aceiteHidraulico': false,
-      'aceiteTransmision': false,
-      'combustible': '',
-      'horaLlenado': '',
-    };
-
-    /// Control llantas
-    final controlLlantasJson = _defaultControlLlantas();
-
-    /// Programa de trabajo
-    Map<String, dynamic> programaTrabajoJson = {
-      'n_cucharas_programado': 0,
-      'n_cucharas_realizado': 0,
-    };
-
-    /// Checklist
-    String checkListStr = jsonEncode(checkListJson ?? []);
-
-    /// Checklist telemando
-    String checkListTelemandoStr = jsonEncode(checkListTelemandoJson ?? []);
-
-    final insertData = <String, dynamic>{
-      'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'horometros': jsonEncode(horometrosJson),
-      'condiciones_equipo': jsonEncode(condicionesEquipoJson),
-      'programa_trabajo': jsonEncode(programaTrabajoJson),
-      'check_list': checkListStr,
-      'check_list_telemando': checkListTelemandoStr,
-      'control_llantas': jsonEncode(controlLlantasJson),
-    };
-    if (operadorId != null) insertData['operador_id'] = operadorId;
-    if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    _appendHybridOperationMetadata(
-      insertData,
+    return _operationRepo.insertOperacionCarguio(
+      fecha,
+      turno,
+      seccion,
+      operador,
+      jefeGuardia,
+      equipo,
+      nEquipo,
+      capacidad,
+      tipoEquipo,
+      checkListJson: checkListJson,
+      checkListTelemandoJson: checkListTelemandoJson,
+      horometrosBase: horometrosBase,
+      actorDni: actorDni,
+      actorOperadorId: actorOperadorId,
+      operadorId: operadorId,
+      equipoId: equipoId,
+      zonaId: zonaId,
+      jefeGuardiaId: jefeGuardiaId,
+      identityVersion: identityVersion,
+      syncable: syncable,
       turnoId: turnoId,
       frenteOrigen: frenteOrigen,
       registradorUsuarioId: registradorUsuarioId,
@@ -4119,7 +3782,6 @@ CREATE TABLE $tableName (
       laborId: laborId,
       labor: labor,
     );
-    return await db.insert('Operacion_carguio', insertData);
   }
 
   Future<List<Map<String, dynamic>>> getOperacionCarguioByTurnoAndFechaMaster(
@@ -4148,15 +3810,7 @@ CREATE TABLE $tableName (
   }
 
   Future<int> eliminarOperacionTalCarguioFisico(int id) async {
-    final db = await database;
-
-    final result = await db.delete(
-      'Operacion_carguio',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    return result;
+    return _operationRepo.deleteOperation('Operacion_carguio', id);
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdCarguio(
@@ -4363,70 +4017,27 @@ CREATE TABLE $tableName (
     int? laborId,
     String? labor,
   }) async {
-    final db = await database;
-
-    /// 🔥 estructura base
-    Map<String, dynamic> horometrosJson = {
-      'horometro': {'inicio': 0, 'final': 0, 'op': true},
-    };
-
-    /// 🔥 aplicar valor de nube
-    if (horometrosBase != null && horometrosBase.isNotEmpty) {
-      final item = horometrosBase.first;
-      final finalValor = (item['final'] ?? 0).toDouble();
-
-      horometrosJson['horometro']['inicio'] = finalValor;
-    }
-
-    /// Condiciones equipo
-    Map<String, dynamic> condicionesEquipoJson = {
-      'op': false,
-      'noOp': false,
-      'lugar': '',
-      'descripcion': '',
-      'aceiteMotor': false,
-      'aceiteHidraulico': false,
-      'aceiteTransmision': false,
-      'combustible': '',
-      'horaLlenado': '',
-    };
-
-    /// Control llantas
-    final controlLlantasJson = _defaultControlLlantas();
-
-    /// Programa de trabajo
-    Map<String, dynamic> programaTrabajoJson = {
-      'n_viaje_mineral': 0.0,
-      'n_viaje_desmonte': 0.0,
-      'programado': 0.0,
-      'realizado': 0.0,
-      'total': 0.0,
-    };
-
-    /// Checklist
-    String checkListStr = jsonEncode(checkListJson ?? []);
-
-    /// Checklist telemando
-    String checkListTelemandoStr = jsonEncode(checkListTelemandoJson ?? []);
-
-    final insertData = <String, dynamic>{
-      'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'horometros': jsonEncode(horometrosJson),
-      'condiciones_equipo': jsonEncode(condicionesEquipoJson),
-      'programa_trabajo': jsonEncode(programaTrabajoJson),
-      'check_list': checkListStr,
-      'check_list_telemando': checkListTelemandoStr,
-      'control_llantas': jsonEncode(controlLlantasJson),
-    };
-    if (operadorId != null) insertData['operador_id'] = operadorId;
-    if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    _appendHybridOperationMetadata(
-      insertData,
+    return _operationRepo.insertOperacionDumper(
+      fecha,
+      turno,
+      seccion,
+      operador,
+      jefeGuardia,
+      equipo,
+      nEquipo,
+      capacidad,
+      tipoEquipo,
+      checkListJson: checkListJson,
+      checkListTelemandoJson: checkListTelemandoJson,
+      horometrosBase: horometrosBase,
+      actorDni: actorDni,
+      actorOperadorId: actorOperadorId,
+      operadorId: operadorId,
+      equipoId: equipoId,
+      zonaId: zonaId,
+      jefeGuardiaId: jefeGuardiaId,
+      identityVersion: identityVersion,
+      syncable: syncable,
       turnoId: turnoId,
       frenteOrigen: frenteOrigen,
       registradorUsuarioId: registradorUsuarioId,
@@ -4434,7 +4045,6 @@ CREATE TABLE $tableName (
       laborId: laborId,
       labor: labor,
     );
-    return await db.insert('Operacion_Dumper', insertData);
   }
 
   Future<List<Map<String, dynamic>>> getOperacionDumperByTurnoAndFechaMaster(
@@ -4463,15 +4073,7 @@ CREATE TABLE $tableName (
   }
 
   Future<int> eliminarOperacionTalDumperFisico(int id) async {
-    final db = await database;
-
-    final result = await db.delete(
-      'Operacion_Dumper',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    return result;
+    return _operationRepo.deleteOperation('Operacion_Dumper', id);
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdDumper(
@@ -4702,61 +4304,23 @@ CREATE TABLE $tableName (
     int? laborId,
     String? labor,
   }) async {
-    final db = await database;
-
-    /// 🔥 estructura base
-    Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true},
-      'percusion': {'inicio': 0, 'final': 0, 'op': true},
-    };
-
-    /// 🔥 aplicar valores de nube
-    if (horometrosBase != null && horometrosBase.isNotEmpty) {
-      for (var item in horometrosBase) {
-        final tipo = item['tipo_horometro'];
-        final finalValor = (item['final'] ?? 0).toDouble();
-
-        if (horometrosJson.containsKey(tipo)) {
-          horometrosJson[tipo]['inicio'] = finalValor;
-        }
-      }
-    }
-
-    /// Condiciones equipo
-    Map<String, dynamic> condicionesEquipoJson = {
-      'op': false,
-      'noOp': false,
-      'lugar': '',
-      'descripcion': '',
-      'aceiteMotor': false,
-      'aceiteHidraulico': false,
-      'aceiteTransmision': false,
-      'combustible': '',
-      'horaLlenado': '',
-    };
-
-    /// Control llantas
-    final controlLlantasJson = _defaultControlLlantas();
-
-    /// Checklist
-    String checkListStr = jsonEncode(checkListJson ?? []);
-
-    final insertData = <String, dynamic>{
-      'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'horometros': jsonEncode(horometrosJson),
-      'condiciones_equipo': jsonEncode(condicionesEquipoJson),
-      'check_list': checkListStr,
-      'control_llantas': jsonEncode(controlLlantasJson),
-    };
-    if (operadorId != null) insertData['operador_id'] = operadorId;
-    if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    _appendHybridOperationMetadata(
-      insertData,
+    return _operationRepo.insertOperacionRompeBaco(
+      fecha,
+      turno,
+      operador,
+      jefeGuardia,
+      equipo,
+      nEquipo,
+      checkListJson: checkListJson,
+      horometrosBase: horometrosBase,
+      actorDni: actorDni,
+      actorOperadorId: actorOperadorId,
+      operadorId: operadorId,
+      equipoId: equipoId,
+      zonaId: zonaId,
+      jefeGuardiaId: jefeGuardiaId,
+      identityVersion: identityVersion,
+      syncable: syncable,
       turnoId: turnoId,
       frenteOrigen: frenteOrigen,
       registradorUsuarioId: registradorUsuarioId,
@@ -4764,7 +4328,6 @@ CREATE TABLE $tableName (
       laborId: laborId,
       labor: labor,
     );
-    return await db.insert('Operacion_rompebanco', insertData);
   }
 
   Future<List<Map<String, dynamic>>> getOperacionRompeBacoByTurnoAndFechaMaster(
@@ -4793,15 +4356,7 @@ CREATE TABLE $tableName (
   }
 
   Future<int> eliminarOperacionTalRompeBacoFisico(int id) async {
-    final db = await database;
-
-    final result = await db.delete(
-      'Operacion_rompebanco',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    return result;
+    return _operationRepo.deleteOperation('Operacion_rompebanco', id);
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdRompeBaco(
@@ -4914,56 +4469,23 @@ CREATE TABLE $tableName (
     int? laborId,
     String? labor,
   }) async {
-    final db = await database;
-
-    Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true},
-      'percusion': {'inicio': 0, 'final': 0, 'op': true},
-    };
-
-    if (horometrosBase != null && horometrosBase.isNotEmpty) {
-      for (var item in horometrosBase) {
-        final tipo = item['tipo_horometro'];
-        final finalValor = (item['final'] ?? 0).toDouble();
-
-        if (horometrosJson.containsKey(tipo)) {
-          horometrosJson[tipo]['inicio'] = finalValor;
-        }
-      }
-    }
-
-    Map<String, dynamic> condicionesEquipoJson = {
-      'op': false,
-      'noOp': false,
-      'lugar': '',
-      'descripcion': '',
-      'aceiteMotor': false,
-      'aceiteHidraulico': false,
-      'aceiteTransmision': false,
-      'combustible': '',
-      'horaLlenado': '',
-    };
-
-    final controlLlantasJson = _defaultControlLlantas();
-
-    String checkListStr = jsonEncode(checkListJson ?? []);
-
-    final insertData = <String, dynamic>{
-      'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'horometros': jsonEncode(horometrosJson),
-      'condiciones_equipo': jsonEncode(condicionesEquipoJson),
-      'check_list': checkListStr,
-      'control_llantas': jsonEncode(controlLlantasJson),
-    };
-    if (operadorId != null) insertData['operador_id'] = operadorId;
-    if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    _appendHybridOperationMetadata(
-      insertData,
+    return _operationRepo.insertOperacionScalamin(
+      fecha,
+      turno,
+      operador,
+      jefeGuardia,
+      equipo,
+      nEquipo,
+      checkListJson: checkListJson,
+      horometrosBase: horometrosBase,
+      actorDni: actorDni,
+      actorOperadorId: actorOperadorId,
+      operadorId: operadorId,
+      equipoId: equipoId,
+      zonaId: zonaId,
+      jefeGuardiaId: jefeGuardiaId,
+      identityVersion: identityVersion,
+      syncable: syncable,
       turnoId: turnoId,
       frenteOrigen: frenteOrigen,
       registradorUsuarioId: registradorUsuarioId,
@@ -4971,7 +4493,6 @@ CREATE TABLE $tableName (
       laborId: laborId,
       labor: labor,
     );
-    return await db.insert('Operacion_Scalamin', insertData);
   }
 
   Future<List<Map<String, dynamic>>> getOperacionScalaminByTurnoAndFechaMaster(
@@ -5000,15 +4521,7 @@ CREATE TABLE $tableName (
   }
 
   Future<int> eliminarOperacionTalScalaminFisico(int id) async {
-    final db = await database;
-
-    final result = await db.delete(
-      'Operacion_Scalamin',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    return result;
+    return _operationRepo.deleteOperation('Operacion_Scalamin', id);
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdScalamin(
@@ -5120,54 +4633,23 @@ CREATE TABLE $tableName (
     int? laborId,
     String? labor,
   }) async {
-    final db = await database;
-
-    Map<String, dynamic> horometrosJson = {
-      'diesel': {'inicio': 0, 'final': 0, 'op': true},
-    };
-
-    if (horometrosBase != null && horometrosBase.isNotEmpty) {
-      for (var item in horometrosBase) {
-        final tipo = item['tipo_horometro'];
-        final finalValor = (item['final'] ?? 0).toDouble();
-        if (horometrosJson.containsKey(tipo)) {
-          horometrosJson[tipo]['inicio'] = finalValor;
-        }
-      }
-    }
-
-    Map<String, dynamic> condicionesEquipoJson = {
-      'op': false,
-      'noOp': false,
-      'lugar': '',
-      'descripcion': '',
-      'aceiteMotor': false,
-      'aceiteHidraulico': false,
-      'aceiteTransmision': false,
-      'combustible': '',
-      'horaLlenado': '',
-    };
-
-    final controlLlantasJson = _defaultControlLlantas();
-
-    String checkListStr = jsonEncode(checkListJson ?? []);
-
-    final insertData = <String, dynamic>{
-      'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'horometros': jsonEncode(horometrosJson),
-      'condiciones_equipo': jsonEncode(condicionesEquipoJson),
-      'check_list': checkListStr,
-      'control_llantas': jsonEncode(controlLlantasJson),
-    };
-    if (operadorId != null) insertData['operador_id'] = operadorId;
-    if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-    _appendHybridOperationMetadata(
-      insertData,
+    return _operationRepo.insertOperacionScissor(
+      fecha,
+      turno,
+      operador,
+      jefeGuardia,
+      equipo,
+      nEquipo,
+      checkListJson: checkListJson,
+      horometrosBase: horometrosBase,
+      actorDni: actorDni,
+      actorOperadorId: actorOperadorId,
+      operadorId: operadorId,
+      equipoId: equipoId,
+      zonaId: zonaId,
+      jefeGuardiaId: jefeGuardiaId,
+      identityVersion: identityVersion,
+      syncable: syncable,
       turnoId: turnoId,
       frenteOrigen: frenteOrigen,
       registradorUsuarioId: registradorUsuarioId,
@@ -5175,7 +4657,6 @@ CREATE TABLE $tableName (
       laborId: laborId,
       labor: labor,
     );
-    return await db.insert('Operacion_scissor', insertData);
   }
 
   Future<List<Map<String, dynamic>>> getOperacionScissorByTurnoAndFechaMaster(
@@ -5204,15 +4685,7 @@ CREATE TABLE $tableName (
   }
 
   Future<int> eliminarOperacionTalScissorFisico(int id) async {
-    final db = await database;
-
-    final result = await db.delete(
-      'Operacion_scissor',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    return result;
+    return _operationRepo.deleteOperation('Operacion_scissor', id);
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdScissor(
@@ -5324,63 +4797,23 @@ CREATE TABLE $tableName (
     int? laborId,
     String? labor,
   }) async {
-    final db = await database;
-
-    /// 🔥 estructura base
-    Map<String, dynamic> horometrosJson = {
-      'horometro_principal': {'inicio': 0, 'final': 0, 'op': true},
-      'electrico': {'inicio': 0, 'final': 0, 'op': true},
-      'diesel': {'inicio': 0, 'final': 0, 'op': true},
-    };
-
-    /// 🔥 aplicar valores de nube
-    if (horometrosBase != null && horometrosBase.isNotEmpty) {
-      for (var item in horometrosBase) {
-        final tipo = item['tipo_horometro'];
-        final finalValor = (item['final'] ?? 0).toDouble();
-
-        if (horometrosJson.containsKey(tipo)) {
-          horometrosJson[tipo]['inicio'] = finalValor;
-        }
-      }
-    }
-
-    /// Condiciones equipo
-    Map<String, dynamic> condicionesEquipoJson = {
-      'op': false,
-      'noOp': false,
-      'lugar': '',
-      'descripcion': '',
-      'aceiteMotor': false,
-      'aceiteHidraulico': false,
-      'aceiteTransmision': false,
-      'combustible': '',
-      'horaLlenado': '',
-    };
-
-    /// Control llantas
-    final controlLlantasJson = _defaultControlLlantas();
-
-    /// Checklist
-    String checkListStr = jsonEncode(checkListJson ?? []);
-
-    final insertData = <String, dynamic>{
-      'fecha': fecha,
-      'turno': turno,
-      'operador': operador,
-      'jefe_guardia': jefeGuardia,
-      'equipo': equipo,
-      'horometros': jsonEncode(horometrosJson),
-      'condiciones_equipo': jsonEncode(condicionesEquipoJson),
-      'check_list': checkListStr,
-      'control_llantas': jsonEncode(controlLlantasJson),
-    };
-    if (operadorId != null) insertData['operador_id'] = operadorId;
-    if (equipoId != null) insertData['equipo_id'] = equipoId;
-    if (jefeGuardiaId != null) insertData['jefe_guardia_id'] = jefeGuardiaId;
-
-    _appendHybridOperationMetadata(
-      insertData,
+    return _operationRepo.insertOperacionAnfochanger(
+      fecha,
+      turno,
+      operador,
+      jefeGuardia,
+      equipo,
+      nEquipo,
+      checkListJson: checkListJson,
+      horometrosBase: horometrosBase,
+      actorDni: actorDni,
+      actorOperadorId: actorOperadorId,
+      operadorId: operadorId,
+      equipoId: equipoId,
+      zonaId: zonaId,
+      jefeGuardiaId: jefeGuardiaId,
+      identityVersion: identityVersion,
+      syncable: syncable,
       turnoId: turnoId,
       frenteOrigen: frenteOrigen,
       registradorUsuarioId: registradorUsuarioId,
@@ -5388,8 +4821,6 @@ CREATE TABLE $tableName (
       laborId: laborId,
       labor: labor,
     );
-
-    return await db.insert('Operacion_anfochanger', insertData);
   }
 
   Future<List<Map<String, dynamic>>>
@@ -5419,15 +4850,7 @@ CREATE TABLE $tableName (
   }
 
   Future<int> eliminarOperacionTalAnfochangerFisico(int id) async {
-    final db = await database;
-
-    final result = await db.delete(
-      'Operacion_anfochanger',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    return result;
+    return _operationRepo.deleteOperation('Operacion_anfochanger', id);
   }
 
   Future<List<Map<String, dynamic>>> getCheckListByOperacionIdAnfochanger(
@@ -5544,11 +4967,7 @@ CREATE TABLE $tableName (
   }
 
   Future<List<TipoPerforacion>> getTiposPerforacion() async {
-    final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'tipo_perforaciones',
-    );
-    return List.generate(maps.length, (i) => TipoPerforacion.fromJson(maps[i]));
+    return _sharedCatalogRepo.getTiposPerforacion();
   }
 
   Future<Map<String, dynamic>?> getExploracionById(int id) async {
@@ -5676,13 +5095,7 @@ CREATE TABLE $tableName (
   }
 
   Future<List<TipoPerforacion>> getTiposPerforacionhorizontalfil() async {
-    final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'tipo_perforaciones',
-      where: 'proceso = ? AND permitido_medicion = ?',
-      whereArgs: ['PERFORACIÓN HORIZONTAL', 1],
-    );
-    return List.generate(maps.length, (i) => TipoPerforacion.fromJson(maps[i]));
+    return _sharedCatalogRepo.getTiposPerforacionhorizontalfil();
   }
 
   Future<int> insertarMedicionHorizontal(Map<String, dynamic> datos) async {
@@ -5718,13 +5131,7 @@ CREATE TABLE $tableName (
 
   //TONELADASSSS----------------------------------------------------------------------
   Future<List<TipoPerforacion>> getTiposPerforacionLargofil() async {
-    final db = await sharedCatalogDatabase;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'tipo_perforaciones',
-      where: 'proceso = ? AND permitido_medicion = ?',
-      whereArgs: ['PERFORACIÓN TALADROS LARGOS', 1],
-    );
-    return List.generate(maps.length, (i) => TipoPerforacion.fromJson(maps[i]));
+    return _sharedCatalogRepo.getTiposPerforacionLargofil();
   }
 
   Future<int> insertarMedicionLargo(Map<String, dynamic> datos) async {
