@@ -7,6 +7,7 @@ class OperacionesService {
     'tal_largo': ApiConfig.operacionTalLargoEndpoint,
     'tal_horizontal': ApiConfig.operacionTalHorizontalEndpoint,
     'carguio': ApiConfig.operacionCarguioEndpoint,
+    'acarreo': ApiConfig.operacionAcarreoEndpoint,
     'empernador': ApiConfig.operacionEmpernadorEndpoint,
     'scalamin': ApiConfig.operacionScalaminEndpoint,
     'scissor': ApiConfig.operacionScissorEndpoint,

@@ -4,7 +4,7 @@ import 'package:sqflite/sqflite.dart';
 
 class OperationRepository {
   OperationRepository({DatabaseHelper? databaseHelper})
-      : _databaseHelper = databaseHelper ?? DatabaseHelper();
+    : _databaseHelper = databaseHelper ?? DatabaseHelper();
 
   final DatabaseHelper _databaseHelper;
 
@@ -70,10 +70,14 @@ class OperationRepository {
 
   /// Returns default horometros structure based on process type.
   /// Most drilling processes use diesel/electrico/percusion.
-  /// Carguio/Dumper use a single 'horometro' key.
+  /// Carguio/Dumper/Acarreo use a single 'horometro' key.
   Map<String, dynamic> defaultHorometros(String processType) {
-    if (processType == 'Carguio' || processType == 'Dumper') {
-      return {'horometro': {'inicio': 0, 'final': 0, 'op': true}};
+    if (processType == 'Carguio' ||
+        processType == 'Dumper' ||
+        processType == 'Acarreo') {
+      return {
+        'horometro': {'inicio': 0, 'final': 0, 'op': true},
+      };
     }
     return {
       'diesel': {'inicio': 0, 'final': 0, 'op': true},
@@ -185,7 +189,9 @@ class OperationRepository {
       whereArgs: [operacionId],
     );
     if (result.isEmpty) {
-      return defaultFactory != null ? defaultFactory() : defaultHorometros('TalLargo');
+      return defaultFactory != null
+          ? defaultFactory()
+          : defaultHorometros('TalLargo');
     }
     final horometrosJson = result.first['horometros'] as String? ?? '{}';
     try {
@@ -201,7 +207,9 @@ class OperationRepository {
       return horometros;
     } catch (e) {
       print('Error decodificando horometros: $e');
-      return defaultFactory != null ? defaultFactory() : defaultHorometros('TalLargo');
+      return defaultFactory != null
+          ? defaultFactory()
+          : defaultHorometros('TalLargo');
     }
   }
 
@@ -232,7 +240,8 @@ class OperationRepository {
       whereArgs: [operacionId],
     );
     if (result.isEmpty) return defaultCondicionesEquipo();
-    final condicionesJson = result.first['condiciones_equipo'] as String? ?? '{}';
+    final condicionesJson =
+        result.first['condiciones_equipo'] as String? ?? '{}';
     try {
       final condiciones = jsonDecode(condicionesJson) as Map<String, dynamic>;
       condiciones.putIfAbsent('horaLlenado', () => '');
@@ -406,8 +415,10 @@ class OperationRepository {
         if (estado != null) {
           registros[i]['estado'] = estado['estado'] ?? registros[i]['estado'];
           registros[i]['codigo'] = estado['codigo'] ?? registros[i]['codigo'];
-          registros[i]['hora_inicio'] = estado['hora_inicio'] ?? registros[i]['hora_inicio'];
-          registros[i]['hora_final'] = estado['hora_final'] ?? registros[i]['hora_final'];
+          registros[i]['hora_inicio'] =
+              estado['hora_inicio'] ?? registros[i]['hora_inicio'];
+          registros[i]['hora_final'] =
+              estado['hora_final'] ?? registros[i]['hora_final'];
         }
         encontrado = true;
         break;
@@ -462,7 +473,8 @@ class OperationRepository {
     }
     for (int i = 0; i < nuevosRegistros.length; i++) {
       if (i < nuevosRegistros.length - 1) {
-        nuevosRegistros[i]['hora_final'] = nuevosRegistros[i + 1]['hora_inicio'] ?? '';
+        nuevosRegistros[i]['hora_final'] =
+            nuevosRegistros[i + 1]['hora_inicio'] ?? '';
       } else {
         nuevosRegistros[i]['hora_final'] = '';
       }
@@ -558,7 +570,8 @@ class OperationRepository {
         (estado) => estado['id'] == estadoId,
         orElse: () => null,
       );
-      if (estadoEncontrado != null && estadoEncontrado.containsKey('operacion')) {
+      if (estadoEncontrado != null &&
+          estadoEncontrado.containsKey('operacion')) {
         return estadoEncontrado['operacion'] as Map<String, dynamic>;
       }
       return _defaultOperacionByEstado();
@@ -642,7 +655,8 @@ class OperationRepository {
     final updateData = <String, dynamic>{};
     final laborId = _asInt(operacionData['labor_id']);
     if (laborId != null) updateData['labor_id'] = laborId;
-    final frenteOrigen = operacionData['frente_origen']?.toString().trim() ?? '';
+    final frenteOrigen =
+        operacionData['frente_origen']?.toString().trim() ?? '';
     if (frenteOrigen.isNotEmpty) updateData['frente_origen'] = frenteOrigen;
     final labor = operacionData['labor']?.toString().trim() ?? '';
     if (labor.isNotEmpty) updateData['labor'] = labor;
@@ -818,7 +832,6 @@ class OperationRepository {
     required Map<String, dynamic> horometrosJson,
     List<Map<String, dynamic>>? checkListJson,
     String? nEquipo,
-    String? modeloEquipo,
     String? capacidad,
     String? tipoEquipo,
   }) {
@@ -837,21 +850,23 @@ class OperationRepository {
     final controlLlantasJson = defaultControlLlantas();
     final checkListStr = jsonEncode(checkListJson ?? []);
 
-    return {
+    final data = <String, dynamic>{
       'fecha': fecha,
       'turno': turno,
       'operador': operador,
       'jefe_guardia': jefeGuardia,
       'equipo': equipo,
-      'n_equipo': nEquipo,
-      'modelo': modeloEquipo,
-      'capacidad': capacidad,
-      'tipo_equipo': tipoEquipo,
       'horometros': jsonEncode(horometrosJson),
       'condiciones_equipo': jsonEncode(condicionesEquipoJson),
       'check_list': checkListStr,
       'control_llantas': jsonEncode(controlLlantasJson),
     };
+
+    if (nEquipo != null) data['n_equipo'] = nEquipo;
+    if (capacidad != null) data['capacidad'] = capacidad;
+    if (tipoEquipo != null) data['tipo_equipo'] = tipoEquipo;
+
+    return data;
   }
 
   // ============================================================
@@ -909,12 +924,9 @@ class OperationRepository {
   Future<int> insertOperacionTalHorizontal(
     String fecha,
     String turno,
-    String seccion,
     String operador,
     String jefeGuardia,
-    String equipo,
-    String nEquipo,
-    String modeloEquipo, {
+    String equipo, {
     List<Map<String, dynamic>>? checkListJson,
     List<Map<String, dynamic>>? horometrosBase,
     String? actorDni,
@@ -943,12 +955,9 @@ class OperationRepository {
       operador: operador,
       jefeGuardia: jefeGuardia,
       equipo: equipo,
-      nEquipo: nEquipo,
-      modeloEquipo: modeloEquipo,
       horometrosJson: horometrosJson,
       checkListJson: checkListJson,
     );
-    data['seccion'] = seccion;
     if (operadorId != null) data['operador_id'] = operadorId;
     if (equipoId != null) data['equipo_id'] = equipoId;
     if (zonaId != null) data['zona_id'] = zonaId;
@@ -992,15 +1001,12 @@ class OperationRepository {
     String? labor,
   }) async {
     final db = await _db;
-    final horometrosJson = _buildHorometrosJson(
-      {
-        'diesel': {'inicio': 0, 'final': 0, 'op': true},
-        'electrico': {'inicio': 0, 'final': 0, 'op': true},
-        'percusion': {'inicio': 0, 'final': 0, 'op': true},
-        'empernador': {'inicio': 0, 'final': 0, 'op': true},
-      },
-      horometrosBase,
-    );
+    final horometrosJson = _buildHorometrosJson({
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
+      'electrico': {'inicio': 0, 'final': 0, 'op': true},
+      'percusion': {'inicio': 0, 'final': 0, 'op': true},
+      'empernador': {'inicio': 0, 'final': 0, 'op': true},
+    }, horometrosBase);
     final data = _buildOperationInsertBase(
       fecha: fecha,
       turno: turno,
@@ -1058,10 +1064,9 @@ class OperationRepository {
     String? labor,
   }) async {
     final db = await _db;
-    final horometrosJson = _buildHorometrosJson(
-      {'horometro': {'inicio': 0, 'final': 0, 'op': true}},
-      horometrosBase,
-    );
+    final horometrosJson = _buildHorometrosJson({
+      'horometro': {'inicio': 0, 'final': 0, 'op': true},
+    }, horometrosBase);
     final data = _buildOperationInsertBase(
       fecha: fecha,
       turno: turno,
@@ -1126,10 +1131,9 @@ class OperationRepository {
     String? labor,
   }) async {
     final db = await _db;
-    final horometrosJson = _buildHorometrosJson(
-      {'horometro': {'inicio': 0, 'final': 0, 'op': true}},
-      horometrosBase,
-    );
+    final horometrosJson = _buildHorometrosJson({
+      'horometro': {'inicio': 0, 'final': 0, 'op': true},
+    }, horometrosBase);
     final data = _buildOperationInsertBase(
       fecha: fecha,
       turno: turno,
@@ -1165,6 +1169,80 @@ class OperationRepository {
     return await db.insert('Operacion_Dumper', data);
   }
 
+  Future<int> insertOperacionAcarreo(
+    String fecha,
+    String turno,
+    String seccion,
+    String operador,
+    String jefeGuardia,
+    String equipo,
+    String nEquipo,
+    String capacidad,
+    String tipoEquipo, {
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? checkListTelemandoJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+    int? revisado,
+    int? aprobacion,
+  }) async {
+    final db = await _db;
+    final horometrosJson = _buildHorometrosJson({
+      'horometro': {'inicio': 0, 'final': 0, 'op': true},
+    }, horometrosBase);
+    final data = _buildOperationInsertBase(
+      fecha: fecha,
+      turno: turno,
+      operador: operador,
+      jefeGuardia: jefeGuardia,
+      equipo: equipo,
+      nEquipo: nEquipo,
+      capacidad: capacidad,
+      tipoEquipo: tipoEquipo,
+      horometrosJson: horometrosJson,
+      checkListJson: checkListJson,
+    );
+    data['seccion'] = seccion;
+    if (operadorId != null) data['operador_id'] = operadorId;
+    if (equipoId != null) data['equipo_id'] = equipoId;
+    if (zonaId != null) data['zona_id'] = zonaId;
+    if (jefeGuardiaId != null) data['jefe_guardia_id'] = jefeGuardiaId;
+    if (revisado != null) data['revisado'] = revisado;
+    if (aprobacion != null) data['aprobacion'] = aprobacion;
+    const programaTrabajoJson = {
+      'n_viaje_mineral': 0.0,
+      'n_viaje_desmonte': 0.0,
+      'programado': 0.0,
+      'realizado': 0.0,
+      'total': 0.0,
+    };
+    data['programa_trabajo'] = jsonEncode(programaTrabajoJson);
+    data['check_list_telemando'] = jsonEncode(checkListTelemandoJson ?? []);
+    appendHybridOperationMetadata(
+      data,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+    );
+    return await db.insert('Operacion_acarreo', data);
+  }
+
   Future<int> insertOperacionRompeBaco(
     String fecha,
     String turno,
@@ -1190,10 +1268,10 @@ class OperationRepository {
     String? labor,
   }) async {
     final db = await _db;
-    final horometrosJson = _buildHorometrosJson(
-      {'diesel': {'inicio': 0, 'final': 0, 'op': true}, 'percusion': {'inicio': 0, 'final': 0, 'op': true}},
-      horometrosBase,
-    );
+    final horometrosJson = _buildHorometrosJson({
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
+      'percusion': {'inicio': 0, 'final': 0, 'op': true},
+    }, horometrosBase);
     final data = _buildOperationInsertBase(
       fecha: fecha,
       turno: turno,
@@ -1245,10 +1323,10 @@ class OperationRepository {
     String? labor,
   }) async {
     final db = await _db;
-    final horometrosJson = _buildHorometrosJson(
-      {'diesel': {'inicio': 0, 'final': 0, 'op': true}, 'percusion': {'inicio': 0, 'final': 0, 'op': true}},
-      horometrosBase,
-    );
+    final horometrosJson = _buildHorometrosJson({
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
+      'percusion': {'inicio': 0, 'final': 0, 'op': true},
+    }, horometrosBase);
     final data = _buildOperationInsertBase(
       fecha: fecha,
       turno: turno,
@@ -1300,10 +1378,9 @@ class OperationRepository {
     String? labor,
   }) async {
     final db = await _db;
-    final horometrosJson = _buildHorometrosJson(
-      {'diesel': {'inicio': 0, 'final': 0, 'op': true}},
-      horometrosBase,
-    );
+    final horometrosJson = _buildHorometrosJson({
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
+    }, horometrosBase);
     final data = _buildOperationInsertBase(
       fecha: fecha,
       turno: turno,
@@ -1355,14 +1432,11 @@ class OperationRepository {
     String? labor,
   }) async {
     final db = await _db;
-    final horometrosJson = _buildHorometrosJson(
-      {
-        'horometro_principal': {'inicio': 0, 'final': 0, 'op': true},
-        'electrico': {'inicio': 0, 'final': 0, 'op': true},
-        'diesel': {'inicio': 0, 'final': 0, 'op': true},
-      },
-      horometrosBase,
-    );
+    final horometrosJson = _buildHorometrosJson({
+      'horometro_principal': {'inicio': 0, 'final': 0, 'op': true},
+      'electrico': {'inicio': 0, 'final': 0, 'op': true},
+      'diesel': {'inicio': 0, 'final': 0, 'op': true},
+    }, horometrosBase);
     final data = _buildOperationInsertBase(
       fecha: fecha,
       turno: turno,
@@ -1397,10 +1471,6 @@ class OperationRepository {
   /// Returns the number of rows deleted.
   Future<int> deleteOperation(String tableName, int id) async {
     final db = await _db;
-    return await db.delete(
-      tableName,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete(tableName, where: 'id = ?', whereArgs: [id]);
   }
 }

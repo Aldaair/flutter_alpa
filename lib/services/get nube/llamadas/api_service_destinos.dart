@@ -10,15 +10,15 @@ class ApiServiceDestinos {
 
   Future<List<Destino>> fetchDestinos(String token) async {
     try {
-      final endpoint = '${ApiConfig.baseUrl}${ApiConfig.destinosEndpoint}';
-      print('📡 Destinos endpoint: $endpoint');
+      final endpoint = '${ApiConfig.baseUrl}${ApiConfig.origenDestinoEndpoint}';
+      print('📡 OrigenDestino endpoint: $endpoint');
 
       final response = await http.get(
         Uri.parse(endpoint),
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      print('📥 Destinos status: ${response.statusCode}');
+      print('📥 OrigenDestino status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final List<dynamic> responseData = json.decode(response.body);
@@ -31,16 +31,16 @@ class ApiServiceDestinos {
             )
             .toList();
 
-        print('📦 Destinos rows recibidas: ${destinos.length}');
+        print('📦 OrigenDestino rows recibidas: ${destinos.length}');
 
-        await _dbHelper.deleteAll('destinos');
+        await _dbHelper.deleteAll('origen_destino');
         await saveToLocalDB(destinos);
 
         return destinos;
       }
 
       throw Exception(
-        'Error al cargar destinos. Código: ${response.statusCode}',
+        'Error al cargar origen_destino. Código: ${response.statusCode}',
       );
     } catch (error) {
       throw Exception('Error en la solicitud: $error');
@@ -49,12 +49,12 @@ class ApiServiceDestinos {
 
   Future<void> saveToLocalDB(List<Destino> destinos) async {
     final sharedDb = await _dbHelper.sharedCatalogDatabase;
-    print('🗄️ Destinos shared DB path: ${sharedDb.path}');
+    print('🗄️ OrigenDestino shared DB path: ${sharedDb.path}');
 
     for (final destino in destinos) {
-      await _dbHelper.insert('destinos', destino.toMap());
+      await _dbHelper.insert('origen_destino', destino.toMap());
     }
 
-    print('✅ Destinos rows guardadas: ${destinos.length}');
+    print('✅ OrigenDestino rows guardadas: ${destinos.length}');
   }
 }

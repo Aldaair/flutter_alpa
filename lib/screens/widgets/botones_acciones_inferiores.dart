@@ -10,6 +10,7 @@ class BotonesAccionesInferiores extends StatelessWidget {
   final VoidCallback? onChecklistTelemandoPressed;
   final VoidCallback? onProgramaTrabajoPressed;
   final bool isCerrado;
+  final bool showPresionLlantas;
 
   const BotonesAccionesInferiores({
     super.key,
@@ -22,6 +23,7 @@ class BotonesAccionesInferiores extends StatelessWidget {
     this.onChecklistTelemandoPressed,
     this.onProgramaTrabajoPressed,
     this.isCerrado = false,
+    this.showPresionLlantas = true,
   });
 
   @override
@@ -62,11 +64,12 @@ class BotonesAccionesInferiores extends StatelessWidget {
                   label: 'CheckList',
                   onPressed: onChecklistPressed,
                 ),
-                _buildAccionBoton(
-                  icon: Icons.tire_repair,
-                  label: 'Presión de llantas',
-                  onPressed: onPresionLlantasPressed,
-                ),
+                if (showPresionLlantas)
+                  _buildAccionBoton(
+                    icon: Icons.tire_repair,
+                    label: 'Presión de llantas',
+                    onPressed: onPresionLlantasPressed,
+                  ),
                 _buildAccionBoton(
                   icon: Icons.lock_outline,
                   label: 'Cerrar registro',
@@ -117,12 +120,14 @@ class BotonesAccionesInferiores extends StatelessWidget {
                     label: 'Condiciones',
                     onPressed: onCondicionesEquipoPressed,
                   ),
-                  const SizedBox(width: 8),
-                  _buildAccionBoton(
-                    icon: Icons.tire_repair,
-                    label: 'Presión',
-                    onPressed: onPresionLlantasPressed,
-                  ),
+                  if (showPresionLlantas) ...[
+                    const SizedBox(width: 8),
+                    _buildAccionBoton(
+                      icon: Icons.tire_repair,
+                      label: 'Presión',
+                      onPressed: onPresionLlantasPressed,
+                    ),
+                  ],
                   if (onProgramaTrabajoPressed != null) ...[
                     const SizedBox(width: 8),
                     _buildAccionBoton(

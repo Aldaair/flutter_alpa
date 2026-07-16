@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/models/DimTurno.dart';
+import 'package:i_miner/shared/acarreo_equipment_type.dart';
 
 class RegistroOperacionDialog extends StatefulWidget {
   final String turno;
@@ -8,6 +9,7 @@ class RegistroOperacionDialog extends StatefulWidget {
   final int procesoId;
   final int categoriaId;
   final Map<String, String>? existingRecord;
+  final Map<String, dynamic>? operacionContext;
   final String? ultimaHoraRegistrada;
   final Function(Map<String, dynamic>) onConfirm;
 
@@ -18,6 +20,7 @@ class RegistroOperacionDialog extends StatefulWidget {
     required this.procesoId,
     required this.categoriaId,
     this.existingRecord,
+    this.operacionContext,
     this.ultimaHoraRegistrada,
     required this.onConfirm,
   });
@@ -55,16 +58,18 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
         "🔍 _cargarEstados: procesoId=${widget.procesoId}, categoriaId=${widget.categoriaId}",
       );
       final dbHelper = DatabaseHelper();
+      final tipoEquipoFiltro = await _resolveEstadoTipoEquipo(dbHelper);
+
       final results = await Future.wait([
         dbHelper.getEstadosByProcesoAndCategoria(
           widget.procesoId,
           widget.categoriaId,
+          tipoEquipo: tipoEquipoFiltro,
         ),
         dbHelper.getDimTurnos(),
       ]);
       final estados = results[0] as List<Map<String, dynamic>>;
       final turnos = results[1] as List<DimTurno>;
-      print("🔍 _cargarEstados: encontrados ${estados.length} estados");
       if (!mounted) return;
       setState(() {
         _estadosCatalogo = estados;
@@ -80,6 +85,37 @@ class _RegistroOperacionDialogState extends State<RegistroOperacionDialog> {
         _loadingTurnos = false;
       });
     }
+  }
+
+  Future<String?> _resolveEstadoTipoEquipo(DatabaseHelper dbHelper) async {
+    if (!await _isAcarreoProcess(dbHelper)) {
+      return null;
+    }
+
+    final equipoId = _asInt(widget.operacionContext?['equipo_id']);
+    if (equipoId != null) {
+      final equipo = await dbHelper.getEquipoById(equipoId);
+      print(equipo);
+      final tipoEquipo = resolveAcarreoTipoEquipoFromName(equipo?.nombre);
+      print(tipoEquipo);
+      if (tipoEquipo != null) {
+        return tipoEquipo;
+      }
+    }
+
+    return resolveAcarreoTipoEquipoFromName(widget.operacionContext?['equipo']);
+  }
+
+  Future<bool> _isAcarreoProcess(DatabaseHelper dbHelper) async {
+    final proceso = await dbHelper.getProcesoById(widget.procesoId);
+    final procesoNombre = proceso?['nombre']?.toString().trim().toUpperCase();
+    return procesoNombre == 'ACARREO';
+  }
+
+  int? _asInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
   }
 
   String _normalizarTurno(String value) {

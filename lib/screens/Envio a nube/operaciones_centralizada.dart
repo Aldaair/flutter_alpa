@@ -95,8 +95,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "CARGUÍO": (context) => DetalleEnvioScreen(
         tipoOperacion: "CARGUÍO",
         endpointTipo: "carguio",
-        fetchOperaciones: () =>
-            _syncRepo.getAllOperations('Operacion_carguio'),
+        fetchOperaciones: () => _syncRepo.getAllOperations('Operacion_carguio'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalCarguioFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) =>
@@ -110,12 +109,11 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "ACARREO": (context) => DetalleEnvioScreen(
         tipoOperacion: "ACARREO",
         endpointTipo: "acarreo",
-        fetchOperaciones: () =>
-            _syncRepo.getAllOperations('Operacion_Dumper'),
+        fetchOperaciones: () => _syncRepo.getAllOperations('Operacion_acarreo'),
         eliminarRegistro: (id) =>
-            _db.eliminarOperacionTalDumperFisico(id).then((v) => v > 0),
+            _db.eliminarOperacionAcarreoFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) =>
-            _syncRepo.markAsSent('Operacion_Dumper', id),
+            _syncRepo.markAsSent('Operacion_acarreo', id),
         prepararDatosExportar: (ids, data) => ExportarService(
           _db,
         ).prepararDatosParaExportar('acarreo', ids, data),
@@ -140,8 +138,7 @@ class _SeccionesScreenState extends State<SeccionesScreen> {
       "SCISSOR": (context) => DetalleEnvioScreen(
         tipoOperacion: "SCISSOR",
         endpointTipo: "scissor",
-        fetchOperaciones: () =>
-            _syncRepo.getAllOperations('Operacion_scissor'),
+        fetchOperaciones: () => _syncRepo.getAllOperations('Operacion_scissor'),
         eliminarRegistro: (id) =>
             _db.eliminarOperacionTalScissorFisico(id).then((v) => v > 0),
         marcarComoEnviado: (id) =>

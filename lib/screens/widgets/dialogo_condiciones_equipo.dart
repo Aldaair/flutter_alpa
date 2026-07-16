@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:i_miner/shared/acarreo_equipment_type.dart';
 
 class DialogoCondicionesEquipo extends StatefulWidget {
   final int operacionId;
   final String estado;
   final Map<String, dynamic>? condicionesData;
+  final Map<String, dynamic>? operacionContext;
+  final String? procesoNombre;
   final Color primaryColor;
   final Future<bool> Function(int operacionId, Map<String, dynamic> datos)?
   onGuardar;
@@ -12,6 +15,8 @@ class DialogoCondicionesEquipo extends StatefulWidget {
     super.key,
     required this.operacionId,
     this.condicionesData,
+    this.operacionContext,
+    this.procesoNombre,
     required this.estado,
     this.primaryColor = const Color(0xFF1B5E6B),
     this.onGuardar,
@@ -37,6 +42,15 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
   final TextEditingController _descripcionController = TextEditingController();
   final TextEditingController _combustibleController = TextEditingController();
   final TextEditingController _horaLlenadoController = TextEditingController();
+
+  bool get _shouldHideLocomotoraAcarreoFields {
+    final procesoNormalizado = widget.procesoNombre?.trim().toUpperCase();
+    if (procesoNormalizado != 'ACARREO') {
+      return false;
+    }
+
+    return isAcarreoLocomotoraOperation(widget.operacionContext);
+  }
 
   @override
   void initState() {
@@ -68,9 +82,24 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
     _aceiteTransmisionChecked = datos['aceiteTransmision'] ?? false;
     _combustibleController.text = datos['combustible'] ?? '';
     _horaLlenadoController.text = datos['horaLlenado'] ?? '';
+
+    if (_shouldHideLocomotoraAcarreoFields) {
+      _resetHiddenLocomotoraFields();
+    }
+  }
+
+  void _resetHiddenLocomotoraFields() {
+    _aceiteHidraulicoChecked = false;
+    _aceiteTransmisionChecked = false;
+    _combustibleController.clear();
+    _horaLlenadoController.clear();
   }
 
   Future<void> _guardarDatos() async {
+    if (_shouldHideLocomotoraAcarreoFields) {
+      _resetHiddenLocomotoraFields();
+    }
+
     Map<String, dynamic> datosGuardar = {
       'op': _opChecked,
       'noOp': _noOpChecked,
@@ -152,10 +181,12 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
                     _buildSeccionDescripcion(),
                     const SizedBox(height: 20),
                     _buildSeccionAceitesCompacta(),
-                    const SizedBox(height: 20),
-                    _buildSeccionCombustibleCompacta(),
-                    const SizedBox(height: 20),
-                    _buildSeccionHoraLlenado(),
+                    if (!_shouldHideLocomotoraAcarreoFields) ...[
+                      const SizedBox(height: 20),
+                      _buildSeccionCombustibleCompacta(),
+                      const SizedBox(height: 20),
+                      _buildSeccionHoraLlenado(),
+                    ],
                   ],
                 ),
               ),
@@ -413,20 +444,22 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
               onChanged: (value) =>
                   setState(() => _aceiteMotorChecked = value ?? false),
             ),
-            const SizedBox(height: 8),
-            _buildCheckboxCompacto(
-              label: 'HIDRÁULICO',
-              value: _aceiteHidraulicoChecked,
-              onChanged: (value) =>
-                  setState(() => _aceiteHidraulicoChecked = value ?? false),
-            ),
-            const SizedBox(height: 8),
-            _buildCheckboxCompacto(
-              label: 'TRANSMISIÓN',
-              value: _aceiteTransmisionChecked,
-              onChanged: (value) =>
-                  setState(() => _aceiteTransmisionChecked = value ?? false),
-            ),
+            if (!_shouldHideLocomotoraAcarreoFields) ...[
+              const SizedBox(height: 8),
+              _buildCheckboxCompacto(
+                label: 'HIDRÁULICO',
+                value: _aceiteHidraulicoChecked,
+                onChanged: (value) =>
+                    setState(() => _aceiteHidraulicoChecked = value ?? false),
+              ),
+              const SizedBox(height: 8),
+              _buildCheckboxCompacto(
+                label: 'TRANSMISIÓN',
+                value: _aceiteTransmisionChecked,
+                onChanged: (value) =>
+                    setState(() => _aceiteTransmisionChecked = value ?? false),
+              ),
+            ],
           ],
         ),
       );
@@ -466,24 +499,26 @@ class _DialogoCondicionesEquipoState extends State<DialogoCondicionesEquipo> {
                         setState(() => _aceiteMotorChecked = value ?? false),
                   ),
                 ),
-                Expanded(
-                  child: _buildCheckboxCompacto(
-                    label: 'HIDRÁULICO',
-                    value: _aceiteHidraulicoChecked,
-                    onChanged: (value) => setState(
-                      () => _aceiteHidraulicoChecked = value ?? false,
+                if (!_shouldHideLocomotoraAcarreoFields)
+                  Expanded(
+                    child: _buildCheckboxCompacto(
+                      label: 'HIDRÁULICO',
+                      value: _aceiteHidraulicoChecked,
+                      onChanged: (value) => setState(
+                        () => _aceiteHidraulicoChecked = value ?? false,
+                      ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: _buildCheckboxCompacto(
-                    label: 'TRANSMISIÓN',
-                    value: _aceiteTransmisionChecked,
-                    onChanged: (value) => setState(
-                      () => _aceiteTransmisionChecked = value ?? false,
+                if (!_shouldHideLocomotoraAcarreoFields)
+                  Expanded(
+                    child: _buildCheckboxCompacto(
+                      label: 'TRANSMISIÓN',
+                      value: _aceiteTransmisionChecked,
+                      onChanged: (value) => setState(
+                        () => _aceiteTransmisionChecked = value ?? false,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ],

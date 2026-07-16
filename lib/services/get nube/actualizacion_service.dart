@@ -75,7 +75,7 @@ class ActualizacionService {
       "Labores": fetchLabores,
       "Turnos": fetchDimTurnos,
       "Procesos": fetchProcesos,
-      "Destinos": fetchDestinos,
+      "Origen y Destinos": fetchOrigenYDestinos,
       //"Autorizaciones": refreshOfflineAuthorizationSnapshot,
       "Cargos": fetchCargos,
       "Usuarios": fetchUsuarios,
@@ -558,10 +558,7 @@ class ActualizacionService {
 
   Future<void> refreshOfflineAuthorizationSnapshot() async {
     try {
-      await UserService().syncOfflineProfileSnapshot(
-        dni: dni,
-        token: token,
-      );
+      await UserService().syncOfflineProfileSnapshot(dni: dni, token: token);
       print('✅ Offline authorization snapshot refreshed');
     } catch (e) {
       print('❌ Error refreshing offline authorization snapshot: $e');
@@ -760,7 +757,7 @@ class ActualizacionService {
     }
   }
 
-  Future<void> fetchDestinos() async {
+  Future<void> fetchOrigenYDestinos() async {
     final apiService = ApiServiceDestinos();
 
     try {

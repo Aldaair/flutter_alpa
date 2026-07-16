@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/config/data/shared_catalog_repository.dart';
-import 'package:i_miner/models/DimLabor.dart';
 
 class DialogoFormularioPerforacion extends StatefulWidget {
   final int operacionId;
@@ -29,65 +28,57 @@ class DialogoFormularioPerforacion extends StatefulWidget {
       _DialogoFormularioPerforacionState();
 }
 
-class _DumperFrontOption {
-  const _DumperFrontOption({
-    required this.laborId,
-    required this.alaId,
-    required this.tipoLabor,
-    required this.labor,
-    required this.ala,
-    required this.mina,
-    required this.zona,
-    required this.area,
-    required this.fase,
-    required this.estructuraMineral,
-    required this.nivel,
-  });
+class _OrigenDestinoOption {
+  const _OrigenDestinoOption({required this.id, required this.nombre});
 
-  final int? laborId;
-  final int? alaId;
-  final String tipoLabor;
-  final String labor;
-  final String ala;
-  final String mina;
-  final String zona;
-  final String area;
-  final String fase;
-  final String estructuraMineral;
-  final String nivel;
+  final int? id;
+  final String nombre;
 }
 
 class _DialogoFormularioPerforacionState
     extends State<DialogoFormularioPerforacion> {
-  static const String _sinLaborLabel = 'SIN LABOR';
-
   bool isEditable = false;
   bool isLoading = true;
   bool isSmallScreen = false;
 
   final TextEditingController observacionesController = TextEditingController();
-  final TextEditingController nViajesController = TextEditingController();
+  final TextEditingController nCucharasController = TextEditingController();
+  final TextEditingController nCarrosController = TextEditingController();
+  String? equipoOperacionNombre;
 
-  String? tipoLaborSeleccionado;
-  String? laborInicioSeleccionado;
-  String? alaSeleccionado;
-  String? nivelSeleccionado;
-  int? laborInicioId;
+  String? ubicacionInicioSeleccionada;
+  int? ubicacionInicioId;
 
   String? ubicacionDestinoSeleccionado;
   int? ubicacionDestinoId;
 
-
-
-  final Map<String, _DumperFrontOption> _frontOptionMap = {};
-  _DumperFrontOption? selectedFrontOption;
-  String? selectedFrontLabel;
   final SharedCatalogRepository _sharedCatalogRepository =
       SharedCatalogRepository();
 
+  List<Map<String, dynamic>> todosLosOrigenes = [];
+  List<Map<String, dynamic>> todosLosDestinos = [];
   List<Map<String, dynamic>> destinosDisponibles = [];
+  List<_OrigenDestinoOption> origenesDisponibles = [];
+  List<String> opcionesOrigen = [];
   List<String> opcionesDestino = [];
-  List<DimLabor> laboresCatalogo = [];
+
+  bool get _usaCarritos {
+    final equipo = equipoOperacionNombre?.trim().toUpperCase() ?? '';
+    return equipo.contains('LOCOMOTORA');
+  }
+
+  String? get _filtroTipoEquipoDestino {
+    if (_usaCarritos) {
+      return 'LOCOMOTORA';
+    }
+
+    final equipo = equipoOperacionNombre?.trim().toUpperCase() ?? '';
+    if (equipo.contains('VOLQUETE')) {
+      return 'VOLQUETE';
+    }
+
+    return null;
+  }
 
   @override
   void initState() {
@@ -103,23 +94,41 @@ class _DialogoFormularioPerforacionState
     try {
       final db = DatabaseHelper();
       final results = await Future.wait([
-        _sharedCatalogRepository.getLabores(),
-        db.getDestinosByProcesoId(widget.procesoId),
+        _sharedCatalogRepository.getOrigenDestinoByProcesoAndTipo(
+          proceso: 'ACARREO',
+          tipo: 'ORIGEN',
+        ),
+        _sharedCatalogRepository.getOrigenDestinoByProcesoAndTipo(
+          proceso: 'ACARREO',
+          tipo: 'DESTINO',
+        ),
+        db.database.then(
+          (database) => database.query(
+            'Operacion_acarreo',
+            columns: ['equipo'],
+            where: 'id = ?',
+            whereArgs: [widget.operacionId],
+            limit: 1,
+          ),
+        ),
       ]);
 
       if (!mounted) return;
 
       setState(() {
-        laboresCatalogo = results[0] as List<DimLabor>;
-        destinosDisponibles = results[1] as List<Map<String, dynamic>>;
-        opcionesDestino = destinosDisponibles
-            .map((d) => d['nombre']?.toString() ?? '')
-            .where((n) => n.isNotEmpty)
-            .toList();
+        todosLosOrigenes = List<Map<String, dynamic>>.from(
+          results[0] as List<Map<String, dynamic>>,
+        );
+        todosLosDestinos = List<Map<String, dynamic>>.from(
+          results[1] as List<Map<String, dynamic>>,
+        );
+        final operacionRows = results[2] as List<Map<String, Object?>>;
+        equipoOperacionNombre = operacionRows.isNotEmpty
+            ? operacionRows.first['equipo']?.toString()
+            : null;
+        _aplicarFiltroOrigenes();
+        _aplicarFiltroDestinos();
       });
-
-      _rebuildFrontOptions();
-      _preseleccionarInicio();
     } catch (e) {
       print('Error cargando datos de Dumper: $e');
     } finally {
@@ -132,142 +141,115 @@ class _DialogoFormularioPerforacionState
   void _cargarDatosIniciales() {
     if (widget.datosIniciales == null) return;
 
-    laborInicioSeleccionado = widget.datosIniciales!['labor']?.toString();
-    laborInicioId = widget.datosIniciales!['labor_id'] as int?;
-    tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor']?.toString();
-    alaSeleccionado = widget.datosIniciales!['ala']?.toString();
-    nivelSeleccionado = widget.datosIniciales!['nivel']?.toString();
-    if (widget.datosIniciales!.containsKey('labor_id') &&
-        widget.datosIniciales!['labor_id'] == null &&
-        (widget.datosIniciales!['labor']?.toString().isEmpty ?? true)) {
-      selectedFrontLabel = _sinLaborLabel;
-    }
-    ubicacionDestinoSeleccionado =
-        widget.datosIniciales!['ubicacion_destino']?.toString();
-    ubicacionDestinoId = widget.datosIniciales!['ubicacion_destino_id'] as int?;
-    nViajesController.text = widget.datosIniciales!['n_viajes']?.toString() ?? '';
+    ubicacionInicioSeleccionada =
+        widget.datosIniciales!['ubicacion_inicio']?.toString() ??
+        widget.datosIniciales!['frente_origen']?.toString() ??
+        widget.datosIniciales!['labor']?.toString();
+    ubicacionInicioId =
+        _asInt(widget.datosIniciales!['ubicacion_inicio_id']) ??
+        _asInt(widget.datosIniciales!['labor_id']);
+    ubicacionDestinoSeleccionado = widget.datosIniciales!['ubicacion_destino']
+        ?.toString();
+    ubicacionDestinoId = _asInt(widget.datosIniciales!['ubicacion_destino_id']);
+    nCucharasController.text =
+        widget.datosIniciales!['n_cucharas']?.toString() ??
+        widget.datosIniciales!['n_viajes']?.toString() ??
+        '';
+    nCarrosController.text =
+        widget.datosIniciales!['n_carros']?.toString() ?? '';
     observacionesController.text =
         widget.datosIniciales!['observaciones']?.toString() ?? '';
   }
 
-  void _rebuildFrontOptions() {
-    _frontOptionMap.clear();
-    _frontOptionMap[_sinLaborLabel] = const _DumperFrontOption(
-      laborId: null,
-      alaId: null,
-      tipoLabor: '',
-      labor: '',
-      ala: '',
-      mina: '',
-      zona: '',
-      area: '',
-      fase: '',
-      estructuraMineral: '',
-      nivel: '',
-    );
+  void _aplicarFiltroOrigenes() {
+    origenesDisponibles = todosLosOrigenes
+        .map(
+          (origen) => _OrigenDestinoOption(
+            id: _asInt(origen['id']),
+            nombre: origen['nombre']?.toString() ?? '',
+          ),
+        )
+        .where((origen) => origen.nombre.trim().isNotEmpty)
+        .toList();
+    print("ORIGENES DISPONIBLES");
+    print(origenesDisponibles);
 
-    void registerOption(_DumperFrontOption option) {
-      if (option.tipoLabor.trim().isEmpty ||
-          option.labor.trim().isEmpty) {
-        return;
+    opcionesOrigen = origenesDisponibles
+        .map((origen) => origen.nombre)
+        .toList();
+
+    if (ubicacionInicioSeleccionada != null &&
+        !opcionesOrigen.contains(ubicacionInicioSeleccionada)) {
+      ubicacionInicioSeleccionada = null;
+      ubicacionInicioId = null;
+    }
+  }
+
+  _OrigenDestinoOption? _resolveSelectedOrigin() {
+    final selectedName = ubicacionInicioSeleccionada?.trim();
+    for (final origen in origenesDisponibles) {
+      if (selectedName != null &&
+          selectedName.isNotEmpty &&
+          origen.nombre == selectedName) {
+        return origen;
       }
-      final label = _buildSelectionLabel(option.tipoLabor, option.labor, option.ala);
-      _frontOptionMap[label] = option;
+      if (ubicacionInicioId != null && origen.id == ubicacionInicioId) {
+        return origen;
+      }
     }
 
-    for (final labor in laboresCatalogo) {
-      registerOption(_DumperFrontOption(
-        laborId: labor.laborId,
-        alaId: labor.alaId,
-        tipoLabor: labor.tipoLaborNombre,
-        labor: labor.nombreLabor,
-        ala: labor.alaNombre,
-        mina: labor.minaNombre,
-        zona: labor.zonaNombre,
-        area: labor.areaNombre,
-        fase: labor.faseNombre,
-        estructuraMineral: labor.estructuraMineralNombre,
-        nivel: labor.nivelNombre,
-      ));
+    return null;
+  }
+
+  void _aplicarFiltroDestinos() {
+    final tipoEquipo = _filtroTipoEquipoDestino;
+
+    destinosDisponibles = tipoEquipo == null
+        ? List<Map<String, dynamic>>.from(todosLosDestinos)
+        : todosLosDestinos.where((destino) {
+            final destinoTipoEquipo =
+                destino['tipo_equipo']?.toString().trim().toUpperCase() ?? '';
+            return destinoTipoEquipo == tipoEquipo;
+          }).toList();
+
+    opcionesDestino = destinosDisponibles
+        .map((d) => d['nombre']?.toString() ?? '')
+        .where((n) => n.isNotEmpty)
+        .toList();
+
+    if (ubicacionDestinoSeleccionado != null &&
+        !opcionesDestino.contains(ubicacionDestinoSeleccionado)) {
+      ubicacionDestinoSeleccionado = null;
+      ubicacionDestinoId = null;
     }
-  }
-
-  void _preseleccionarInicio() {
-    final label = selectedFrontLabel ?? _buildSelectionLabelFromState();
-    if (label == null) return;
-    final option = _frontOptionMap[label];
-    if (option != null) {
-      _aplicarFrontOption(option);
-    }
-  }
-
-  String _buildSelectionLabel(String tipoLabor, String labor, [String? ala]) {
-    final base = '${tipoLabor.trim()} - ${labor.trim()}';
-    final normalizedAla = ala?.trim() ?? '';
-    if (normalizedAla.isEmpty) {
-      return base;
-    }
-    return '$base - $normalizedAla';
-  }
-
-  String? _buildSelectionLabelFromState() {
-    final tipoLabor = tipoLaborSeleccionado?.trim();
-    final labor = laborInicioSeleccionado?.trim();
-    if (tipoLabor == null || tipoLabor.isEmpty) return null;
-    if (labor == null || labor.isEmpty) return null;
-    return _buildSelectionLabel(tipoLabor, labor, alaSeleccionado);
-  }
-
-  _DumperFrontOption? _resolveSelectedFront() {
-    final label = selectedFrontLabel ?? _buildSelectionLabelFromState();
-    if (label == null) return null;
-    return _frontOptionMap[label];
-  }
-
-  void _clearFrontSelection() {
-    setState(() {
-      selectedFrontOption = null;
-      selectedFrontLabel = null;
-      tipoLaborSeleccionado = null;
-      laborInicioSeleccionado = null;
-      alaSeleccionado = null;
-      nivelSeleccionado = null;
-      laborInicioId = null;
-    });
-  }
-
-  void _aplicarFrontOption(_DumperFrontOption option) {
-    setState(() {
-      tipoLaborSeleccionado = option.tipoLabor;
-      laborInicioSeleccionado = option.labor;
-      alaSeleccionado = option.ala;
-      nivelSeleccionado = option.nivel;
-      laborInicioId = option.laborId;
-      selectedFrontOption = option;
-      selectedFrontLabel = option.laborId == null
-          ? _sinLaborLabel
-          : _buildSelectionLabel(option.tipoLabor, option.labor, option.ala);
-    });
   }
 
   Future<void> _guardarDatos() async {
-    final selected = _resolveSelectedFront();
-    if (selected == null) {
-      _mostrarSnackbar('Debe seleccionar una opción válida en Ubicación INICIO', Colors.orange);
+    final origenSeleccionado = _resolveSelectedOrigin();
+    if (origenSeleccionado == null) {
+      _mostrarSnackbar(
+        'Debe seleccionar una opción válida en Ubicación INICIO',
+        Colors.orange,
+      );
       return;
     }
 
     final datosFormulario = <String, dynamic>{
-      'labor_id': selected.laborId,
-      'labor': selected.labor,
-      'tipo_labor': selected.tipoLabor,
-      'ala': selected.ala,
-      'ala_id': selected.alaId,
-      'nivel': selected.nivel,
+      'ubicacion_inicio_id': origenSeleccionado.id,
+      'ubicacion_inicio': origenSeleccionado.nombre,
+      'labor_id': origenSeleccionado.id,
+      'labor': origenSeleccionado.nombre,
+      'frente_origen': origenSeleccionado.nombre,
+      'tipo_labor': '',
+      'ala': '',
+      'ala_id': null,
+      'nivel': '',
       'ubicacion_destino_id': ubicacionDestinoId ?? 0,
       'ubicacion_destino': ubicacionDestinoSeleccionado ?? '',
-      'n_viajes': int.tryParse(nViajesController.text) ?? 0,
       'observaciones': observacionesController.text,
+      if (_usaCarritos) 'n_carros': int.tryParse(nCarrosController.text) ?? 0,
+      if (!_usaCarritos)
+        'n_cucharas': int.tryParse(nCucharasController.text) ?? 0,
     };
 
     widget.onGuardar(datosFormulario);
@@ -286,9 +268,16 @@ class _DialogoFormularioPerforacionState
     );
   }
 
+  int? _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
   @override
   void dispose() {
-    nViajesController.dispose();
+    nCucharasController.dispose();
+    nCarrosController.dispose();
     observacionesController.dispose();
     super.dispose();
   }
@@ -299,8 +288,9 @@ class _DialogoFormularioPerforacionState
     isSmallScreen = screenWidth < 600;
 
     final dialogWidth = isSmallScreen ? screenWidth * 0.95 : 1000.0;
-    final dialogHeight =
-        isSmallScreen ? MediaQuery.of(context).size.height * 0.9 : 750.0;
+    final dialogHeight = isSmallScreen
+        ? MediaQuery.of(context).size.height * 0.9
+        : 750.0;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -327,7 +317,7 @@ class _DialogoFormularioPerforacionState
                           const SizedBox(height: 16),
                           _buildSeccionUbicacionFin(),
                           const SizedBox(height: 16),
-                          _buildSeccionViajes(),
+                          _buildSeccionAcarreo(),
                           const SizedBox(height: 16),
                           _buildSeccionObservaciones(),
                         ],
@@ -342,11 +332,7 @@ class _DialogoFormularioPerforacionState
   }
 
   Widget _buildSeccionUbicacionInicio() {
-    final selected = _resolveSelectedFront() ?? selectedFrontOption;
-    final selectedDetails = selected?.laborId != null ? selected : null;
-    final isSinLaborSelected = selectedFrontLabel == _sinLaborLabel;
-    final options =
-        _frontOptionMap.keys.toList()..sort();
+    final options = List<String>.from(opcionesOrigen)..sort();
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -385,44 +371,44 @@ class _DialogoFormularioPerforacionState
           ),
           const SizedBox(height: 8),
           _buildSearchableAutocompleteField(
-            label: 'Frente de Trabajo',
-            hintText: 'Buscar por tipo labor, labor o ala...',
+            label: 'Seleccionar origen',
+            hintText: 'Buscar origen compartido...',
             options: options,
-            selectedValue: selectedFrontLabel ?? _buildSelectionLabelFromState(),
+            selectedValue: ubicacionInicioSeleccionada,
             onChanged: (value) {
-              if (value != (selectedFrontLabel ?? _buildSelectionLabelFromState())) {
-                _clearFrontSelection();
-              }
+              if (value == ubicacionInicioSeleccionada) return;
+              setState(() {
+                ubicacionInicioSeleccionada = value.trim().isEmpty
+                    ? null
+                    : value;
+                ubicacionInicioId = null;
+              });
             },
             onSelected: (value) {
-              final option = _frontOptionMap[value];
-              if (option != null) {
-                _aplicarFrontOption(option);
-              }
+              final option = origenesDisponibles.firstWhere(
+                (item) => item.nombre == value,
+                orElse: () => const _OrigenDestinoOption(id: null, nombre: ''),
+              );
+              if (option.nombre.isEmpty) return;
+              setState(() {
+                ubicacionInicioSeleccionada = option.nombre;
+                ubicacionInicioId = option.id;
+              });
             },
           ),
-          if (_frontOptionMap.isEmpty)
+          if (opcionesOrigen.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'No hay labores disponibles en los planes',
+                'No hay orígenes compartidos disponibles para Acarreo',
                 style: TextStyle(fontSize: 11, color: Colors.red.shade400),
               ),
             ),
-          if (selectedDetails != null) ...[
+          if (ubicacionInicioSeleccionada != null &&
+              ubicacionInicioSeleccionada!.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              '${selectedDetails.mina} / ${selectedDetails.zona} / ${selectedDetails.area} / ${selectedDetails.fase}',
-              style: const TextStyle(fontSize: 12),
-            ),
-            Text(
-              '${selectedDetails.estructuraMineral} / ${selectedDetails.nivel} / ${selectedDetails.tipoLabor} / ${selectedDetails.labor}${selectedDetails.ala.isNotEmpty ? ' / Ala ${selectedDetails.ala}' : ''}',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-          ] else if (isSinLaborSelected) ...[
-            const SizedBox(height: 8),
-            const Text(
-              _sinLaborLabel,
+              ubicacionInicioSeleccionada!,
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
@@ -480,7 +466,7 @@ class _DialogoFormularioPerforacionState
                         (item) => item['nombre'] == value,
                         orElse: () => <String, dynamic>{},
                       );
-                      ubicacionDestinoId = destino['id'] as int?;
+                      ubicacionDestinoId = _asInt(destino['id']);
                     });
                   }
                 : null,
@@ -499,7 +485,7 @@ class _DialogoFormularioPerforacionState
     );
   }
 
-  Widget _buildSeccionViajes() {
+  Widget _buildSeccionAcarreo() {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -526,7 +512,7 @@ class _DialogoFormularioPerforacionState
               ),
               const SizedBox(width: 6),
               Text(
-                'Número de Viajes (Cucharas)',
+                'Detalles de acarreo',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -536,23 +522,24 @@ class _DialogoFormularioPerforacionState
             ],
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: nViajesController,
-            enabled: isEditable,
+          if (equipoOperacionNombre != null &&
+              equipoOperacionNombre!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Equipo: $equipoOperacionNombre',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          _buildCompactTextField(
+            controller: _usaCarritos ? nCarrosController : nCucharasController,
+            label: _usaCarritos ? 'N° carritos' : 'N° cucharas',
+            hintText: '0',
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(
-              hintText: 'Ingrese número de viajes',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
-              ),
-              isDense: true,
-            ),
           ),
         ],
       ),
@@ -711,7 +698,7 @@ class _DialogoFormularioPerforacionState
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              isSmallScreen ? 'Perforación' : 'Formulario de Perforación',
+              isSmallScreen ? 'Acarreo' : 'Acarreo operation',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: isSmallScreen ? 14 : 16,
@@ -759,6 +746,31 @@ class _DialogoFormularioPerforacionState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCompactTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hintText,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
+    return TextField(
+      controller: controller,
+      enabled: isEditable,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hintText,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
+        isDense: true,
       ),
     );
   }
@@ -861,10 +873,6 @@ class _DialogoFormularioPerforacionState
         children: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              minimumSize: Size.zero,
-            ),
             child: Text(
               'Cancelar',
               style: TextStyle(
@@ -880,11 +888,6 @@ class _DialogoFormularioPerforacionState
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                minimumSize: Size.zero,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),

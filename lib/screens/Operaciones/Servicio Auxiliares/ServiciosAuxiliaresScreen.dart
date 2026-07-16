@@ -189,6 +189,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           categoriaId,
                                           ultimaHora,
                                           existingRecord,
+                                          operacionContext,
                                         ) => showRegistroOperacionDialog(
                                           context: context,
                                           dialog: RegistroOperacionDialog(
@@ -201,6 +202,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                               (k, v) =>
                                                   MapEntry(k, v.toString()),
                                             ),
+                                            operacionContext: operacionContext,
                                             onConfirm: (data) =>
                                                 Navigator.of(context).pop(data),
                                           ),
@@ -252,10 +254,14 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           estado,
                                           condicionesData,
                                           primaryColor,
+                                          operacionContext,
+                                          procesoNombre,
                                         ) => DialogoCondicionesEquipo(
                                           operacionId: operacionId,
                                           estado: estado,
                                           condicionesData: condicionesData,
+                                          operacionContext: operacionContext,
+                                          procesoNombre: procesoNombre,
                                           primaryColor: primaryColor,
                                           onGuardar: (id, datos) => DatabaseHelper()
                                               .updateCondicionesEquipoAnfochanger(
@@ -310,6 +316,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           required primaryColor,
                                           onChecklistTelemandoPressed,
                                           onProgramaTrabajoPressed,
+                                          showPresionLlantas = true,
                                           isCerrado = false,
                                         }) => BotonesAccionesInferiores(
                                           onChecklistPressed:
@@ -323,6 +330,8 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           onPresionLlantasPressed:
                                               onPresionLlantasPressed,
                                           primaryColor: primaryColor,
+                                          showPresionLlantas:
+                                              showPresionLlantas,
                                           isCerrado: isCerrado,
                                         ),
                                   ),
@@ -361,6 +370,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           categoriaId,
                                           ultimaHora,
                                           existingRecord,
+                                          operacionContext,
                                         ) => showRegistroOperacionDialog(
                                           context: context,
                                           dialog: RegistroOperacionDialog(
@@ -373,6 +383,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                               (k, v) =>
                                                   MapEntry(k, v.toString()),
                                             ),
+                                            operacionContext: operacionContext,
                                             onConfirm: (data) =>
                                                 Navigator.of(context).pop(data),
                                           ),
@@ -424,10 +435,14 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           estado,
                                           condicionesData,
                                           primaryColor,
+                                          operacionContext,
+                                          procesoNombre,
                                         ) => DialogoCondicionesEquipo(
                                           operacionId: operacionId,
                                           estado: estado,
                                           condicionesData: condicionesData,
+                                          operacionContext: operacionContext,
+                                          procesoNombre: procesoNombre,
                                           primaryColor: primaryColor,
                                           onGuardar: (id, datos) =>
                                               DatabaseHelper()
@@ -484,6 +499,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           required primaryColor,
                                           onChecklistTelemandoPressed,
                                           onProgramaTrabajoPressed,
+                                          showPresionLlantas = true,
                                           isCerrado = false,
                                         }) => BotonesAccionesInferiores(
                                           onChecklistPressed:
@@ -497,6 +513,8 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           onPresionLlantasPressed:
                                               onPresionLlantasPressed,
                                           primaryColor: primaryColor,
+                                          showPresionLlantas:
+                                              showPresionLlantas,
                                           isCerrado: isCerrado,
                                         ),
                                   ),
@@ -535,6 +553,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           categoriaId,
                                           ultimaHora,
                                           existingRecord,
+                                          operacionContext,
                                         ) => showRegistroOperacionDialog(
                                           context: context,
                                           dialog: RegistroOperacionDialog(
@@ -547,6 +566,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                               (k, v) =>
                                                   MapEntry(k, v.toString()),
                                             ),
+                                            operacionContext: operacionContext,
                                             onConfirm: (data) =>
                                                 Navigator.of(context).pop(data),
                                           ),
@@ -598,10 +618,14 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           estado,
                                           condicionesData,
                                           primaryColor,
+                                          operacionContext,
+                                          procesoNombre,
                                         ) => DialogoCondicionesEquipo(
                                           operacionId: operacionId,
                                           estado: estado,
                                           condicionesData: condicionesData,
+                                          operacionContext: operacionContext,
+                                          procesoNombre: procesoNombre,
                                           primaryColor: primaryColor,
                                           onGuardar: (id, datos) =>
                                               DatabaseHelper()
@@ -658,6 +682,7 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           required primaryColor,
                                           onChecklistTelemandoPressed,
                                           onProgramaTrabajoPressed,
+                                          showPresionLlantas = true,
                                           isCerrado = false,
                                         }) => BotonesAccionesInferiores(
                                           onChecklistPressed:
@@ -671,6 +696,8 @@ class ServiciosAuxiliaresScreen extends StatelessWidget {
                                           onPresionLlantasPressed:
                                               onPresionLlantasPressed,
                                           primaryColor: primaryColor,
+                                          showPresionLlantas:
+                                              showPresionLlantas,
                                           isCerrado: isCerrado,
                                         ),
                                   ),

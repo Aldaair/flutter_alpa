@@ -370,33 +370,79 @@ class OperacionCarguioRegistroDetalleRequest {
 }
 
 class OperacionAcarreoRegistroDetalleRequest {
+  final String? tipoAcarreo;
+  final String? tipoEquipo;
   final int? laborId;
+  final int? ubicacionDestinoId;
   final String? ubicacionDestino;
   final int? nCucharas;
+  final int? nCarros;
+  final String? tipoCarrito;
   final String? observaciones;
 
   OperacionAcarreoRegistroDetalleRequest({
+    this.tipoAcarreo,
+    this.tipoEquipo,
     this.laborId,
+    this.ubicacionDestinoId,
     this.ubicacionDestino,
     this.nCucharas,
+    this.nCarros,
+    this.tipoCarrito,
     this.observaciones,
   });
 
   factory OperacionAcarreoRegistroDetalleRequest.fromJson(
     Map<String, dynamic> json,
   ) => OperacionAcarreoRegistroDetalleRequest(
+    tipoAcarreo: json['tipo_acarreo'] as String?,
+    tipoEquipo: json['tipo_equipo'] as String?,
     laborId: _toInt(json['labor_id']),
+    ubicacionDestinoId: _toInt(json['ubicacion_destino_id']),
     ubicacionDestino: json['ubicacion_destino'] as String?,
     nCucharas: _toInt(json['n_cucharas']),
+    nCarros: _toInt(json['n_carros']),
+    tipoCarrito: json['tipo_carrito'] as String?,
     observaciones: json['observaciones'] as String?,
   );
 
-  Map<String, dynamic> toJson() => {
-    if (laborId != null) 'labor_id': laborId,
-    if (ubicacionDestino != null) 'ubicacion_destino': ubicacionDestino,
-    if (nCucharas != null) 'n_cucharas': nCucharas,
-    if (observaciones != null) 'observaciones': observaciones,
-  };
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      if (tipoAcarreo != null) 'tipo_acarreo': tipoAcarreo,
+      if (laborId != null) 'labor_id': laborId,
+      if (ubicacionDestinoId != null)
+        'ubicacion_destino_id': ubicacionDestinoId,
+      if (ubicacionDestino != null) 'ubicacion_destino': ubicacionDestino,
+      if (tipoCarrito != null) 'tipo_carrito': tipoCarrito,
+      if (observaciones != null) 'observaciones': observaciones,
+    };
+
+    if (_isLocomotora) {
+      if (nCarros != null) map['n_carros'] = nCarros;
+      return map;
+    }
+
+    if (_isVolqueteStyle) {
+      if (nCucharas != null) map['n_cucharas'] = nCucharas;
+      return map;
+    }
+
+    if (nCucharas != null) map['n_cucharas'] = nCucharas;
+    if (nCarros != null) map['n_carros'] = nCarros;
+    return map;
+  }
+
+  bool get _isLocomotora =>
+      _normalizedContains(tipoAcarreo, 'LOCOMOTORA') ||
+      _normalizedContains(tipoEquipo, 'LOCOMOTORA');
+
+  bool get _isVolqueteStyle =>
+      _normalizedContains(tipoAcarreo, 'VOLQUETE') ||
+      _normalizedContains(tipoEquipo, 'VOLQUETE');
+
+  bool _normalizedContains(String? value, String needle) {
+    return value?.trim().toUpperCase().contains(needle) ?? false;
+  }
 }
 
 class OperacionScalaminRegistroDetalleRequest {

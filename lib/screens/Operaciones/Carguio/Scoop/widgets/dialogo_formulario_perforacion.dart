@@ -58,8 +58,6 @@ class _ScoopFrontOption {
 
 class _DialogoFormularioPerforacionState
     extends State<DialogoFormularioPerforacion> {
-  static const String _sinLaborLabel = 'SIN LABOR';
-
   bool isEditable = false;
   bool isLoading = true;
 
@@ -105,7 +103,7 @@ class _DialogoFormularioPerforacionState
 
       final results = await Future.wait([
         _sharedCatalogRepository.getLabores(),
-        dbHelper.getDestinosByProcesoId(widget.procesoId),
+        dbHelper.getOrigenDestino('CARGUIO', 'DESTINO'),
       ]);
 
       if (!mounted) return;
@@ -142,11 +140,6 @@ class _DialogoFormularioPerforacionState
     tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor']?.toString();
     alaSeleccionado = widget.datosIniciales!['ala']?.toString();
     nivelSeleccionado = widget.datosIniciales!['nivel']?.toString();
-    if (widget.datosIniciales!.containsKey('labor_id') &&
-        widget.datosIniciales!['labor_id'] == null &&
-        (widget.datosIniciales!['labor']?.toString().isEmpty ?? true)) {
-      selectedManualFrontLabel = _sinLaborLabel;
-    }
     ubicacionDestinoId = widget.datosIniciales!['ubicacion_destino_id'] as int?;
     ubicacionDestinoSeleccionado = widget.datosIniciales!['ubicacion_destino']
         ?.toString();
@@ -159,29 +152,16 @@ class _DialogoFormularioPerforacionState
 
   void _rebuildManualFrontMap() {
     _manualFrontMap.clear();
-    _manualFrontMap[_sinLaborLabel] = const _ScoopFrontOption(
-      laborId: null,
-      alaId: null,
-      tipoLabor: '',
-      labor: '',
-      ala: '',
-      mina: '',
-      zona: '',
-      area: '',
-      fase: '',
-      estructuraMineral: '',
-      nivel: '',
-    );
 
     void registerOption(_ScoopFrontOption option) {
-      if (option.tipoLabor.trim().isEmpty ||
-          option.labor.trim().isEmpty) {
+      if (option.tipoLabor.trim().isEmpty || option.labor.trim().isEmpty) {
         return;
       }
       final label = _buildSelectionLabel(
         option.tipoLabor,
         option.labor,
         option.ala,
+        option.nivel,
       );
       _manualFrontMap[label] = option;
     }
@@ -210,13 +190,25 @@ class _DialogoFormularioPerforacionState
     }
   }
 
-  String _buildSelectionLabel(String tipoLabor, String labor, [String? ala]) {
+  String _buildSelectionLabel(
+    String tipoLabor,
+    String labor, [
+    String? ala,
+    String? nivel,
+  ]) {
     final base = '${tipoLabor.trim()} - ${labor.trim()}';
     final normalizedAla = ala?.trim() ?? '';
-    if (normalizedAla.isEmpty) {
-      return base;
+    final normalizedNivel = nivel?.trim() ?? '';
+
+    final parts = <String>[base];
+    if (normalizedAla.isNotEmpty) {
+      parts.add(normalizedAla);
     }
-    return '$base - $normalizedAla';
+    if (normalizedNivel.isNotEmpty) {
+      parts.add('Nivel $normalizedNivel');
+    }
+
+    return parts.join(' - ');
   }
 
   String? _buildSelectionLabelFromState() {
@@ -224,13 +216,31 @@ class _DialogoFormularioPerforacionState
     final labor = laborSeleccionada?.trim();
     if (tipoLabor == null || tipoLabor.isEmpty) return null;
     if (labor == null || labor.isEmpty) return null;
-    return _buildSelectionLabel(tipoLabor, labor, alaSeleccionado);
+    return _buildSelectionLabel(
+      tipoLabor,
+      labor,
+      alaSeleccionado,
+      nivelSeleccionado,
+    );
   }
 
   _ScoopFrontOption? _resolveManualFrontSelection() {
     final label = selectedManualFrontLabel ?? _buildSelectionLabelFromState();
     if (label == null) return null;
     return _manualFrontMap[label];
+  }
+
+  Map<String, dynamic> _buildLaborPayload() {
+    final manualFront = _resolveManualFrontSelection();
+
+    return <String, dynamic>{
+      'labor_id': manualFront?.laborId,
+      'labor': manualFront?.labor ?? '',
+      'tipo_labor': manualFront?.tipoLabor ?? '',
+      'ala': manualFront?.ala ?? '',
+      'ala_id': manualFront?.alaId,
+      'nivel': manualFront?.nivel ?? '',
+    };
   }
 
   void _clearManualFrontSelection() {
@@ -253,22 +263,20 @@ class _DialogoFormularioPerforacionState
       alaSeleccionado = option.ala;
       nivelSeleccionado = option.nivel;
       selectedManualFront = option;
-      selectedManualFrontLabel = option.laborId == null
-          ? _sinLaborLabel
-          : _buildSelectionLabel(option.tipoLabor, option.labor, option.ala);
+      selectedManualFrontLabel = _buildSelectionLabel(
+        option.tipoLabor,
+        option.labor,
+        option.ala,
+        option.nivel,
+      );
     });
   }
 
-  Future<void> _guardarDatos() async {
-    final manualFront = _resolveManualFrontSelection();
-    if (manualFront == null) {
-      _mostrarSnackbar(
-        'Debe seleccionar un frente de trabajo válido',
-        Colors.orange,
-      );
-      return;
-    }
+  String _normalizeSearchValue(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
 
+  Future<void> _guardarDatos() async {
     final destinoSeleccionado = destinosDisponibles.firstWhere(
       (destino) => destino['nombre'] == ubicacionDestinoSeleccionado,
       orElse: () => <String, dynamic>{},
@@ -277,12 +285,7 @@ class _DialogoFormularioPerforacionState
         (destinoSeleccionado['id'] as int?) ?? ubicacionDestinoId ?? 0;
 
     final datosFormulario = <String, dynamic>{
-      'labor_id': manualFront.laborId,
-      'labor': manualFront.labor,
-      'tipo_labor': manualFront.tipoLabor,
-      'ala': manualFront.ala,
-      'ala_id': manualFront.alaId,
-      'nivel': manualFront.nivel,
+      ..._buildLaborPayload(),
       'frente_origen': 'otro_frente',
       'ubicacion_destino_id': destinoId,
       'ubicacion_destino': ubicacionDestinoSeleccionado ?? '',
@@ -357,7 +360,6 @@ class _DialogoFormularioPerforacionState
   Widget _buildSeccionLabor() {
     final selected = _resolveManualFrontSelection() ?? selectedManualFront;
     final selectedDetails = selected?.laborId != null ? selected : null;
-    final isSinLaborSelected = selectedManualFrontLabel == _sinLaborLabel;
     final options = _manualFrontMap.keys.toList()..sort();
 
     return Container(
@@ -396,9 +398,12 @@ class _DialogoFormularioPerforacionState
             label: 'Frente de Trabajo',
             hintText: 'Buscar por tipo labor, labor o ala...',
             options: options,
-            selectedValue: selectedManualFrontLabel ?? _buildSelectionLabelFromState(),
+            selectedValue:
+                selectedManualFrontLabel ?? _buildSelectionLabelFromState(),
             onChanged: (value) {
-              if (value != (selectedManualFrontLabel ?? _buildSelectionLabelFromState())) {
+              if (value !=
+                  (selectedManualFrontLabel ??
+                      _buildSelectionLabelFromState())) {
                 _clearManualFrontSelection();
               }
             },
@@ -414,12 +419,6 @@ class _DialogoFormularioPerforacionState
             Text(
               '${selectedDetails.estructuraMineral} / Nivel ${selectedDetails.nivel} / ${selectedDetails.tipoLabor} / ${selectedDetails.labor}${selectedDetails.ala.isNotEmpty ? ' / Ala ${selectedDetails.ala}' : ''}',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-          ] else if (isSinLaborSelected) ...[
-            const SizedBox(height: 8),
-            const Text(
-              _sinLaborLabel,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
         ],
@@ -619,9 +618,11 @@ class _DialogoFormularioPerforacionState
         if (!isFieldEnabled) {
           return const Iterable<String>.empty();
         }
-        final query = textEditingValue.text.trim().toLowerCase();
+        final query = _normalizeSearchValue(textEditingValue.text);
         if (query.isEmpty) return options;
-        return options.where((option) => option.toLowerCase().contains(query));
+        return options.where(
+          (option) => _normalizeSearchValue(option).contains(query),
+        );
       },
       onSelected: isFieldEnabled ? onSelected : null,
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {

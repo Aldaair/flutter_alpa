@@ -8,6 +8,7 @@ import 'package:i_miner/screens/widgets/dialogo_horometro.dart';
 import 'package:i_miner/screens/widgets/operacion_card.dart';
 import 'package:i_miner/screens/widgets/operacion_card_config.dart';
 import 'package:i_miner/core/checklist_helper.dart';
+import 'package:i_miner/shared/acarreo_equipment_type.dart';
 
 // ======== CONFIG CLASS ========
 class OperacionScreenConfig {
@@ -40,6 +41,7 @@ typedef DialogoRegistroBuilder =
       int categoriaId,
       String? ultimaHora,
       Map<String, dynamic>? existingRecord,
+      Map<String, dynamic>? operacionContext,
     );
 
 typedef DialogoPerforacionBuilder =
@@ -74,6 +76,8 @@ typedef CondicionesEquipoBuilder =
       String estado,
       Map<String, dynamic>? condicionesData,
       Color primaryColor,
+      Map<String, dynamic>? operacionContext,
+      String procesoNombre,
     );
 
 typedef CheckImagenBuilder =
@@ -106,6 +110,7 @@ typedef BotonesAccionesBuilder =
       required Color primaryColor,
       VoidCallback? onChecklistTelemandoPressed,
       VoidCallback? onProgramaTrabajoPressed,
+      bool showPresionLlantas,
       bool isCerrado,
     });
 
@@ -190,12 +195,22 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
   String get _s => widget.config.dbSuffix;
   String get _n => widget.config.operacionNombreDb;
 
+  bool get _shouldShowPresionLlantasAction {
+    if (_normalizarClave(widget.config.proceso) != 'ACARREO') {
+      return true;
+    }
+
+    return !isAcarreoLocomotoraOperation(operacionActual);
+  }
+
   String get _tableName {
     switch (_s) {
       case 'Horizontal':
         return 'Operacion_tal_horizontal';
       case 'Dumper':
         return 'Operacion_dumper';
+      case 'Acarreo':
+        return 'Operacion_acarreo';
       case 'Carguio':
         return 'Operacion_carguio';
       case 'Scissor':
@@ -218,10 +233,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     selectedTurno = _resolverTurnoActual();
     if (widget.dniUsuario != null) {
       final puedeSeleccionar = await OfflineAuthorizationRepository()
-          .userHasCargo(widget.dniUsuario!, [
-        'JEFE DE GUARDIA',
-        'SUPERVISOR',
-      ]);
+          .userHasCargo(widget.dniUsuario!, ['JEFE DE GUARDIA', 'SUPERVISOR']);
       if (!mounted) return;
       setState(() {
         _canSelectOperators = puedeSeleccionar;
@@ -274,8 +286,9 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     if (widget.dniUsuario == null) {
       return null;
     }
-    final usuario = await OfflineAuthorizationRepository()
-        .getUserByDni(widget.dniUsuario!);
+    final usuario = await OfflineAuthorizationRepository().getUserByDni(
+      widget.dniUsuario!,
+    );
     return usuario?['id'] as int?;
   }
 
@@ -396,6 +409,15 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           );
         }
         return _db.getOperacionDumperByTurnoAndFechaMaster(turnoId, fecha);
+      case 'Acarreo':
+        if (operadorId != null) {
+          return _db.getOperacionAcarreoByTurnoAndFecha(
+            turnoId,
+            fecha,
+            operadorId: operadorId,
+          );
+        }
+        return _db.getOperacionAcarreoByTurnoAndFechaMaster(turnoId, fecha);
       case 'Carguio':
         if (operadorId != null) {
           return _db.getOperacionCarguioByTurnoAndFecha(
@@ -472,7 +494,9 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
     Map<String, dynamic> data,
     List<Map<String, dynamic>> checkListJson,
   ) async {
-    final horometrosBase = await _buildHorometrosBase(data['equipo_id'] as int?);
+    final horometrosBase = await _buildHorometrosBase(
+      data['equipo_id'] as int?,
+    );
 
     switch (_n) {
       case 'TalLargo':
@@ -498,12 +522,9 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         await _db.insertOperacionTalHorizontal(
           data['fecha'],
           data['turno'] ?? '',
-          data['seccion'] ?? '',
           data['operador'] ?? '',
           data['jefeGuardia'] ?? '',
           data['equipo'] ?? '',
-          data['codigo'] ?? '',
-          data['modelo'] ?? '',
           equipoId: data['equipo_id'] as int?,
           actorOperadorId: data['actor_operador_id'] as int?,
           operadorId: data['operador_id'] as int?,
@@ -538,6 +559,31 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           jefeGuardiaId: data['jefe_guardia_id'] as int?,
           checkListJson: checkListJson,
           horometrosBase: horometrosBase,
+        );
+      case 'Acarreo':
+        await _db.insertOperacionAcarreo(
+          data['fecha'],
+          data['turno'] ?? '',
+          data['seccion'] ?? '',
+          data['operador'] ?? '',
+          data['jefe_guardia'] ?? '',
+          data['equipo'] ?? '',
+          data['n_equipo'] ?? '',
+          data['capacidad'] ?? '',
+          data['tipo_equipo'] ?? '',
+          equipoId: data['equipo_id'] as int?,
+          actorOperadorId: data['actor_operador_id'] as int?,
+          operadorId: data['operador_id'] as int?,
+          turnoId: data['turno_id'] as int?,
+          registradorNombre: data['registrador'] ?? '',
+          registradorUsuarioId:
+              (data['registrador_id'] ?? data['registrador_usuario_id'])
+                  as int?,
+          jefeGuardiaId: data['jefe_guardia_id'] as int?,
+          checkListJson: checkListJson,
+          horometrosBase: horometrosBase,
+          revisado: data['revisado'] as int?,
+          aprobacion: data['aprobacion'] as int?,
         );
       case 'Carguio':
         await _db.insertOperacionCarguio(
@@ -677,6 +723,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         return await _db.eliminarOperacionTalHorizontalFisico(id);
       case 'Dumper':
         return await _db.eliminarOperacionTalDumperFisico(id);
+      case 'Acarreo':
+        return await _db.eliminarOperacionAcarreoFisico(id);
       case 'Carguio':
         return await _db.eliminarOperacionTalCarguioFisico(id);
       case 'Scissor':
@@ -733,6 +781,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         return _db.getHorometrosByOperacionIdHorizontal(operacionId);
       case 'Dumper':
         return _db.getHorometrosByOperacionIdDumper(operacionId);
+      case 'Acarreo':
+        return _db.getHorometrosByOperacionIdAcarreo(operacionId);
       case 'Carguio':
         return _db.getHorometrosByOperacionIdCarguio(operacionId);
       case 'Scissor':
@@ -764,6 +814,9 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         break;
       case 'Dumper':
         ok = await _db.updateHorometrosDumper(operacionId, horometros);
+        break;
+      case 'Acarreo':
+        ok = await _db.updateHorometrosAcarreo(operacionId, horometros);
         break;
       case 'Carguio':
         ok = await _db.updateHorometrosCarguio(operacionId, horometros);
@@ -803,6 +856,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         return _db.getCheckListByOperacionIdHorizontal(operacionId);
       case 'Dumper':
         return _db.getCheckListByOperacionIdDumper(operacionId);
+      case 'Acarreo':
+        return _db.getCheckListByOperacionIdAcarreo(operacionId);
       case 'Carguio':
         return _db.getCheckListByOperacionIdCarguio(operacionId);
       case 'Scissor':
@@ -831,6 +886,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         return _db.updateCheckListHorizontal(operacionId, checklist);
       case 'Dumper':
         return _db.updateCheckListDumper(operacionId, checklist);
+      case 'Acarreo':
+        return _db.updateCheckListAcarreo(operacionId, checklist);
       case 'Carguio':
         return _db.updateCheckListCarguio(operacionId, checklist);
       case 'Scissor':
@@ -856,6 +913,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         return _db.getCondicionesEquipoByOperacionIdHorizontal(operacionId);
       case 'Dumper':
         return _db.getCondicionesEquipoByOperacionIdDumper(operacionId);
+      case 'Acarreo':
+        return _db.getCondicionesEquipoByOperacionIdAcarreo(operacionId);
       case 'Carguio':
         return _db.getCondicionesEquipoByOperacionIdCarguio(operacionId);
       case 'Scissor':
@@ -883,6 +942,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         return _db.getControlLlantasByOperacionIdHorizontal(operacionId);
       case 'Dumper':
         return _db.getControlLlantasByOperacionIdDumper(operacionId);
+      case 'Acarreo':
+        return _db.getControlLlantasByOperacionIdAcarreo(operacionId);
       case 'Carguio':
         return _db.getControlLlantasByOperacionIdCarguio(operacionId);
       case 'Scissor':
@@ -1084,6 +1145,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
               onProgramaTrabajoPressed: widget.config.hasProgramaTrabajo
                   ? _handleProgramaTrabajo
                   : null,
+              showPresionLlantas: _shouldShowPresionLlantasAction,
               isCerrado: (operacionActual?['cerrado'] as int?) == 1,
             ),
 
@@ -1372,6 +1434,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
       categoriaId,
       ultimaHora,
       null,
+      operacionActual,
     );
 
     if (result != null) {
@@ -1388,17 +1451,19 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         .toString()
         .toUpperCase();
 
-    final estadosDelMismoTipo = operacionesTabla
-        .where(
-          (item) =>
-              (item['estado'] ?? '').toString().toUpperCase() == estadoNombre,
-        )
-        .toList()
-      ..sort((a, b) {
-        final numeroA = (a['numero'] as int?) ?? 0;
-        final numeroB = (b['numero'] as int?) ?? 0;
-        return numeroA.compareTo(numeroB);
-      });
+    final estadosDelMismoTipo =
+        operacionesTabla
+            .where(
+              (item) =>
+                  (item['estado'] ?? '').toString().toUpperCase() ==
+                  estadoNombre,
+            )
+            .toList()
+          ..sort((a, b) {
+            final numeroA = (a['numero'] as int?) ?? 0;
+            final numeroB = (b['numero'] as int?) ?? 0;
+            return numeroA.compareTo(numeroB);
+          });
 
     final currentIndex = estadosDelMismoTipo.indexWhere(
       (item) => item['id'] == operacion['id'],
@@ -1434,6 +1499,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
         'prev_hora_inicio': prevHoraInicio,
         'next_hora_inicio': nextHoraInicio,
       },
+      operacionActual,
     );
 
     if (result != null) {
@@ -1561,7 +1627,10 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           : int.tryParse(data['numero']?.toString() ?? '');
 
       if (estadoId == null) {
-        _mostrarSnackBar('Error: no se pudo resolver el ID del registro', Colors.red);
+        _mostrarSnackBar(
+          'Error: no se pudo resolver el ID del registro',
+          Colors.red,
+        );
         return;
       }
 
@@ -2012,8 +2081,7 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
               .toList()
         : <HorometroDef>[];
 
-    final equipoUltimos =
-        await _db.getEquipoUltimosHorometros(equipoId);
+    final equipoUltimos = await _db.getEquipoUltimosHorometros(equipoId);
 
     showDialog(
       context: context,
@@ -2070,7 +2138,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
 
             // Resolver horario_fin del turno desde dim_turno
             final turno = _obtenerTurnoActual();
-            final horarioFin = turno?.horarioFin ??
+            final horarioFin =
+                turno?.horarioFin ??
                 (selectedTurno == 'DÍA' ? '19:00' : '07:00');
             final horaCorte = _restar90Minutos(horarioFin);
 
@@ -2078,15 +2147,16 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
             // Si el último estado ya tiene hora_final (ej: se seteo explícitamente
             // desde la UI), se respeta. Si no, se auto-asigna el corte.
             final ultimoHoraFinal = ultimoEstado['hora_final']?.toString();
-            final tieneHoraFinal = ultimoHoraFinal != null &&
-                ultimoHoraFinal.isNotEmpty;
+            final tieneHoraFinal =
+                ultimoHoraFinal != null && ultimoHoraFinal.isNotEmpty;
 
             String horaReservaInicio;
             if (tieneHoraFinal) {
               // Ya tiene hora_final del operador o del flujo de creación
               final ultFinMin = _parseHorario(ultimoHoraFinal);
               final horFinMin = _parseHorario(horarioFin);
-              if (ultFinMin != null && horFinMin != null &&
+              if (ultFinMin != null &&
+                  horFinMin != null &&
                   ultFinMin >= horFinMin) {
                 // El último registro ya cubre toda la jornada → cerrar sin RESERVA
                 await DatabaseHelper().cerrarOperacion(
@@ -2184,6 +2254,8 @@ class _OperacionListScreenState extends State<OperacionListScreen> {
           estado,
           condicionesData,
           primaryColor,
+          operacionActual,
+          widget.config.proceso,
         );
       },
     );

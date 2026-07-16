@@ -21,6 +21,7 @@ class SyncService {
     'anfochanger': 'Operacion_anfochanger',
     'rompebanco': 'Operacion_rompebanco',
     'carguio': 'Operacion_carguio',
+    'acarreo': 'Operacion_acarreo',
     'dumper': 'Operacion_Dumper',
     'scalamin': 'Operacion_Scalamin',
   };
@@ -30,10 +31,7 @@ class SyncService {
 
     try {
       for (final entry in _processTables.entries) {
-        await _syncProceso(
-          tipo: entry.key,
-          tableName: entry.value,
-        );
+        await _syncProceso(tipo: entry.key, tableName: entry.value);
       }
 
       print("✅ Sincronización completa");
@@ -56,11 +54,7 @@ class SyncService {
     }
 
     final ids = data.map<int>((e) => e['id'] as int).toSet();
-    final jsonData = await _export.prepararDatosParaExportar(
-      tipo,
-      ids,
-      data,
-    );
+    final jsonData = await _export.prepararDatosParaExportar(tipo, ids, data);
 
     if (jsonData.isEmpty) {
       print("✔️ $tipo sin registros exportables");

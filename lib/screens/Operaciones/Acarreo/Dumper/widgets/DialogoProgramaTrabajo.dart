@@ -97,7 +97,7 @@ class _DialogoProgramaTrabajoState extends State<DialogoProgramaTrabajo> {
       'total': _parseDouble(totalController.text),
     };
 
-    bool guardado = await DatabaseHelper().updateProgramaTrabajoDumper(
+    bool guardado = await DatabaseHelper().updateProgramaTrabajoAcarreo(
       widget.operacionId,
       data,
     );

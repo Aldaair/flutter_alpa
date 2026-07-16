@@ -3,7 +3,7 @@ import 'package:sqflite/sqflite.dart';
 
 class SyncRepository {
   SyncRepository({DatabaseHelper? databaseHelper})
-      : _databaseHelper = databaseHelper ?? DatabaseHelper();
+    : _databaseHelper = databaseHelper ?? DatabaseHelper();
 
   final DatabaseHelper _databaseHelper;
 
@@ -56,6 +56,8 @@ class SyncRepository {
       final cerrado = (row['cerrado'] as int?) ?? 0;
       normalized['envio'] = enviado;
       normalized['estado'] = cerrado == 1 ? 'cerrado' : 'activo';
+      normalized['registrador_usuario_id'] = row['registrador_id'];
+      normalized['registrador_nombre'] = row['registrador'];
       normalized['jefeGuardia'] = row['jefe_guardia'];
       return normalized;
     }).toList();

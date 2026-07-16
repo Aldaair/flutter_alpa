@@ -72,7 +72,7 @@ void main() {
   });
 
   test(
-    'migrates version 20 schema to latest with horizontal identity and auth tables',
+    'migrates version 20 schema without restoring removed horizontal snapshot columns',
     () async {
       final dbPath = p.join(tempDir.path, 'migration.db');
       await _createVersion20Database(dbPath);
@@ -88,13 +88,13 @@ void main() {
       expect(_hasColumn(usuarioColumns, 'operador_id'), isTrue);
       expect(_hasColumn(horizontalColumns, 'operador_id'), isTrue);
       expect(_hasColumn(horizontalColumns, 'equipo_id'), isTrue);
-      expect(_hasColumn(horizontalColumns, 'seccion_id'), isTrue);
+      expect(_hasColumn(horizontalColumns, 'zona_id'), isTrue);
       expect(_hasColumn(horizontalColumns, 'jefe_guardia_id'), isTrue);
       expect(_hasColumn(horizontalColumns, 'identity_version'), isTrue);
       expect(_hasColumn(horizontalColumns, 'syncable'), isTrue);
 
       final migratedRow = await db.query('Operacion_tal_horizontal');
-      expect(migratedRow.single['identity_version'], 0);
+      expect(migratedRow.single['identity_version'], isNull);
       expect(migratedRow.single['syncable'], 0);
     },
   );
@@ -142,7 +142,7 @@ void main() {
   });
 
   test(
-    'insertOperacionTalHorizontal persists api v2 identity fields',
+    'insertOperacionTalHorizontal persists supported horizontal identity fields',
     () async {
       final dbPath = p.join(tempDir.path, 'insert_horizontal.db');
       DatabaseHelper.setDatabasePathOverride(dbPath);
@@ -151,19 +151,18 @@ void main() {
       final id = await dbHelper.insertOperacionTalHorizontal(
         '2026-06-17',
         'Dia',
-        'Seccion A',
         'Ana Perez',
         'Luis Rojas',
         'Alpha',
-        'EQ-10',
-        'M1',
         operadorId: 44,
         equipoId: 10,
-        zonaId: 30,
         jefeGuardiaId: 40,
       );
 
       final db = await dbHelper.database;
+      final columns = await db.rawQuery(
+        'PRAGMA table_info(Operacion_tal_horizontal)',
+      );
       final rows = await db.query(
         'Operacion_tal_horizontal',
         where: 'id = ?',
@@ -173,10 +172,11 @@ void main() {
       expect(rows, hasLength(1));
       expect(rows.single['operador_id'], 44);
       expect(rows.single['equipo_id'], 10);
-      expect(rows.single['seccion_id'], 30);
       expect(rows.single['jefe_guardia_id'], 40);
-      expect(rows.single['identity_version'], 2);
-      expect(rows.single['syncable'], 1);
+      expect(rows.single['equipo'], 'Alpha');
+      expect(_hasColumn(columns, 'n_equipo'), isFalse);
+      expect(_hasColumn(columns, 'modelo'), isFalse);
+      expect(_hasColumn(columns, 'seccion'), isFalse);
     },
   );
 

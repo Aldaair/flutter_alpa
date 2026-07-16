@@ -6,6 +6,7 @@ class EstadostBD {
   String proceso;
   int? procesoId;
   int? categoriaId;
+  String? tipoEquipo;
 
   EstadostBD({
     this.id,
@@ -15,6 +16,7 @@ class EstadostBD {
     required this.proceso,
     this.procesoId,
     this.categoriaId,
+    this.tipoEquipo,
   });
 
   factory EstadostBD.fromMap(Map<String, dynamic> map) {
@@ -26,6 +28,7 @@ class EstadostBD {
       proceso: map['proceso'],
       procesoId: map['proceso_id'],
       categoriaId: map['categoria_id'],
+      tipoEquipo: map['tipo_equipo']?.toString(),
     );
   }
 
@@ -38,6 +41,7 @@ class EstadostBD {
       'proceso': proceso,
       'proceso_id': procesoId,
       'categoria_id': categoriaId,
+      'tipo_equipo': tipoEquipo,
     };
   }
 
@@ -50,6 +54,7 @@ class EstadostBD {
       proceso: json['proceso'],
       procesoId: json['proceso_id'],
       categoriaId: json['categoria_id'],
+      tipoEquipo: json['tipo_equipo']?.toString(),
     );
   }
 }

@@ -27,11 +27,11 @@ class DatabaseHelper {
 
   static Database? _database;
   static String? _databasePathOverride;
-  static const int _sharedCatalogDbVersion = 37;
+  static const int _sharedCatalogDbVersion = 40;
   static Database? _sharedCatalogDatabase;
   static String? _currentUserDni;
   static bool _isInitialized = false;
-  static const int _currentDbVersion = 32;
+  static const int _currentDbVersion = 33;
 
   late final OperationRepository _operationRepo;
   late final SharedCatalogRepository _sharedCatalogRepo;
@@ -420,7 +420,19 @@ CREATE TABLE IF NOT EXISTS procesos (
 CREATE TABLE IF NOT EXISTS destinos (
   id INTEGER PRIMARY KEY,
   nombre TEXT NOT NULL,
-  proceso_id INTEGER NOT NULL
+  proceso_id INTEGER NOT NULL,
+  tipo_equipo TEXT
+)
+''');
+
+    await db.execute('''
+CREATE TABLE IF NOT EXISTS origen_destino (
+  id INTEGER PRIMARY KEY,
+  proceso TEXT,
+  proceso_id INTEGER NOT NULL,
+  tipo TEXT,
+  nombre TEXT NOT NULL,
+  tipo_equipo TEXT
 )
 ''');
 
@@ -568,7 +580,8 @@ CREATE TABLE IF NOT EXISTS estados (
   categoria TEXT NOT NULL,
   proceso TEXT NOT NULL,
   proceso_id INTEGER,
-  categoria_id INTEGER
+  categoria_id INTEGER,
+  tipo_equipo TEXT
 )
 ''');
 
@@ -850,7 +863,8 @@ CREATE TABLE IF NOT EXISTS procesos (
 CREATE TABLE IF NOT EXISTS destinos (
   id INTEGER PRIMARY KEY,
   nombre TEXT NOT NULL,
-  proceso_id INTEGER NOT NULL
+  proceso_id INTEGER NOT NULL,
+  tipo_equipo TEXT
 )
 ''');
       }
@@ -1239,6 +1253,33 @@ CREATE TABLE IF NOT EXISTS categorias_estados (
         );
       }
     }
+
+    if (oldVersion < 38) {
+      if (!await _columnaExiste(db, 'destinos', 'tipo_equipo')) {
+        await db.execute('ALTER TABLE destinos ADD COLUMN tipo_equipo TEXT');
+      }
+    }
+
+    if (oldVersion < 39) {
+      if (!await _columnaExiste(db, 'estados', 'tipo_equipo')) {
+        await db.execute('ALTER TABLE estados ADD COLUMN tipo_equipo TEXT');
+      }
+    }
+
+    if (oldVersion < 40) {
+      if (!await _tablaExiste(db, 'origen_destino')) {
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS origen_destino (
+  id INTEGER PRIMARY KEY,
+  proceso TEXT,
+  proceso_id INTEGER NOT NULL,
+  tipo TEXT,
+  nombre TEXT NOT NULL,
+  tipo_equipo TEXT
+)
+''');
+      }
+    }
   }
 
   Future<void> _resetEstadosTable(Database db) async {
@@ -1252,7 +1293,8 @@ CREATE TABLE estados (
   categoria TEXT NOT NULL,
   proceso TEXT NOT NULL,
   proceso_id INTEGER,
-  categoria_id INTEGER
+  categoria_id INTEGER,
+  tipo_equipo TEXT
 )
 ''');
     });
@@ -2371,6 +2413,73 @@ CREATE TABLE UsuarioEquipo (
     if (oldVersion < 32) {
       await db.execute('DROP TABLE IF EXISTS pdfs');
     }
+
+    if (oldVersion < 33) {
+      if (!await _tablaExiste(db, 'Operacion_acarreo')) {
+        await db.execute(_buildOperationTableSql('Operacion_acarreo'));
+      }
+
+      for (final tableName in _operationTables) {
+        if (!await _columnaExiste(db, tableName, 'seccion')) {
+          await db.execute('ALTER TABLE $tableName ADD COLUMN seccion TEXT');
+        }
+        if (!await _columnaExiste(db, tableName, 'n_equipo')) {
+          await db.execute('ALTER TABLE $tableName ADD COLUMN n_equipo TEXT');
+        }
+        if (!await _columnaExiste(db, tableName, 'capacidad')) {
+          await db.execute('ALTER TABLE $tableName ADD COLUMN capacidad TEXT');
+        }
+        if (!await _columnaExiste(db, tableName, 'tipo_equipo')) {
+          await db.execute(
+            'ALTER TABLE $tableName ADD COLUMN tipo_equipo TEXT',
+          );
+        }
+        if (!await _columnaExiste(db, tableName, 'actor_dni')) {
+          await db.execute('ALTER TABLE $tableName ADD COLUMN actor_dni TEXT');
+        }
+        if (!await _columnaExiste(db, tableName, 'actor_operador_id')) {
+          await db.execute(
+            'ALTER TABLE $tableName ADD COLUMN actor_operador_id INTEGER',
+          );
+        }
+        if (!await _columnaExiste(db, tableName, 'zona_id')) {
+          await db.execute('ALTER TABLE $tableName ADD COLUMN zona_id INTEGER');
+        }
+        if (!await _columnaExiste(db, tableName, 'identity_version')) {
+          await db.execute(
+            'ALTER TABLE $tableName ADD COLUMN identity_version INTEGER',
+          );
+        }
+        if (!await _columnaExiste(db, tableName, 'syncable')) {
+          await db.execute(
+            'ALTER TABLE $tableName ADD COLUMN syncable INTEGER DEFAULT 0',
+          );
+        }
+        if (!await _columnaExiste(db, tableName, 'revisado')) {
+          await db.execute(
+            'ALTER TABLE $tableName ADD COLUMN revisado INTEGER',
+          );
+        }
+        if (!await _columnaExiste(db, tableName, 'aprobacion')) {
+          await db.execute(
+            'ALTER TABLE $tableName ADD COLUMN aprobacion INTEGER',
+          );
+        }
+      }
+
+      for (final tableName in _operationTablesWithDispatchExtras) {
+        if (!await _columnaExiste(db, tableName, 'programa_trabajo')) {
+          await db.execute(
+            'ALTER TABLE $tableName ADD COLUMN programa_trabajo TEXT',
+          );
+        }
+        if (!await _columnaExiste(db, tableName, 'check_list_telemando')) {
+          await db.execute(
+            'ALTER TABLE $tableName ADD COLUMN check_list_telemando TEXT',
+          );
+        }
+      }
+    }
   }
 
   static const List<String> _operationTables = [
@@ -2378,6 +2487,7 @@ CREATE TABLE UsuarioEquipo (
     'Operacion_tal_horizontal',
     'Operacion_empernador',
     'Operacion_carguio',
+    'Operacion_acarreo',
     'Operacion_Dumper',
     'Operacion_rompebanco',
     'Operacion_Scalamin',
@@ -2387,6 +2497,7 @@ CREATE TABLE UsuarioEquipo (
 
   static const Set<String> _operationTablesWithDispatchExtras = {
     'Operacion_carguio',
+    'Operacion_acarreo',
     'Operacion_Dumper',
   };
 
@@ -2415,14 +2526,20 @@ CREATE TABLE $tableName (
   fecha TEXT,
   turno TEXT,
   turno_id INTEGER,
+  seccion TEXT,
   operador TEXT,
   operador_id INTEGER,
+  actor_dni TEXT,
+  actor_operador_id INTEGER,
   registrador TEXT,
   registrador_id INTEGER,
   jefe_guardia TEXT,
   jefe_guardia_id INTEGER,
   equipo TEXT,
   equipo_id INTEGER,
+  n_equipo TEXT,
+  capacidad TEXT,
+  tipo_equipo TEXT,
   registros TEXT,
   horometros TEXT,
   condiciones_equipo TEXT,
@@ -2434,7 +2551,12 @@ CREATE TABLE $tableName (
   labor_id INTEGER,
   frente_origen TEXT,
   ala TEXT,
-  ala_id INTEGER$dispatchExtras
+  ala_id INTEGER,
+  zona_id INTEGER,
+  identity_version INTEGER,
+  syncable INTEGER DEFAULT 0,
+  revisado INTEGER,
+  aprobacion INTEGER$dispatchExtras
 )
 ''';
   }
@@ -2451,7 +2573,6 @@ CREATE TABLE $tableName (
     final result = await db.rawQuery("PRAGMA table_info($tabla)");
     return result.any((col) => col['name'] == columna);
   }
-
 
   Future<List<Map<String, dynamic>>> _queryAndHydrateOperations(
     String tableName,
@@ -2557,6 +2678,7 @@ CREATE TABLE $tableName (
     'planes_metrajes_avances',
     'planes_produccion',
     'destinos',
+    'origen_destino',
     'tipo_perforaciones',
     'longitud_barras',
     'pernos',
@@ -2634,15 +2756,15 @@ CREATE TABLE $tableName (
     String proceso,
     String tipo,
   ) async {
-    final db = await database;
+    final db = await sharedCatalogDatabase;
 
     return await db.query(
       'origen_destino',
-      where: 'proceso = ? AND tipo = ?',
-      whereArgs: [proceso, tipo],
+      where: 'UPPER(TRIM(proceso)) = ? AND UPPER(TRIM(tipo)) = ?',
+      whereArgs: [proceso.trim().toUpperCase(), tipo.trim().toUpperCase()],
+      orderBy: 'nombre ASC',
     );
   }
-
 
   //CHECKLIST
   Future<List<Map<String, dynamic>>> getCheckListByProceso(
@@ -2751,6 +2873,10 @@ CREATE TABLE $tableName (
     return _sharedCatalogRepo.getEquipos();
   }
 
+  Future<Equipo?> getEquipoById(int equipoId) async {
+    return _sharedCatalogRepo.getEquipoById(equipoId);
+  }
+
   Future<Map<String, dynamic>?> getEquipoUltimosHorometros(int equipoId) async {
     return _sharedCatalogRepo.getEquipoUltimosHorometros(equipoId);
   }
@@ -2798,11 +2924,13 @@ CREATE TABLE $tableName (
 
   Future<List<Map<String, dynamic>>> getEstadosByProcesoAndCategoria(
     int procesoId,
-    int categoriaId,
-  ) async {
+    int categoriaId, {
+    String? tipoEquipo,
+  }) async {
     return _sharedCatalogRepo.getEstadosByProcesoAndCategoria(
       procesoId,
       categoriaId,
+      tipoEquipo: tipoEquipo,
     );
   }
 
@@ -3396,12 +3524,9 @@ CREATE TABLE $tableName (
   Future<int> insertOperacionTalHorizontal(
     String fecha,
     String turno,
-    String seccion,
     String operador,
     String jefeGuardia,
-    String equipo,
-    String nEquipo,
-    String modeloEquipo, {
+    String equipo, {
     List<Map<String, dynamic>>? checkListJson,
     List<Map<String, dynamic>>? horometrosBase,
     String? actorDni,
@@ -3422,12 +3547,9 @@ CREATE TABLE $tableName (
     return _operationRepo.insertOperacionTalHorizontal(
       fecha,
       turno,
-      seccion,
       operador,
       jefeGuardia,
       equipo,
-      nEquipo,
-      modeloEquipo,
       checkListJson: checkListJson,
       horometrosBase: horometrosBase,
       actorDni: actorDni,
@@ -3981,6 +4103,294 @@ CREATE TABLE $tableName (
     int updated = await db.update(
       'Operacion_carguio',
       {'programa_trabajo': jsonEncode(programaTrabajo)},
+      where: 'id = ?',
+      whereArgs: [operacionId],
+    );
+
+    return updated > 0;
+  }
+
+  Future<int> insertOperacionAcarreo(
+    String fecha,
+    String turno,
+    String seccion,
+    String operador,
+    String jefeGuardia,
+    String equipo,
+    String nEquipo,
+    String capacidad,
+    String tipoEquipo, {
+    List<Map<String, dynamic>>? checkListJson,
+    List<Map<String, dynamic>>? checkListTelemandoJson,
+    List<Map<String, dynamic>>? horometrosBase,
+    String? actorDni,
+    int? actorOperadorId,
+    int? operadorId,
+    int? equipoId,
+    int? zonaId,
+    int? jefeGuardiaId,
+    int? identityVersion,
+    int? syncable,
+    int? turnoId,
+    String? frenteOrigen,
+    int? registradorUsuarioId,
+    String? registradorNombre,
+    int? laborId,
+    String? labor,
+    int? revisado,
+    int? aprobacion,
+  }) async {
+    return _operationRepo.insertOperacionAcarreo(
+      fecha,
+      turno,
+      seccion,
+      operador,
+      jefeGuardia,
+      equipo,
+      nEquipo,
+      capacidad,
+      tipoEquipo,
+      checkListJson: checkListJson,
+      checkListTelemandoJson: checkListTelemandoJson,
+      horometrosBase: horometrosBase,
+      actorDni: actorDni,
+      actorOperadorId: actorOperadorId,
+      operadorId: operadorId,
+      equipoId: equipoId,
+      zonaId: zonaId,
+      jefeGuardiaId: jefeGuardiaId,
+      identityVersion: identityVersion,
+      syncable: syncable,
+      turnoId: turnoId,
+      frenteOrigen: frenteOrigen,
+      registradorUsuarioId: registradorUsuarioId,
+      registradorNombre: registradorNombre,
+      laborId: laborId,
+      labor: labor,
+      revisado: revisado,
+      aprobacion: aprobacion,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getOperacionAcarreoByTurnoAndFechaMaster(
+    int turnoId,
+    String fecha,
+  ) async {
+    return _queryAndHydrateOperations(
+      'Operacion_acarreo',
+      turnoId,
+      fecha,
+      onlyActive: true,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getOperacionAcarreoByTurnoAndFecha(
+    int turnoId,
+    String fecha, {
+    int? operadorId,
+  }) async {
+    return _queryAndHydrateOperations(
+      'Operacion_acarreo',
+      turnoId,
+      fecha,
+      operadorId: operadorId,
+    );
+  }
+
+  Future<int> eliminarOperacionAcarreoFisico(int id) async {
+    return _operationRepo.deleteOperation('Operacion_acarreo', id);
+  }
+
+  Future<List<Map<String, dynamic>>> getCheckListByOperacionIdAcarreo(
+    int operacionId,
+  ) async {
+    return _operationRepo.getCheckList(
+      operacionId,
+      tableName: 'Operacion_acarreo',
+    );
+  }
+
+  Future<Map<String, dynamic>> getHorometrosByOperacionIdAcarreo(
+    int operacionId,
+  ) async {
+    return _operationRepo.getHorometros(
+      operacionId,
+      tableName: 'Operacion_acarreo',
+    );
+  }
+
+  Future<Map<String, dynamic>> getCondicionesEquipoByOperacionIdAcarreo(
+    int operacionId,
+  ) async {
+    return _operationRepo.getCondicionesEquipo(
+      operacionId,
+      tableName: 'Operacion_acarreo',
+    );
+  }
+
+  Future<Map<String, dynamic>> getControlLlantasByOperacionIdAcarreo(
+    int operacionId,
+  ) async {
+    return _operationRepo.getControlLlantas(
+      operacionId,
+      tableName: 'Operacion_acarreo',
+    );
+  }
+
+  Future<bool> updateControlLlantasAcarreo(
+    int operacionId,
+    Map<String, dynamic> controlLlantas,
+  ) async {
+    return _operationRepo.updateControlLlantas(
+      operacionId,
+      controlLlantas,
+      tableName: 'Operacion_acarreo',
+    );
+  }
+
+  Future<bool> updateCheckListAcarreo(
+    int operacionId,
+    List<Map<String, dynamic>> checkList,
+  ) async {
+    return _operationRepo.updateCheckList(
+      operacionId,
+      checkList,
+      tableName: 'Operacion_acarreo',
+    );
+  }
+
+  Future<bool> updateCondicionesEquipoAcarreo(
+    int operacionId,
+    Map<String, dynamic> condiciones,
+  ) async {
+    return _operationRepo.updateCondicionesEquipo(
+      operacionId,
+      condiciones,
+      tableName: 'Operacion_acarreo',
+    );
+  }
+
+  Future<bool> updateHorometrosAcarreo(
+    int operacionId,
+    Map<String, dynamic> horometros,
+  ) async {
+    return _operationRepo.updateHorometros(
+      operacionId,
+      horometros,
+      tableName: 'Operacion_acarreo',
+    );
+  }
+
+  Future<bool> updateCheckListTelemandoAcarreo(
+    int operacionId,
+    List<Map<String, dynamic>> checkListTelemando,
+  ) async {
+    final db = await database;
+
+    final updated = await db.update(
+      'Operacion_acarreo',
+      {'check_list_telemando': jsonEncode(checkListTelemando)},
+      where: 'id = ?',
+      whereArgs: [operacionId],
+    );
+
+    return updated > 0;
+  }
+
+  Future<List<Map<String, dynamic>>> getCheckListTelemandoByOperacionIdAcarreo(
+    int operacionId,
+  ) async {
+    final db = await database;
+
+    final result = await db.query(
+      'Operacion_acarreo',
+      columns: ['check_list_telemando'],
+      where: 'id = ?',
+      whereArgs: [operacionId],
+    );
+
+    if (result.isEmpty) {
+      return [];
+    }
+
+    final checkListJson =
+        result.first['check_list_telemando'] as String? ?? '[]';
+
+    try {
+      final lista = jsonDecode(checkListJson) as List<dynamic>;
+      return lista.map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (e) {
+      print('Error decodificando checklist telemando de acarreo: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> getProgramaTrabajoByOperacionIdAcarreo(
+    int operacionId,
+  ) async {
+    final db = await database;
+
+    final result = await db.query(
+      'Operacion_acarreo',
+      columns: ['programa_trabajo'],
+      where: 'id = ?',
+      whereArgs: [operacionId],
+    );
+
+    Map<String, dynamic> estructuraNueva() {
+      return {
+        'n_viaje_mineral': 0.0,
+        'n_viaje_desmonte': 0.0,
+        'programado': 0.0,
+        'realizado': 0.0,
+        'total': 0.0,
+      };
+    }
+
+    if (result.isEmpty) {
+      return estructuraNueva();
+    }
+
+    final programaTrabajoJson =
+        result.first['programa_trabajo'] as String? ?? '{}';
+
+    try {
+      final programaTrabajo = jsonDecode(programaTrabajoJson);
+      if (programaTrabajo is! Map || programaTrabajo.isEmpty) {
+        return estructuraNueva();
+      }
+
+      return {
+        'n_viaje_mineral': (programaTrabajo['n_viaje_mineral'] ?? 0).toDouble(),
+        'n_viaje_desmonte': (programaTrabajo['n_viaje_desmonte'] ?? 0)
+            .toDouble(),
+        'programado': (programaTrabajo['programado'] ?? 0).toDouble(),
+        'realizado': (programaTrabajo['realizado'] ?? 0).toDouble(),
+        'total': (programaTrabajo['total'] ?? 0).toDouble(),
+      };
+    } catch (e) {
+      print('Error decodificando programa_trabajo de acarreo: $e');
+      return estructuraNueva();
+    }
+  }
+
+  Future<bool> updateProgramaTrabajoAcarreo(
+    int operacionId,
+    Map<String, dynamic> programaTrabajo,
+  ) async {
+    final db = await database;
+
+    final data = {
+      'n_viaje_mineral': (programaTrabajo['n_viaje_mineral'] ?? 0).toDouble(),
+      'n_viaje_desmonte': (programaTrabajo['n_viaje_desmonte'] ?? 0).toDouble(),
+      'programado': (programaTrabajo['programado'] ?? 0).toDouble(),
+      'realizado': (programaTrabajo['realizado'] ?? 0).toDouble(),
+      'total': (programaTrabajo['total'] ?? 0).toDouble(),
+    };
+
+    final updated = await db.update(
+      'Operacion_acarreo',
+      {'programa_trabajo': jsonEncode(data)},
       where: 'id = ?',
       whereArgs: [operacionId],
     );

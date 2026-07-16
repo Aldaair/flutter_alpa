@@ -125,10 +125,7 @@ class ExportarService {
           condicionesEquipo: condiciones,
           controlLlantas: controlLlantas,
           checkList: checkListOrNull,
-          registros: _buildRegistros(
-            registrosRaw,
-            OperacionAcarreoRegistroDetalleRequest.fromJson,
-          ),
+          registros: _buildAcarreoRegistros(registrosRaw, op['tipo_equipo']),
         );
 
       case 'carguio':
@@ -262,6 +259,34 @@ class ExportarService {
         operacion: opDetalle != null ? detalleFactory(opDetalle) : null,
       );
     }).toList();
+  }
+
+  List<RegistroRequest<OperacionAcarreoRegistroDetalleRequest>>
+  _buildAcarreoRegistros(
+    List<Map<String, dynamic>> registros,
+    dynamic tipoEquipo,
+  ) {
+    if (registros.isEmpty) return [];
+
+    final normalizedTipoEquipo = tipoEquipo?.toString();
+
+    return _buildRegistros(
+      registros.map((registro) {
+        final copy = Map<String, dynamic>.from(registro);
+        final operacion = copy['operacion'];
+        if (operacion is Map<String, dynamic> && operacion.isEmpty) {
+          copy['operacion'] = null;
+        } else if (operacion is Map<String, dynamic> &&
+            normalizedTipoEquipo != null) {
+          copy['operacion'] = {
+            ...operacion,
+            'tipo_equipo': operacion['tipo_equipo'] ?? normalizedTipoEquipo,
+          };
+        }
+        return copy;
+      }).toList(),
+      OperacionAcarreoRegistroDetalleRequest.fromJson,
+    );
   }
 
   Map<String, dynamic> _decodeMap(dynamic value) {

@@ -194,9 +194,7 @@ class HorizontalCatalogRepository {
     await db.transaction((txn) async {
       await txn.delete('estados');
       for (final estado in estados) {
-        final data = estado.toMap();
-        data.remove('id');
-        await txn.insert('estados', data);
+        await txn.insert('estados', estado.toMap());
       }
     });
   }

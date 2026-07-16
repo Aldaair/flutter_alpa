@@ -72,8 +72,6 @@ class _ManualFrontOption {
 
 class _DialogoFormularioPerforacionState
     extends State<DialogoFormularioPerforacion> {
-  static const String _sinLaborLabel = 'SIN LABOR';
-
   bool isEditable = false;
   bool isLoading = true;
 
@@ -192,19 +190,6 @@ class _DialogoFormularioPerforacionState
 
   void _rebuildManualFrontMap() {
     _manualFrontMap.clear();
-    _manualFrontMap[_sinLaborLabel] = const _ManualFrontOption(
-      laborId: null,
-      alaId: null,
-      tipoLabor: '',
-      labor: '',
-      ala: '',
-      mina: '',
-      zona: '',
-      area: '',
-      fase: '',
-      estructuraMineral: '',
-      nivel: '',
-    );
 
     void registerOption(DimLabor labor) {
       final laborId = labor.laborId;
@@ -219,6 +204,7 @@ class _DialogoFormularioPerforacionState
         tipoLabor: tipoLabor,
         labor: laborNombre,
         ala: ala,
+        nivel: labor.nivelNombre,
       );
       _manualFrontMap[label] = _ManualFrontOption(
         laborId: laborId,
@@ -250,13 +236,19 @@ class _DialogoFormularioPerforacionState
     required String tipoLabor,
     required String labor,
     String? ala,
+    String? nivel,
   }) {
     final base = '${tipoLabor.trim()} - ${labor.trim()}';
     final alaNormalizada = ala?.trim() ?? '';
-    if (alaNormalizada.isEmpty) {
-      return base;
+    final nivelNormalizado = nivel?.trim() ?? '';
+    final parts = <String>[base];
+    if (alaNormalizada.isNotEmpty) {
+      parts.add(alaNormalizada);
     }
-    return '$base - $alaNormalizada';
+    if (nivelNormalizado.isNotEmpty) {
+      parts.add('Nivel $nivelNormalizado');
+    }
+    return parts.join(' - ');
   }
 
   String? _buildManualFrontLabelFromState() {
@@ -268,6 +260,7 @@ class _DialogoFormularioPerforacionState
       tipoLabor: tipoLabor,
       labor: labor,
       ala: alaSeleccionado,
+      nivel: nivelSeleccionado,
     );
   }
 
@@ -278,6 +271,25 @@ class _DialogoFormularioPerforacionState
     }
 
     return _manualFrontMap[label];
+  }
+
+  Map<String, dynamic> _buildLaborPayload() {
+    final manualFront = _resolveManualFrontSelection();
+
+    return <String, dynamic>{
+      'frente_origen': 'otro_frente',
+      'labor_id': manualFront?.laborId,
+      'mina': manualFront?.mina ?? '',
+      'zona': manualFront?.zona ?? '',
+      'area': manualFront?.area ?? '',
+      'fase': manualFront?.fase ?? '',
+      'estructura_mineral': manualFront?.estructuraMineral ?? '',
+      'tipo_labor': manualFront?.tipoLabor ?? '',
+      'labor': manualFront?.labor ?? '',
+      'ala': manualFront?.ala ?? '',
+      'ala_id': manualFront?.alaId,
+      'nivel': manualFront?.nivel ?? '',
+    };
   }
 
   void _clearManualFrontSelection() {
@@ -308,18 +320,21 @@ class _DialogoFormularioPerforacionState
       estructuraMineralSeleccionada = option.estructuraMineral;
       nivelSeleccionado = option.nivel;
       selectedManualFront = option;
-      selectedManualFrontLabel = option.laborId == null
-          ? _sinLaborLabel
-          : _buildManualFrontLabel(
-              tipoLabor: option.tipoLabor,
-              labor: option.labor,
-              ala: option.ala,
-            );
+      selectedManualFrontLabel = _buildManualFrontLabel(
+        tipoLabor: option.tipoLabor,
+        labor: option.labor,
+        ala: option.ala,
+        nivel: option.nivel,
+      );
     });
   }
 
   String _buildManualLocationSummary() {
     return 'Ubicación: ${minaSeleccionada ?? '-'} / ${zonaSeleccionada ?? '-'} / ${areaSeleccionada ?? '-'} / ${faseSeleccionada ?? '-'}';
+  }
+
+  String _normalizeSearchValue(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
   Widget _buildSearchableAutocompleteField({
@@ -341,9 +356,11 @@ class _DialogoFormularioPerforacionState
         if (!isFieldEnabled) {
           return const Iterable<String>.empty();
         }
-        final query = textEditingValue.text.trim().toLowerCase();
+        final query = _normalizeSearchValue(textEditingValue.text);
         if (query.isEmpty) return options;
-        return options.where((option) => option.toLowerCase().contains(query));
+        return options.where(
+          (option) => _normalizeSearchValue(option).contains(query),
+        );
       },
       onSelected: isFieldEnabled ? onSelected : null,
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
@@ -462,12 +479,6 @@ class _DialogoFormularioPerforacionState
             ? widget.datosIniciales!['nivel']
             : null;
 
-        if (widget.datosIniciales!.containsKey('labor_id') &&
-            widget.datosIniciales!['labor_id'] == null &&
-            (widget.datosIniciales!['labor']?.toString().isEmpty ?? true)) {
-          selectedManualFrontLabel = _sinLaborLabel;
-        }
-
         tipoPerforacionSeleccionado =
             widget.datosIniciales!['tipo_perforacion']?.isNotEmpty == true
             ? widget.datosIniciales!['tipo_perforacion']
@@ -511,28 +522,8 @@ class _DialogoFormularioPerforacionState
       return;
     }
 
-    final manualFront = _resolveManualFrontSelection();
-    if (manualFront == null) {
-      _mostrarSnackbar(
-        'Debe seleccionar un frente de trabajo válido',
-        Colors.orange,
-      );
-      return;
-    }
-
     Map<String, dynamic> datosFormulario = {
-      'frente_origen': 'otro_frente',
-      'labor_id': manualFront.laborId,
-      'mina': manualFront.mina,
-      'zona': manualFront.zona,
-      'area': manualFront.area,
-      'fase': manualFront.fase,
-      'estructura_mineral': manualFront.estructuraMineral,
-      'tipo_labor': manualFront.tipoLabor,
-      'labor': manualFront.labor,
-      'ala': manualFront.ala,
-      'ala_id': manualFront.alaId,
-      'nivel': manualFront.nivel,
+      ..._buildLaborPayload(),
       'n_taladros_produccion':
           int.tryParse(nTaladrosProduccionController.text) ?? 0,
       'metros_perforados_produccion':
@@ -1116,7 +1107,6 @@ class _DialogoFormularioPerforacionState
   Widget _buildSingleFrontSelector() {
     final selected = _resolveManualFrontSelection() ?? selectedManualFront;
     final selectedDetails = selected?.laborId != null ? selected : null;
-    final isSinLaborSelected = selectedManualFrontLabel == _sinLaborLabel;
     final options = _manualFrontMap.keys.toList()..sort();
 
     return Column(
@@ -1151,12 +1141,6 @@ class _DialogoFormularioPerforacionState
           Text(
             '${selectedDetails.estructuraMineral} / Nivel ${selectedDetails.nivel} / ${selectedDetails.tipoLabor} / ${selectedDetails.labor}${selectedDetails.ala.isNotEmpty ? ' / Ala ${selectedDetails.ala}' : ''}',
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-          ),
-        ] else if (isSinLaborSelected) ...[
-          const SizedBox(height: 8),
-          const Text(
-            _sinLaborLabel,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],
       ],

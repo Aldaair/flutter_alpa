@@ -44,7 +44,7 @@ class _ActualizacionDialogState extends State<ActualizacionDialog> {
       'Labores',
       'Turnos',
       'Procesos',
-      'Destinos',
+      'Origen y Destinos',
       'Cargos',
       'Usuarios',
       'Categorías Estados',

@@ -119,6 +119,18 @@ class SharedCatalogRepository {
     return List.generate(maps.length, (i) => Equipo.fromJson(maps[i]));
   }
 
+  Future<Equipo?> getEquipoById(int equipoId) async {
+    final db = await _databaseHelper.sharedCatalogDatabase;
+    final maps = await db.query(
+      'Equipo',
+      where: 'id = ?',
+      whereArgs: [equipoId],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return Equipo.fromJson(maps.first);
+  }
+
   Future<Map<String, dynamic>?> getEquipoUltimosHorometros(int equipoId) async {
     final db = await _databaseHelper.sharedCatalogDatabase;
     final maps = await db.query(
@@ -286,9 +298,22 @@ class SharedCatalogRepository {
   ) async {
     final db = await _databaseHelper.sharedCatalogDatabase;
     return await db.query(
-      'destinos',
+      'origen_destino',
       where: 'proceso_id = ?',
       whereArgs: [procesoId],
+      orderBy: 'nombre ASC',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getOrigenDestinoByProcesoAndTipo({
+    required String proceso,
+    required String tipo,
+  }) async {
+    final db = await _databaseHelper.sharedCatalogDatabase;
+    return await db.query(
+      'origen_destino',
+      where: 'UPPER(TRIM(proceso)) = ? AND UPPER(TRIM(tipo)) = ?',
+      whereArgs: [proceso.trim().toUpperCase(), tipo.trim().toUpperCase()],
       orderBy: 'nombre ASC',
     );
   }
@@ -367,13 +392,19 @@ class SharedCatalogRepository {
 
   Future<List<Map<String, dynamic>>> getEstadosByProcesoAndCategoria(
     int procesoId,
-    int categoriaId,
-  ) async {
+    int categoriaId, {
+    String? tipoEquipo,
+  }) async {
     final db = await _databaseHelper.sharedCatalogDatabase;
+    final normalizedTipoEquipo = tipoEquipo?.trim().toUpperCase();
     return await db.query(
       'estados',
-      where: 'proceso_id = ? AND categoria_id = ?',
-      whereArgs: [procesoId, categoriaId],
+      where: normalizedTipoEquipo == null || normalizedTipoEquipo.isEmpty
+          ? 'proceso_id = ? AND categoria_id = ?'
+          : 'proceso_id = ? AND categoria_id = ? AND UPPER(TRIM(tipo_equipo)) = ?',
+      whereArgs: normalizedTipoEquipo == null || normalizedTipoEquipo.isEmpty
+          ? [procesoId, categoriaId]
+          : [procesoId, categoriaId, normalizedTipoEquipo],
       orderBy: 'codigo ASC',
     );
   }

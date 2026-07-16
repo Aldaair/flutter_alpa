@@ -713,6 +713,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     categoriaId,
                     ultimaHora,
                     existingRecord,
+                    operacionContext,
                   ) => showRegistroOperacionDialog(
                     context: context,
                     dialog: RegistroOperacionDialog(
@@ -724,6 +725,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       existingRecord: existingRecord?.map(
                         (k, v) => MapEntry(k, v.toString()),
                       ),
+                      operacionContext: operacionContext,
                       onConfirm: (data) => Navigator.of(context).pop(data),
                     ),
                   ),
@@ -771,15 +773,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onConfirmar: onConfirmar,
                   ),
               onBuildCondicionesEquipo:
-                  (operacionId, estado, condicionesData, primaryColor) =>
-                      DialogoCondicionesEquipo(
-                        operacionId: operacionId,
-                        estado: estado,
-                        condicionesData: condicionesData,
-                        primaryColor: primaryColor,
-                        onGuardar: (id, datos) =>
-                            DatabaseHelper().updateCondicionesEquipo(id, datos),
-                      ),
+                  (
+                    operacionId,
+                    estado,
+                    condicionesData,
+                    primaryColor,
+                    operacionContext,
+                    procesoNombre,
+                  ) => DialogoCondicionesEquipo(
+                    operacionId: operacionId,
+                    estado: estado,
+                    condicionesData: condicionesData,
+                    operacionContext: operacionContext,
+                    procesoNombre: procesoNombre,
+                    primaryColor: primaryColor,
+                    onGuardar: (id, datos) =>
+                        DatabaseHelper().updateCondicionesEquipo(id, datos),
+                  ),
               onBuildCheckImagen:
                   (operacionId, estado, controlLlantasData, primaryColor) =>
                       DialogoCheckImagen(
@@ -816,6 +826,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     required primaryColor,
                     onChecklistTelemandoPressed,
                     onProgramaTrabajoPressed,
+                    showPresionLlantas = true,
                     isCerrado = false,
                   }) => BotonesAccionesInferiores(
                     onChecklistPressed: onChecklistPressed,
@@ -824,11 +835,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onCondicionesEquipoPressed: onCondicionesEquipoPressed,
                     onPresionLlantasPressed: onPresionLlantasPressed,
                     primaryColor: primaryColor,
+                    showPresionLlantas: showPresionLlantas,
                     isCerrado: isCerrado,
                   ),
-                ),
-              ),
-            );
+            ),
+          ),
+        );
         break;
 
       case 'PERFORACIÓN\nHORIZONTAL':
@@ -853,6 +865,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     categoriaId,
                     ultimaHora,
                     existingRecord,
+                    operacionContext,
                   ) => showRegistroOperacionDialog(
                     context: context,
                     dialog: RegistroOperacionDialog(
@@ -864,6 +877,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       existingRecord: existingRecord?.map(
                         (k, v) => MapEntry(k, v.toString()),
                       ),
+                      operacionContext: operacionContext,
                       onConfirm: (data) => Navigator.of(context).pop(data),
                     ),
                   ),
@@ -911,15 +925,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onConfirmar: onConfirmar,
                   ),
               onBuildCondicionesEquipo:
-                  (operacionId, estado, condicionesData, primaryColor) =>
-                      DialogoCondicionesEquipo(
-                        operacionId: operacionId,
-                        estado: estado,
-                        condicionesData: condicionesData,
-                        primaryColor: primaryColor,
-                        onGuardar: (id, datos) => DatabaseHelper()
-                            .updateCondicionesEquipoHorizontal(id, datos),
-                      ),
+                  (
+                    operacionId,
+                    estado,
+                    condicionesData,
+                    primaryColor,
+                    operacionContext,
+                    procesoNombre,
+                  ) => DialogoCondicionesEquipo(
+                    operacionId: operacionId,
+                    estado: estado,
+                    condicionesData: condicionesData,
+                    operacionContext: operacionContext,
+                    procesoNombre: procesoNombre,
+                    primaryColor: primaryColor,
+                    onGuardar: (id, datos) => DatabaseHelper()
+                        .updateCondicionesEquipoHorizontal(id, datos),
+                  ),
               onBuildCheckImagen:
                   (operacionId, estado, controlLlantasData, primaryColor) =>
                       DialogoCheckImagen(
@@ -956,6 +978,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     required primaryColor,
                     onChecklistTelemandoPressed,
                     onProgramaTrabajoPressed,
+                    showPresionLlantas = true,
                     isCerrado = false,
                   }) => BotonesAccionesInferiores(
                     onChecklistPressed: onChecklistPressed,
@@ -964,11 +987,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onCondicionesEquipoPressed: onCondicionesEquipoPressed,
                     onPresionLlantasPressed: onPresionLlantasPressed,
                     primaryColor: primaryColor,
+                    showPresionLlantas: showPresionLlantas,
                     isCerrado: isCerrado,
                   ),
-                ),
-              ),
-            );
+            ),
+          ),
+        );
         break;
 
       case 'SOSTENIMIENTO':
@@ -993,6 +1017,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     categoriaId,
                     ultimaHora,
                     existingRecord,
+                    operacionContext,
                   ) => showRegistroOperacionDialog(
                     context: context,
                     dialog: RegistroOperacionDialog(
@@ -1004,6 +1029,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       existingRecord: existingRecord?.map(
                         (k, v) => MapEntry(k, v.toString()),
                       ),
+                      operacionContext: operacionContext,
                       onConfirm: (data) => Navigator.of(context).pop(data),
                     ),
                   ),
@@ -1048,15 +1074,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onConfirmar: onConfirmar,
                   ),
               onBuildCondicionesEquipo:
-                  (operacionId, estado, condicionesData, primaryColor) =>
-                      DialogoCondicionesEquipo(
-                        operacionId: operacionId,
-                        estado: estado,
-                        condicionesData: condicionesData,
-                        primaryColor: primaryColor,
-                        onGuardar: (id, datos) => DatabaseHelper()
-                            .updateCondicionesEquipoEmpernador(id, datos),
-                      ),
+                  (
+                    operacionId,
+                    estado,
+                    condicionesData,
+                    primaryColor,
+                    operacionContext,
+                    procesoNombre,
+                  ) => DialogoCondicionesEquipo(
+                    operacionId: operacionId,
+                    estado: estado,
+                    condicionesData: condicionesData,
+                    operacionContext: operacionContext,
+                    procesoNombre: procesoNombre,
+                    primaryColor: primaryColor,
+                    onGuardar: (id, datos) => DatabaseHelper()
+                        .updateCondicionesEquipoEmpernador(id, datos),
+                  ),
               onBuildCheckImagen:
                   (operacionId, estado, controlLlantasData, primaryColor) =>
                       DialogoCheckImagen(
@@ -1093,6 +1127,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     required primaryColor,
                     onChecklistTelemandoPressed,
                     onProgramaTrabajoPressed,
+                    showPresionLlantas = true,
                     isCerrado = false,
                   }) => BotonesAccionesInferiores(
                     onChecklistPressed: onChecklistPressed,
@@ -1101,11 +1136,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onCondicionesEquipoPressed: onCondicionesEquipoPressed,
                     onPresionLlantasPressed: onPresionLlantasPressed,
                     primaryColor: primaryColor,
+                    showPresionLlantas: showPresionLlantas,
                     isCerrado: isCerrado,
                   ),
-                ),
-              ),
-            );
+            ),
+          ),
+        );
         break;
 
       case 'CARGUÍO':
@@ -1132,6 +1168,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     categoriaId,
                     ultimaHora,
                     existingRecord,
+                    operacionContext,
                   ) => showRegistroOperacionDialog(
                     context: context,
                     dialog: RegistroOperacionDialog(
@@ -1143,6 +1180,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       existingRecord: existingRecord?.map(
                         (k, v) => MapEntry(k, v.toString()),
                       ),
+                      operacionContext: operacionContext,
                       onConfirm: (data) => Navigator.of(context).pop(data),
                     ),
                   ),
@@ -1188,15 +1226,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onConfirmar: onConfirmar,
                   ),
               onBuildCondicionesEquipo:
-                  (operacionId, estado, condicionesData, primaryColor) =>
-                      DialogoCondicionesEquipo(
-                        operacionId: operacionId,
-                        estado: estado,
-                        condicionesData: condicionesData,
-                        primaryColor: primaryColor,
-                        onGuardar: (id, datos) => DatabaseHelper()
-                            .updateCondicionesEquipoCarguio(id, datos),
-                      ),
+                  (
+                    operacionId,
+                    estado,
+                    condicionesData,
+                    primaryColor,
+                    operacionContext,
+                    procesoNombre,
+                  ) => DialogoCondicionesEquipo(
+                    operacionId: operacionId,
+                    estado: estado,
+                    condicionesData: condicionesData,
+                    operacionContext: operacionContext,
+                    procesoNombre: procesoNombre,
+                    primaryColor: primaryColor,
+                    onGuardar: (id, datos) => DatabaseHelper()
+                        .updateCondicionesEquipoCarguio(id, datos),
+                  ),
               onBuildCheckImagen:
                   (operacionId, estado, controlLlantasData, primaryColor) =>
                       DialogoCheckImagen(
@@ -1233,6 +1279,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     required primaryColor,
                     onChecklistTelemandoPressed,
                     onProgramaTrabajoPressed,
+                    showPresionLlantas = true,
                     isCerrado = false,
                   }) => BotonesAccionesInferiores(
                     onChecklistPressed: onChecklistPressed,
@@ -1241,11 +1288,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onCondicionesEquipoPressed: onCondicionesEquipoPressed,
                     onPresionLlantasPressed: onPresionLlantasPressed,
                     primaryColor: primaryColor,
+                    showPresionLlantas: showPresionLlantas,
                     isCerrado: isCerrado,
                   ),
-                ),
-              ),
-            );
+            ),
+          ),
+        );
         break;
 
       case 'ACARREO':
@@ -1258,8 +1306,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               config: OperacionScreenConfig(
                 proceso: 'ACARREO',
                 procesoId: resolvedProcesoId,
-                dbSuffix: 'Dumper',
-                operacionNombreDb: 'Dumper',
+                dbSuffix: 'Acarreo',
+                operacionNombreDb: 'Acarreo',
                 hasChecklistTelemando: true,
                 hasProgramaTrabajo: true,
               ),
@@ -1272,6 +1320,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     categoriaId,
                     ultimaHora,
                     existingRecord,
+                    operacionContext,
                   ) => showRegistroOperacionDialog(
                     context: context,
                     dialog: RegistroOperacionDialog(
@@ -1283,6 +1332,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       existingRecord: existingRecord?.map(
                         (k, v) => MapEntry(k, v.toString()),
                       ),
+                      operacionContext: operacionContext,
                       onConfirm: (data) => Navigator.of(context).pop(data),
                     ),
                   ),
@@ -1328,15 +1378,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onConfirmar: onConfirmar,
                   ),
               onBuildCondicionesEquipo:
-                  (operacionId, estado, condicionesData, primaryColor) =>
-                      DialogoCondicionesEquipo(
-                        operacionId: operacionId,
-                        estado: estado,
-                        condicionesData: condicionesData,
-                        primaryColor: primaryColor,
-                        onGuardar: (id, datos) => DatabaseHelper()
-                            .updateCondicionesEquipoDumper(id, datos),
-                      ),
+                  (
+                    operacionId,
+                    estado,
+                    condicionesData,
+                    primaryColor,
+                    operacionContext,
+                    procesoNombre,
+                  ) => DialogoCondicionesEquipo(
+                    operacionId: operacionId,
+                    estado: estado,
+                    condicionesData: condicionesData,
+                    operacionContext: operacionContext,
+                    procesoNombre: procesoNombre,
+                    primaryColor: primaryColor,
+                    onGuardar: (id, datos) => DatabaseHelper()
+                        .updateCondicionesEquipoAcarreo(id, datos),
+                  ),
               onBuildCheckImagen:
                   (operacionId, estado, controlLlantasData, primaryColor) =>
                       DialogoCheckImagen(
@@ -1345,7 +1403,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         controlLlantasData: controlLlantasData ?? {},
                         primaryColor: primaryColor,
                         onSave: (id, datos) => DatabaseHelper()
-                            .updateControlLlantasDumper(id, datos),
+                            .updateControlLlantasAcarreo(id, datos),
                       ),
               buildBotonesEstado: (onEstadoSeleccionado) =>
                   BotonesEstado(onEstadoSeleccionado: onEstadoSeleccionado),
@@ -1373,6 +1431,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     required primaryColor,
                     onChecklistTelemandoPressed,
                     onProgramaTrabajoPressed,
+                    showPresionLlantas = true,
                     isCerrado = false,
                   }) => BotonesAccionesInferiores(
                     onChecklistPressed: onChecklistPressed,
@@ -1381,11 +1440,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onCondicionesEquipoPressed: onCondicionesEquipoPressed,
                     onPresionLlantasPressed: onPresionLlantasPressed,
                     primaryColor: primaryColor,
+                    showPresionLlantas: showPresionLlantas,
                     isCerrado: isCerrado,
                   ),
-                ),
-              ),
-            );
+            ),
+          ),
+        );
         break;
 
       case 'MEDICIONES':

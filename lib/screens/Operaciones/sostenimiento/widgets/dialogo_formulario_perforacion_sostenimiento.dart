@@ -34,10 +34,14 @@ class _LaborOption {
 
   String get displayLabel {
     final base = '$tipoLabor - $laborNombre';
-    if (ala.trim().isEmpty) {
-      return base;
+    final parts = <String>[base];
+    if (ala.trim().isNotEmpty) {
+      parts.add(ala.trim());
     }
-    return '$base - $ala';
+    if (nivel.trim().isNotEmpty) {
+      parts.add('Nivel ${nivel.trim()}');
+    }
+    return parts.join(' - ');
   }
 
   String get searchText =>
@@ -69,8 +73,6 @@ class DialogoFormularioEmpernador extends StatefulWidget {
 
 class _DialogoFormularioEmpernadorState
     extends State<DialogoFormularioEmpernador> {
-  static const String _sinLaborLabel = 'SIN LABOR';
-
   bool isEditable = false;
   bool isLoading = false;
 
@@ -131,15 +133,6 @@ class _DialogoFormularioEmpernadorState
       final labores = results[2] as List<DimLabor>;
 
       final opciones = <_LaborOption>[];
-      opciones.add(
-        const _LaborOption(
-          laborId: null,
-          alaId: null,
-          laborNombre: '',
-          tipoLabor: '',
-          nivel: '',
-        ),
-      );
       for (final labor in labores) {
         opciones.add(
           _LaborOption(
@@ -182,7 +175,7 @@ class _DialogoFormularioEmpernadorState
               ..sort();
 
         for (final opt in opciones) {
-          final label = opt.laborId == null ? _sinLaborLabel : opt.displayLabel;
+          final label = opt.displayLabel;
           opcionesLabor.add(label);
           _laborOptionMap[label] = opt;
         }
@@ -203,6 +196,7 @@ class _DialogoFormularioEmpernadorState
     final tipoLaborInicial =
         widget.datosIniciales?['tipo_labor']?.toString() ?? '';
     final alaInicial = widget.datosIniciales?['ala']?.toString() ?? '';
+    final nivelInicial = widget.datosIniciales?['nivel']?.toString() ?? '';
     if (laborInicial.isEmpty) return;
     if (opciones.isEmpty) return;
 
@@ -210,7 +204,8 @@ class _DialogoFormularioEmpernadorState
       (o) =>
           o!.laborNombre == laborInicial &&
           (tipoLaborInicial.isEmpty || o.tipoLabor == tipoLaborInicial) &&
-          (alaInicial.isEmpty || o.ala == alaInicial),
+          (alaInicial.isEmpty || o.ala == alaInicial) &&
+          (nivelInicial.isEmpty || o.nivel == nivelInicial),
       orElse: () => null,
     );
     if (match != null) {
@@ -226,7 +221,7 @@ class _DialogoFormularioEmpernadorState
       tipoLaborSeleccionado = option.tipoLabor;
       nivelSeleccionado = option.nivel;
       alaSeleccionado = option.ala;
-      _selectedLaborLabel = option.laborId == null ? _sinLaborLabel : option.displayLabel;
+      _selectedLaborLabel = option.displayLabel;
     });
   }
 
@@ -240,6 +235,20 @@ class _DialogoFormularioEmpernadorState
       nivelSeleccionado = null;
       alaSeleccionado = null;
     });
+  }
+
+  Map<String, dynamic> _buildLaborPayload() {
+    final selectedOption =
+        _laborOptionMap[_selectedLaborLabel ?? _buildSelectionLabel() ?? ''];
+
+    return <String, dynamic>{
+      'labor_id': selectedOption?.laborId,
+      'labor': selectedOption?.laborNombre ?? '',
+      'tipo_labor': selectedOption?.tipoLabor ?? '',
+      'ala': selectedOption?.ala ?? '',
+      'ala_id': selectedOption?.alaId,
+      'nivel': selectedOption?.nivel ?? '',
+    };
   }
 
   void _onTipoPernoChanged(String? tipo) {
@@ -267,13 +276,6 @@ class _DialogoFormularioEmpernadorState
     alaSeleccionado = widget.datosIniciales!['ala']?.toString();
     tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor']?.toString();
     nivelSeleccionado = widget.datosIniciales!['nivel']?.toString();
-
-    if (widget.datosIniciales!.containsKey('labor_id') &&
-        widget.datosIniciales!['labor_id'] == null &&
-        (widget.datosIniciales!['labor']?.toString().isEmpty ?? true)) {
-      _selectedLaborLabel = _sinLaborLabel;
-    }
-
     tipoPernoSeleccionado = widget.datosIniciales!['tipo_pernos'];
     longitudPernoSeleccionada = widget.datosIniciales!['log_pernos'];
     nPernosInstaladosController.text =
@@ -287,23 +289,8 @@ class _DialogoFormularioEmpernadorState
   }
 
   Future<void> _guardarDatos() async {
-    if (_selectedLaborLabel == null || !_laborOptionMap.containsKey(_selectedLaborLabel)) {
-      _mostrarSnackbar(
-        'Debe seleccionar un frente de trabajo válido',
-        Colors.orange,
-      );
-      return;
-    }
-
-    final selectedOption = _laborOptionMap[_selectedLaborLabel!];
-
     Map<String, dynamic> datosFormulario = {
-      'labor_id': selectedOption?.laborId,
-      'labor': selectedOption?.laborNombre ?? '',
-      'tipo_labor': selectedOption?.tipoLabor ?? '',
-      'ala': selectedOption?.ala ?? '',
-      'ala_id': selectedOption?.alaId,
-      'nivel': selectedOption?.nivel ?? '',
+      ..._buildLaborPayload(),
       'tipo_pernos': tipoPernoSeleccionado ?? '',
       'log_pernos': longitudPernoSeleccionada ?? '',
       'n_pernos_instalados': nPernosInstaladosController.text,
@@ -384,7 +371,6 @@ class _DialogoFormularioEmpernadorState
     final selected = _selectedOption;
     final selectedDetails = selected?.laborId != null ? selected : null;
     final selectedLabel = _selectedLaborLabel ?? _buildSelectionLabel();
-    final isSinLaborSelected = selectedLabel == _sinLaborLabel;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -455,12 +441,6 @@ class _DialogoFormularioEmpernadorState
               '${selectedDetails.tipoLabor}',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
-          ] else if (isSinLaborSelected) ...[
-            const SizedBox(height: 8),
-            const Text(
-              _sinLaborLabel,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
           ],
         ],
       ),
@@ -472,12 +452,20 @@ class _DialogoFormularioEmpernadorState
     final labor = laborSeleccionada?.trim();
     if (tipoLabor == null || tipoLabor.isEmpty) return null;
     if (labor == null || labor.isEmpty) return null;
-    final base = '$tipoLabor - $labor';
+    final parts = <String>['$tipoLabor - $labor'];
     final ala = alaSeleccionado?.trim() ?? '';
-    if (ala.isEmpty) {
-      return base;
+    final nivel = nivelSeleccionado?.trim() ?? '';
+    if (ala.isNotEmpty) {
+      parts.add(ala);
     }
-    return '$base - $ala';
+    if (nivel.isNotEmpty) {
+      parts.add('Nivel $nivel');
+    }
+    return parts.join(' - ');
+  }
+
+  String _normalizeSearchValue(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 
   Widget _buildSearchableAutocompleteField({
@@ -499,9 +487,11 @@ class _DialogoFormularioEmpernadorState
         if (!isFieldEnabled) {
           return const Iterable<String>.empty();
         }
-        final query = textEditingValue.text.trim().toLowerCase();
+        final query = _normalizeSearchValue(textEditingValue.text);
         if (query.isEmpty) return options;
-        return options.where((option) => option.toLowerCase().contains(query));
+        return options.where(
+          (option) => _normalizeSearchValue(option).contains(query),
+        );
       },
       onSelected: isFieldEnabled ? onSelected : null,
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
@@ -976,5 +966,4 @@ class _DialogoFormularioEmpernadorState
       ),
     );
   }
-
 }

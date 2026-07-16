@@ -35,15 +35,10 @@ void main() {
   });
 
   test(
-    'buildHorizontalCreatePlan blocks save when a cached catalog ID is missing',
+    'buildHorizontalCreatePlan blocks save when required cached IDs are missing',
     () {
       final missingEquipo = buildHorizontalCreatePlan(
         equipoId: null,
-        jefeGuardiaId: 40,
-        operadorId: 44,
-      );
-      final missingSeccion = buildHorizontalCreatePlan(
-        equipoId: 10,
         jefeGuardiaId: 40,
         operadorId: 44,
       );
@@ -55,8 +50,6 @@ void main() {
 
       expect(missingEquipo.isBlocked, isTrue);
       expect(missingEquipo.blockingMessage, contains('equipment ID'));
-      expect(missingSeccion.isBlocked, isTrue);
-      expect(missingSeccion.blockingMessage, contains('zone ID'));
       expect(missingJefe.isBlocked, isTrue);
       expect(missingJefe.blockingMessage, contains('guard leader ID'));
     },
@@ -143,7 +136,7 @@ void main() {
   });
 
   test(
-    'insertOperacionTalHorizontal stores a non-syncable draft when operador_id is missing',
+    'insertOperacionTalHorizontal stores a draft with supported persisted fields',
     () async {
       final dbPath = p.join(tempDir.path, 'draft_without_operator.db');
       DatabaseHelper.setDatabasePathOverride(dbPath);
@@ -152,37 +145,36 @@ void main() {
       final rowId = await dbHelper.insertOperacionTalHorizontal(
         '2026-06-17',
         'DÍA',
-        'Section 12',
         'Ana Perez',
         'Luis Rojas',
         'Boomer',
-        'TH-01',
-        'S1D',
         equipoId: 10,
-        zonaId: 30,
         jefeGuardiaId: 40,
         identityVersion: 2,
         syncable: false ? 1 : 0,
       );
 
       final db = await dbHelper.database;
+      final columns = await db.rawQuery(
+        'PRAGMA table_info(Operacion_tal_horizontal)',
+      );
       final rows = await db.query(
         'Operacion_tal_horizontal',
         where: 'id = ?',
         whereArgs: [rowId],
       );
 
-      expect(rows.single['identity_version'], 2);
       expect(rows.single['operador_id'], isNull);
       expect(rows.single['equipo_id'], 10);
-      expect(rows.single['seccion_id'], 30);
       expect(rows.single['jefe_guardia_id'], 40);
-      expect(rows.single['syncable'], 0);
+      expect(_hasColumn(columns, 'n_equipo'), isFalse);
+      expect(_hasColumn(columns, 'modelo'), isFalse);
+      expect(_hasColumn(columns, 'seccion'), isFalse);
     },
   );
 
   test(
-    'insertOperacionTalHorizontal stores a syncable row when all IDs exist',
+    'insertOperacionTalHorizontal stores equipment identity by equipo_id',
     () async {
       final dbPath = p.join(tempDir.path, 'syncable_with_ids.db');
       DatabaseHelper.setDatabasePathOverride(dbPath);
@@ -191,15 +183,11 @@ void main() {
       final rowId = await dbHelper.insertOperacionTalHorizontal(
         '2026-06-17',
         'DÍA',
-        'Section 12',
         'Ana Perez',
         'Luis Rojas',
         'Boomer',
-        'TH-01',
-        'S1D',
         operadorId: 44,
         equipoId: 10,
-        zonaId: 30,
         jefeGuardiaId: 40,
         identityVersion: 2,
         syncable: true ? 1 : 0,
@@ -212,12 +200,14 @@ void main() {
         whereArgs: [rowId],
       );
 
-      expect(rows.single['identity_version'], 2);
       expect(rows.single['operador_id'], 44);
       expect(rows.single['equipo_id'], 10);
-      expect(rows.single['seccion_id'], 30);
       expect(rows.single['jefe_guardia_id'], 40);
-      expect(rows.single['syncable'], 1);
+      expect(rows.single['equipo'], 'Boomer');
     },
   );
+}
+
+bool _hasColumn(List<Map<String, Object?>> columns, String name) {
+  return columns.any((column) => column['name'] == name);
 }
