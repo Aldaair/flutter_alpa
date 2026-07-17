@@ -324,22 +324,14 @@ class OperacionEmpernadorRegistroDetalleRequest {
 }
 
 class OperacionCarguioRegistroDetalleRequest {
-  final String? nivelInicio;
-  final String? tipoLaborInicio;
-  final String? laborInicio;
-  final String? alaInicio;
   final int? laborId;
-  final String? ubicacionDestino;
+  final int? destinoId;
   final int? nCucharas;
   final String? observaciones;
 
   OperacionCarguioRegistroDetalleRequest({
-    this.nivelInicio,
-    this.tipoLaborInicio,
-    this.laborInicio,
-    this.alaInicio,
     this.laborId,
-    this.ubicacionDestino,
+    this.destinoId,
     this.nCucharas,
     this.observaciones,
   });
@@ -347,23 +339,15 @@ class OperacionCarguioRegistroDetalleRequest {
   factory OperacionCarguioRegistroDetalleRequest.fromJson(
     Map<String, dynamic> json,
   ) => OperacionCarguioRegistroDetalleRequest(
-    nivelInicio: json['nivel_inicio'] as String?,
-    tipoLaborInicio: json['tipo_labor_inicio'] as String?,
-    laborInicio: json['labor_inicio'] as String?,
-    alaInicio: json['ala_inicio'] as String?,
     laborId: _toInt(json['labor_id']),
-    ubicacionDestino: json['ubicacion_destino'] as String?,
+    destinoId: _toInt(json['destino_id'] ?? json['ubicacion_destino_id']),
     nCucharas: _toInt(json['n_cucharas']),
     observaciones: json['observaciones'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
-    if (nivelInicio != null) 'nivel_inicio': nivelInicio,
-    if (tipoLaborInicio != null) 'tipo_labor_inicio': tipoLaborInicio,
-    if (laborInicio != null) 'labor_inicio': laborInicio,
-    if (alaInicio != null) 'ala_inicio': alaInicio,
     if (laborId != null) 'labor_id': laborId,
-    if (ubicacionDestino != null) 'ubicacion_destino': ubicacionDestino,
+    if (destinoId != null) 'destino_id': destinoId,
     if (nCucharas != null) 'n_cucharas': nCucharas,
     if (observaciones != null) 'observaciones': observaciones,
   };
@@ -372,9 +356,8 @@ class OperacionCarguioRegistroDetalleRequest {
 class OperacionAcarreoRegistroDetalleRequest {
   final String? tipoAcarreo;
   final String? tipoEquipo;
-  final int? laborId;
-  final int? ubicacionDestinoId;
-  final String? ubicacionDestino;
+  final int? origenId;
+  final int? destinoId;
   final int? nCucharas;
   final int? nCarros;
   final String? tipoCarrito;
@@ -383,9 +366,8 @@ class OperacionAcarreoRegistroDetalleRequest {
   OperacionAcarreoRegistroDetalleRequest({
     this.tipoAcarreo,
     this.tipoEquipo,
-    this.laborId,
-    this.ubicacionDestinoId,
-    this.ubicacionDestino,
+    this.origenId,
+    this.destinoId,
     this.nCucharas,
     this.nCarros,
     this.tipoCarrito,
@@ -397,9 +379,10 @@ class OperacionAcarreoRegistroDetalleRequest {
   ) => OperacionAcarreoRegistroDetalleRequest(
     tipoAcarreo: json['tipo_acarreo'] as String?,
     tipoEquipo: json['tipo_equipo'] as String?,
-    laborId: _toInt(json['labor_id']),
-    ubicacionDestinoId: _toInt(json['ubicacion_destino_id']),
-    ubicacionDestino: json['ubicacion_destino'] as String?,
+    origenId: _toInt(
+      json['origen_id'] ?? json['ubicacion_inicio_id'] ?? json['labor_id'],
+    ),
+    destinoId: _toInt(json['destino_id'] ?? json['ubicacion_destino_id']),
     nCucharas: _toInt(json['n_cucharas']),
     nCarros: _toInt(json['n_carros']),
     tipoCarrito: json['tipo_carrito'] as String?,
@@ -409,10 +392,8 @@ class OperacionAcarreoRegistroDetalleRequest {
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{
       if (tipoAcarreo != null) 'tipo_acarreo': tipoAcarreo,
-      if (laborId != null) 'labor_id': laborId,
-      if (ubicacionDestinoId != null)
-        'ubicacion_destino_id': ubicacionDestinoId,
-      if (ubicacionDestino != null) 'ubicacion_destino': ubicacionDestino,
+      if (origenId != null) 'origen_id': origenId,
+      if (destinoId != null) 'destino_id': destinoId,
       if (tipoCarrito != null) 'tipo_carrito': tipoCarrito,
       if (observaciones != null) 'observaciones': observaciones,
     };

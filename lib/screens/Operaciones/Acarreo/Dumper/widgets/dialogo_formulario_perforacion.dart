@@ -122,7 +122,7 @@ class _DialogoFormularioPerforacionState
         todosLosDestinos = List<Map<String, dynamic>>.from(
           results[1] as List<Map<String, dynamic>>,
         );
-        final operacionRows = results[2] as List<Map<String, Object?>>;
+        final operacionRows = results[2] as List<Map<String, dynamic>>;
         equipoOperacionNombre = operacionRows.isNotEmpty
             ? operacionRows.first['equipo']?.toString()
             : null;
@@ -146,11 +146,14 @@ class _DialogoFormularioPerforacionState
         widget.datosIniciales!['frente_origen']?.toString() ??
         widget.datosIniciales!['labor']?.toString();
     ubicacionInicioId =
+        _asInt(widget.datosIniciales!['origen_id']) ??
         _asInt(widget.datosIniciales!['ubicacion_inicio_id']) ??
         _asInt(widget.datosIniciales!['labor_id']);
     ubicacionDestinoSeleccionado = widget.datosIniciales!['ubicacion_destino']
         ?.toString();
-    ubicacionDestinoId = _asInt(widget.datosIniciales!['ubicacion_destino_id']);
+    ubicacionDestinoId =
+        _asInt(widget.datosIniciales!['destino_id']) ??
+        _asInt(widget.datosIniciales!['ubicacion_destino_id']);
     nCucharasController.text =
         widget.datosIniciales!['n_cucharas']?.toString() ??
         widget.datosIniciales!['n_viajes']?.toString() ??
@@ -235,6 +238,7 @@ class _DialogoFormularioPerforacionState
     }
 
     final datosFormulario = <String, dynamic>{
+      'origen_id': origenSeleccionado.id,
       'ubicacion_inicio_id': origenSeleccionado.id,
       'ubicacion_inicio': origenSeleccionado.nombre,
       'labor_id': origenSeleccionado.id,
@@ -244,6 +248,7 @@ class _DialogoFormularioPerforacionState
       'ala': '',
       'ala_id': null,
       'nivel': '',
+      'destino_id': ubicacionDestinoId ?? 0,
       'ubicacion_destino_id': ubicacionDestinoId ?? 0,
       'ubicacion_destino': ubicacionDestinoSeleccionado ?? '',
       'observaciones': observacionesController.text,

@@ -1,10 +1,7 @@
 class ApiConfig {
-  static const String baseUrl = 'http://localhost:5000/api';
-  //'https://api-dotnet-yauliyacu.onrender.com/api';
-  //'https://api-seminco-catalina-huanca.vercel.app/api';
-  //'https://backend-seminco-pro-02.vercel.app/api';
-  //'https://backend-seminco-mina-02.onrender.com/api';
-  // 'https://backendseminco-production.up.railway.app/api';
+  static const String baseUrl = //'http://localhost:5000/api';
+      'https://api-dotnet-yauliyacu.onrender.com/api';
+
   static const String loginEndpoint = '/auth/login';
   static const String estadosEndpoint = '/estado/';
   static const String checklistEndpoint = '/check-list';
@@ -26,7 +23,7 @@ class ApiConfig {
   static const String longitudBarrasEndpoint = '/longitud-barras/';
   static const String pernosEndpoint = '/pernos/';
   static const String mallasEndpoint = '/mallas/';
-  static const String destinosEndpoint = '/destinos';
+  static const String origenDestinoEndpoint = '/origen-destino';
 
   static const String accesorioEndpoint = '/Accesorios/';
   static const String datosExploracionesEndpoint = '/NubeDatosExploraciones';
@@ -56,6 +53,7 @@ class ApiConfig {
       '$operacionesV2Base/tal-largo';
   static const String operacionTalHorizontalEndpoint =
       '$operacionesV2Base/tal-horizontal';
+  static const String operacionAcarreoEndpoint = '$operacionesV2Base/acarreo';
   static const String operacionCarguioEndpoint = '$operacionesV2Base/carguio';
   static const String operacionEmpernadorEndpoint =
       '$operacionesV2Base/empernador';

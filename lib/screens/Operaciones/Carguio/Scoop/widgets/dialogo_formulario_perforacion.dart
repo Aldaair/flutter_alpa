@@ -140,7 +140,9 @@ class _DialogoFormularioPerforacionState
     tipoLaborSeleccionado = widget.datosIniciales!['tipo_labor']?.toString();
     alaSeleccionado = widget.datosIniciales!['ala']?.toString();
     nivelSeleccionado = widget.datosIniciales!['nivel']?.toString();
-    ubicacionDestinoId = widget.datosIniciales!['ubicacion_destino_id'] as int?;
+    ubicacionDestinoId =
+        widget.datosIniciales!['destino_id'] as int? ??
+        widget.datosIniciales!['ubicacion_destino_id'] as int?;
     ubicacionDestinoSeleccionado = widget.datosIniciales!['ubicacion_destino']
         ?.toString();
 
@@ -287,6 +289,7 @@ class _DialogoFormularioPerforacionState
     final datosFormulario = <String, dynamic>{
       ..._buildLaborPayload(),
       'frente_origen': 'otro_frente',
+      'destino_id': destinoId,
       'ubicacion_destino_id': destinoId,
       'ubicacion_destino': ubicacionDestinoSeleccionado ?? '',
       'n_cucharas': int.tryParse(nCucharasController.text) ?? 0,

@@ -11,7 +11,7 @@ void main() {
     service = ExportarService(DatabaseHelper());
   });
 
-  test('exports locomotora acarreo registros without n_cucharas', () async {
+  test('exports locomotora acarreo registros with origin/destination ids only', () async {
     final jsonData = await service.prepararDatosParaExportar(
       'acarreo',
       {21},
@@ -27,7 +27,7 @@ void main() {
           'estado': 'cerrado',
           'envio': 0,
           'registros':
-              '[{"id":1,"numero":1,"estado":"ok","codigo":"A-1","hora_inicio":"08:00","hora_final":"09:00","operacion":{"labor_id":2,"ubicacion_destino_id":3,"ubicacion_destino":"Tolva 1","n_cucharas":0,"n_carros":4,"observaciones":"ready"}}]',
+              '[{"id":1,"numero":1,"estado":"ok","codigo":"A-1","hora_inicio":"08:00","hora_final":"09:00","operacion":{"labor_id":2,"ubicacion_inicio_id":2,"labor":"Tolva origen","frente_origen":"Tolva origen","ubicacion_destino_id":3,"ubicacion_destino":"Tolva 1","n_cucharas":0,"n_carros":4,"observaciones":"ready"}}]',
           'horometros': '{}',
           'check_list': '[]',
           'condiciones_equipo': '{}',
@@ -40,11 +40,18 @@ void main() {
         (jsonData.single['registros'] as List).single['operacion']
             as Map<String, dynamic>;
 
+    expect(operacion['origen_id'], 2);
+    expect(operacion['destino_id'], 3);
+    expect(operacion.containsKey('labor_id'), isFalse);
+    expect(operacion.containsKey('ubicacion_destino_id'), isFalse);
+    expect(operacion.containsKey('ubicacion_destino'), isFalse);
+    expect(operacion.containsKey('labor'), isFalse);
+    expect(operacion.containsKey('frente_origen'), isFalse);
     expect(operacion.containsKey('n_cucharas'), isFalse);
     expect(operacion['n_carros'], 4);
   });
 
-  test('exports volquete acarreo registros without n_carros', () async {
+  test('exports volquete acarreo registros without legacy name fields', () async {
     final jsonData = await service.prepararDatosParaExportar(
       'acarreo',
       {22},
@@ -60,7 +67,7 @@ void main() {
           'estado': 'cerrado',
           'envio': 0,
           'registros':
-              '[{"id":1,"numero":1,"estado":"ok","codigo":"A-2","hora_inicio":"10:00","hora_final":"11:00","operacion":{"labor_id":2,"ubicacion_destino_id":3,"ubicacion_destino":"Cancha 2","n_cucharas":6,"n_carros":0,"observaciones":"ready"}}]',
+              '[{"id":1,"numero":1,"estado":"ok","codigo":"A-2","hora_inicio":"10:00","hora_final":"11:00","operacion":{"origen_id":8,"labor_id":2,"ubicacion_destino_id":3,"ubicacion_destino":"Cancha 2","destino_id":9,"n_cucharas":6,"n_carros":0,"observaciones":"ready"}}]',
           'horometros': '{}',
           'check_list': '[]',
           'condiciones_equipo': '{}',
@@ -73,8 +80,13 @@ void main() {
         (jsonData.single['registros'] as List).single['operacion']
             as Map<String, dynamic>;
 
+    expect(operacion['origen_id'], 8);
+    expect(operacion['destino_id'], 9);
     expect(operacion['n_cucharas'], 6);
     expect(operacion.containsKey('n_carros'), isFalse);
+    expect(operacion.containsKey('labor_id'), isFalse);
+    expect(operacion.containsKey('ubicacion_destino_id'), isFalse);
+    expect(operacion.containsKey('ubicacion_destino'), isFalse);
   });
 
   test('preserves both acarreo metrics when tipo_equipo is unknown', () async {
@@ -105,7 +117,11 @@ void main() {
         (jsonData.single['registros'] as List).single['operacion']
             as Map<String, dynamic>;
 
+    expect(operacion['origen_id'], 2);
+    expect(operacion['destino_id'], 3);
     expect(operacion['n_cucharas'], 2);
     expect(operacion['n_carros'], 1);
+    expect(operacion.containsKey('labor_id'), isFalse);
+    expect(operacion.containsKey('ubicacion_destino_id'), isFalse);
   });
 }
