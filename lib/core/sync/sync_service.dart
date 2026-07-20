@@ -1,19 +1,49 @@
 import 'package:i_miner/config/data/database_helper.dart';
 import 'package:i_miner/config/data/sync_repository.dart';
+import 'package:i_miner/core/sync/export_payload_utils.dart';
 import 'package:i_miner/services/envio%20nube/exportar_service.dart';
 import 'package:i_miner/services/envio%20nube/operaciones_service.dart';
 
 class SyncService {
   static final SyncService _instance = SyncService._internal();
-  factory SyncService() => _instance;
-  SyncService._internal();
+  static bool _isSyncInProgress = false;
 
-  final SyncRepository _syncRepo = SyncRepository();
-  final OperacionesService _api = OperacionesService();
-  late final ExportarService _export = ExportarService(DatabaseHelper());
+  factory SyncService({
+    SyncRepository? syncRepository,
+    OperacionesService? api,
+    ExportarService? exportService,
+    Map<String, String>? processTables,
+  }) {
+    if (syncRepository != null ||
+        api != null ||
+        exportService != null ||
+        processTables != null) {
+      return SyncService._internal(
+        syncRepository: syncRepository,
+        api: api,
+        exportService: exportService,
+        processTables: processTables,
+      );
+    }
+    return _instance;
+  }
+
+  SyncService._internal({
+    SyncRepository? syncRepository,
+    OperacionesService? api,
+    ExportarService? exportService,
+    Map<String, String>? processTables,
+  }) : _syncRepo = syncRepository ?? SyncRepository(),
+       _api = api ?? OperacionesService(),
+       _export = exportService ?? ExportarService(DatabaseHelper()),
+       _processTables = processTables ?? _defaultProcessTables;
+
+  final SyncRepository _syncRepo;
+  final OperacionesService _api;
+  final ExportarService _export;
 
   /// Maps endpoint type table name.
-  static const _processTables = {
+  static const Map<String, String> _defaultProcessTables = {
     'tal_largo': 'Operacion_tal_largo',
     'tal_horizontal': 'Operacion_tal_horizontal',
     'empernador': 'Operacion_empernador',
@@ -26,18 +56,44 @@ class SyncService {
     'scalamin': 'Operacion_Scalamin',
   };
 
-  Future<void> syncData() async {
-    print("🚀 Iniciando sincronización...");
+  final Map<String, String> _processTables;
+
+  bool get isSyncInProgress => _isSyncInProgress;
+
+  Future<T?> runGuardedOperation<T>(
+    Future<T> Function() operation, {
+    String source = 'sync',
+  }) async {
+    if (_isSyncInProgress) {
+      print('⚠️ Skipping $source because another sync/send is already running');
+      return null;
+    }
+
+    _isSyncInProgress = true;
+    print('🔒 Sync lock acquired by $source');
 
     try {
-      for (final entry in _processTables.entries) {
-        await _syncProceso(tipo: entry.key, tableName: entry.value);
-      }
-
-      print("✅ Sincronización completa");
-    } catch (e) {
-      print("❌ Error en sync: $e");
+      return await operation();
+    } finally {
+      _isSyncInProgress = false;
+      print('🔓 Sync lock released by $source');
     }
+  }
+
+  Future<void> syncData() async {
+    await runGuardedOperation(() async {
+      print("🚀 Iniciando sincronización...");
+
+      try {
+        for (final entry in _processTables.entries) {
+          await _syncProceso(tipo: entry.key, tableName: entry.value);
+        }
+
+        print("✅ Sincronización completa");
+      } catch (e) {
+        print("❌ Error en sync: $e");
+      }
+    }, source: 'auto-sync');
   }
 
   Future<void> _syncProceso({
@@ -61,21 +117,56 @@ class SyncService {
       return;
     }
 
-    final dataParaEnviar = jsonData.map((item) {
-      final copia = Map<String, dynamic>.from(item);
-      copia.remove('local_id');
-      return copia;
-    }).toList();
+    final dataParaEnviar = jsonData.map(preparePayloadForSend).toList();
 
-    final success = await _api.crear(tipo, dataParaEnviar);
+    final result = await _api.crear(
+      tipo,
+      dataParaEnviar,
+      onItemProcessed: (itemResult) async {
+        if (!itemResult.success) {
+          return;
+        }
 
-    if (success) {
-      for (var item in jsonData) {
-        await _syncRepo.markAsSent(tableName, item['local_id']);
-      }
-      print("✅ $tipo sincronizado (${jsonData.length})");
-    } else {
-      print("❌ Error enviando $tipo");
+        final localId = _readLocalId(jsonData, itemResult.localIndex);
+        if (localId == null) {
+          throw StateError(
+            '[$tipo] Missing local_id for index ${itemResult.localIndex}',
+          );
+        }
+
+        await _syncRepo.markAsSent(tableName, localId);
+        print(
+          '✅ [$tipo][${itemResult.localIndex + 1}] Marked local_id=$localId as sent',
+        );
+      },
+    );
+
+    if (result.successCount > 0) {
+      print("✅ $tipo sincronizado (${result.successCount}/${jsonData.length})");
     }
+
+    if (!result.isSuccess) {
+      print("❌ Error enviando $tipo");
+      print(
+        '❌ [$tipo] attempted=${result.attemptedCount} success=${result.successCount} '
+        'failed=${result.failureCount} skipped=${result.skippedCount}',
+      );
+    }
+  }
+
+  int? _readLocalId(List<Map<String, dynamic>> jsonData, int index) {
+    if (index < 0 || index >= jsonData.length) {
+      return null;
+    }
+
+    final value = jsonData[index]['local_id'];
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value?.toString() ?? '');
   }
 }

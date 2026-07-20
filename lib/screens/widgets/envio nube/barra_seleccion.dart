@@ -5,6 +5,7 @@ class BarraSeleccion extends StatelessWidget {
   final VoidCallback onEliminar;
   final VoidCallback onExportar;
   final Color primaryColor;
+  final bool isExportEnabled;
 
   const BarraSeleccion({
     super.key,
@@ -12,6 +13,7 @@ class BarraSeleccion extends StatelessWidget {
     required this.onEliminar,
     required this.onExportar,
     required this.primaryColor,
+    this.isExportEnabled = true,
   });
 
   @override
@@ -61,8 +63,10 @@ class BarraSeleccion extends StatelessWidget {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.file_download, color: Colors.white),
-            onPressed: onExportar,
-            tooltip: 'Exportar seleccionados',
+            onPressed: isExportEnabled ? onExportar : null,
+            tooltip: isExportEnabled
+                ? 'Exportar seleccionados'
+                : 'Envío en progreso',
             iconSize: 20,
           ),
           const SizedBox(width: 4),

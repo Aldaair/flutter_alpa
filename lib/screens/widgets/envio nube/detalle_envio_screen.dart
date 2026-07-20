@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:i_miner/core/sync/export_payload_utils.dart';
+import 'package:i_miner/core/sync/sync_service.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/barra_seleccion.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/carga_dialog.dart';
 import 'package:i_miner/screens/widgets/envio%20nube/confirmacion_dialog.dart';
@@ -49,6 +51,11 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
   Set<int> selectedItems = {};
   bool isLoading = true;
   String mensajeUsuario = "Cargando registros...";
+  final SyncService _syncService = SyncService();
+  bool _isManualSendInProgress = false;
+
+  bool get _isSendBlocked =>
+      _isManualSendInProgress || _syncService.isSyncInProgress;
 
   @override
   void initState() {
@@ -146,6 +153,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
       if (!mounted) return;
       Navigator.pop(context);
       await _fetchOperacionData();
+      if (!mounted) return;
 
       setState(() => selectedItems.clear());
 
@@ -165,6 +173,13 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
 
   Future<void> _exportSelectedItems() async {
     if (selectedItems.isEmpty) return;
+    if (_isSendBlocked) {
+      _mostrarAdvertencia(
+        'Envío en progreso',
+        'Ya existe una sincronización o envío en curso. Espera a que termine para volver a intentarlo.',
+      );
+      return;
+    }
 
     showDialog(
       context: context,
@@ -331,6 +346,17 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
 
   Future<void> _enviarDatosALaNube(List<Map<String, dynamic>> jsonData) async {
     final operacionService = OperacionesService();
+    final successfulLocalIds = <int>{};
+
+    if (_isSendBlocked) {
+      _mostrarAdvertencia(
+        'Envío en progreso',
+        'Ya existe una sincronización o envío en curso. Espera a que termine para volver a intentarlo.',
+      );
+      return;
+    }
+
+    setState(() => _isManualSendInProgress = true);
 
     showDialog(
       context: context,
@@ -339,35 +365,65 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
     );
 
     try {
-      final dataParaEnviar = jsonData.map((item) {
-        final copia = Map<String, dynamic>.from(item);
-        copia.remove('local_id');
-        return copia;
-      }).toList();
+      final dataParaEnviar = jsonData.map(preparePayloadForSend).toList();
 
-      final success = await operacionService.crear(
-        widget.endpointTipo,
-        dataParaEnviar,
+      final result = await _syncService.runGuardedOperation(
+        () => operacionService.crear(
+          widget.endpointTipo,
+          dataParaEnviar,
+          onItemProcessed: (itemResult) async {
+            if (!itemResult.success) {
+              return;
+            }
+
+            final localId = _readLocalId(jsonData, itemResult.localIndex);
+            if (localId == null) {
+              throw StateError(
+                '[${widget.endpointTipo}] Missing local_id for index ${itemResult.localIndex}',
+              );
+            }
+
+            await widget.marcarComoEnviado(localId);
+            successfulLocalIds.add(localId);
+          },
+        ),
+        source: 'manual-send:${widget.endpointTipo}',
       );
 
       if (!mounted) return;
       Navigator.pop(context);
 
-      if (success) {
-        for (var item in jsonData) {
-          final localId = item['local_id'] as int;
-          await widget.marcarComoEnviado(localId);
-        }
+      if (result == null) {
+        _mostrarAdvertencia(
+          'Envío en progreso',
+          'Ya existe una sincronización o envío en curso. Espera a que termine para volver a intentarlo.',
+        );
+        return;
+      }
 
-        await _fetchOperacionData();
+      await _fetchOperacionData();
+      if (!mounted) return;
+
+      setState(() {
+        selectedItems.removeWhere(successfulLocalIds.contains);
+      });
+
+      if (result.isSuccess) {
         setState(() => selectedItems.clear());
 
         showDialog(
           context: context,
           builder: (context) => ExitoDialog(
             titulo: '¡Envío exitoso!',
-            mensaje: 'Se enviaron ${jsonData.length} operaciones correctamente',
+            mensaje:
+                'Se enviaron ${result.successCount} operaciones correctamente',
           ),
+        );
+      } else if (result.successCount > 0) {
+        _mostrarAdvertencia(
+          'Envío parcial completado',
+          'Se enviaron ${result.successCount} operación(es). '
+              '${result.failureCount + result.skippedCount} quedaron pendientes.',
         );
       } else {
         _mostrarError('Error al enviar datos al servidor');
@@ -376,7 +432,27 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
       if (!mounted) return;
       Navigator.pop(context);
       _mostrarError('Error en envío: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => _isManualSendInProgress = false);
+      }
     }
+  }
+
+  int? _readLocalId(List<Map<String, dynamic>> jsonData, int index) {
+    if (index < 0 || index >= jsonData.length) {
+      return null;
+    }
+
+    final value = jsonData[index]['local_id'];
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value?.toString() ?? '');
   }
 
   void _mostrarError(String mensaje) {
@@ -423,6 +499,7 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
             onEliminar: _confirmarEliminacion,
             onExportar: _exportSelectedItems,
             primaryColor: widget.primaryColor,
+            isExportEnabled: !_isSendBlocked,
           ),
           Expanded(
             child: isLoading
@@ -467,10 +544,12 @@ class _DetalleEnvioScreenState extends State<DetalleEnvioScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),
-          onPressed: () async {
-            setState(() => isLoading = true);
-            await _fetchOperacionData();
-          },
+          onPressed: _isSendBlocked
+              ? null
+              : () async {
+                  setState(() => isLoading = true);
+                  await _fetchOperacionData();
+                },
           tooltip: 'Refrescar',
         ),
       ],

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:i_miner/config/data/database_helper.dart';
+import 'package:i_miner/core/sync/export_payload_utils.dart';
 import 'package:i_miner/models/api/v2/operation_dtos.dart';
 
 class ExportarService {
@@ -20,6 +21,7 @@ class ExportarService {
         orElse: () => <String, dynamic>{},
       );
       if (op.isEmpty) continue;
+      if (!_shouldExport(tipo, op)) continue;
 
       final map = _buildOperationMap(tipo, op, id);
       results.add(map);
@@ -36,7 +38,34 @@ class ExportarService {
     final dto = _buildDto(tipo, op);
     final map = dto.toJson();
     map['local_id'] = localId;
+    final clientRequestId = buildClientRequestId(localId);
+    if (clientRequestId != null) {
+      map[clientRequestIdField] = clientRequestId;
+    }
+    if (tipo == 'tal_horizontal' && op['seccion_id'] != null) {
+      map['seccion_id'] = op['seccion_id'];
+      for (final key in const [
+        'operador',
+        'equipo',
+        'seccion',
+        'jefe_guardia',
+        'n_equipo',
+        'modelo_equipo',
+      ]) {
+        if (op[key] != null) {
+          map[key] = op[key];
+        }
+      }
+    }
     return map;
+  }
+
+  bool _shouldExport(String tipo, Map<String, dynamic> op) {
+    if (tipo != 'tal_horizontal') {
+      return true;
+    }
+
+    return _asInt(op['identity_version']) == 2 && _asInt(op['syncable']) == 1;
   }
 
   OperacionUpsertRequest _buildDto(String tipo, Map<String, dynamic> op) {

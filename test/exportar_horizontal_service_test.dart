@@ -49,6 +49,7 @@ void main() {
 
       final payload = jsonData.single;
       expect(payload['local_id'], 10);
+      expect(payload['client_request_id'], '10');
       expect(payload['operador_id'], 44);
       expect(payload['equipo_id'], 20);
       expect(payload['seccion_id'], 30);
@@ -96,6 +97,7 @@ void main() {
       );
 
       expect(jsonData, hasLength(1));
+      expect(jsonData.single['client_request_id'], '11');
       expect(jsonData.single['operador_id'], 45);
       expect(jsonData.single['equipo_id'], 21);
       expect(jsonData.single['seccion_id'], 31);

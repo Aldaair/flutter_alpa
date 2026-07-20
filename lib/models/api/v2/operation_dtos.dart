@@ -514,6 +514,7 @@ class OperacionScissorRegistroDetalleRequest {
 
 class OperacionUpsertRequest {
   final String? fecha;
+  final String? clientRequestId;
   final int? turnoId;
   final int? laborId;
   final int? operadorId;
@@ -534,6 +535,7 @@ class OperacionUpsertRequest {
 
   OperacionUpsertRequest({
     this.fecha,
+    this.clientRequestId,
     this.turnoId,
     this.laborId,
     this.operadorId,
@@ -555,6 +557,7 @@ class OperacionUpsertRequest {
 
   Map<String, dynamic> toJson() => {
     if (fecha != null) 'fecha': fecha,
+    if (clientRequestId != null) 'client_request_id': clientRequestId,
     if (turnoId != null) 'turno_id': turnoId,
     if (laborId != null) 'labor_id': laborId,
     if (operadorId != null) 'operador_id': operadorId,
@@ -585,6 +588,7 @@ class OperacionTalLargoUpsertRequest extends OperacionUpsertRequest {
 
   OperacionTalLargoUpsertRequest({
     super.fecha,
+    super.clientRequestId,
     super.turnoId,
     super.laborId,
     super.operadorId,
@@ -619,6 +623,7 @@ class OperacionTalHorizontalUpsertRequest extends OperacionUpsertRequest {
 
   OperacionTalHorizontalUpsertRequest({
     super.fecha,
+    super.clientRequestId,
     super.turnoId,
     super.laborId,
     super.operadorId,
@@ -653,6 +658,7 @@ class OperacionCarguioUpsertRequest extends OperacionUpsertRequest {
 
   OperacionCarguioUpsertRequest({
     super.fecha,
+    super.clientRequestId,
     super.turnoId,
     super.laborId,
     super.operadorId,
@@ -687,6 +693,7 @@ class OperacionAcarreoUpsertRequest extends OperacionUpsertRequest {
 
   OperacionAcarreoUpsertRequest({
     super.fecha,
+    super.clientRequestId,
     super.turnoId,
     super.laborId,
     super.operadorId,
@@ -721,6 +728,7 @@ class OperacionEmpernadorUpsertRequest extends OperacionUpsertRequest {
 
   OperacionEmpernadorUpsertRequest({
     super.fecha,
+    super.clientRequestId,
     super.turnoId,
     super.laborId,
     super.operadorId,
@@ -755,6 +763,7 @@ class OperacionScalaminUpsertRequest extends OperacionUpsertRequest {
 
   OperacionScalaminUpsertRequest({
     super.fecha,
+    super.clientRequestId,
     super.turnoId,
     super.laborId,
     super.operadorId,
@@ -789,6 +798,7 @@ class OperacionScissorUpsertRequest extends OperacionUpsertRequest {
 
   OperacionScissorUpsertRequest({
     super.fecha,
+    super.clientRequestId,
     super.turnoId,
     super.laborId,
     super.operadorId,
